@@ -1094,7 +1094,8 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
         side: "bottom",
         align: "start",
       },
-    },    {
+    },
+    {
       element: "[data-tour='invoice-create-items']",
       popover: {
         title: "Line Items",
@@ -2311,9 +2312,9 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='crash-reports-list']",
       popover: {
-        title: "Review and resolve",
+        title: "Review and mark fixed",
         description:
-          "Open a row for stack and notes. Mark Reviewed or Resolved as you go. Session-expired and form-validation toasts are not logged.",
+          "Use the visible Review, Fixed, and Reopen actions while scanning. Select several duplicate reports to update them together, and mark Fixed only after the solution is validated. Open a row for stack traces and notes.",
         side: "top",
         align: "center",
       },

@@ -2303,6 +2303,12 @@ export const crashReportApi = {
   update: (id: string, data: { status?: string; adminNotes?: string }) =>
     api.patch(`/crash-reports/${id}`, data),
 
+  /** Update several reports from the admin triage queue */
+  updateMany: (
+    ids: string[],
+    data: { status: string; adminNotes?: string },
+  ) => api.patch("/crash-reports/bulk/status", { ids, ...data }),
+
   /** Delete a crash report */
   remove: (id: string) => api.delete(`/crash-reports/${id}`),
 };

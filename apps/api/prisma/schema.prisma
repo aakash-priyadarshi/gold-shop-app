@@ -4426,7 +4426,7 @@ model CrashReport {
   userAgent       String?  @db.Text
   appVersion      String? // desktop app version
   ip              String? // client IP address (recorded server-side)
-  status          String   @default("new") // new | reviewed | resolved
+  status          String   @default("new") // new | reviewed | resolved (shown as Fixed in admin)
   adminNotes      String?  @db.Text
   // User-initiated report fields
   userTriggered   Boolean  @default(false) // true = user manually clicked Report

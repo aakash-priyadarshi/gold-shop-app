@@ -226,7 +226,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "crash_reports_admin",
     content:
-      "Orivraa automatically records errors shown to users (red error toasts, page crashes, and server 5xx / network failures) so admins can fix issues they do not see themselves. Open Admin → Crash Reports. Default view is today's new reports. Each row has a Copy button with the same title + description + page format as the user's toast copy button. Copy all as AI prompt or Download .md exports every report matching the current filters with fingerprints, stack traces, diagnostics, admin notes, and prompt-injection safety guidance; IP addresses and session credentials are omitted. Configure CRASH_REPORT_SLACK_WEBHOOK_URL only on the Railway API service to post every new, non-duplicate incident to an existing Slack channel, then verify it with Send test alert. CRASH_REPORT_SLACK_MENTION can be here, channel, or the Slack user ID of a bot such as Cursor so each alert mentions it. Auto vs User badges show whether the report was silent capture or a shopkeeper clicking Send Report. Session expiry and form-validation toasts are not logged. Mark reports reviewed or resolved and add admin notes.",
+      "Orivraa automatically records errors shown to users (red error toasts, page crashes, and server 5xx / network failures) so admins can fix issues they do not see themselves. Open Admin → Crash Reports. Default view is today's new reports. Each row has a Copy button plus visible Review, Fixed, and Reopen actions. Select one or every visible report to update several duplicate incidents together. Copy all as AI prompt or Download .md exports every report matching the current filters with fingerprints, stack traces, diagnostics, admin notes, prompt-injection safety guidance, and authenticated status-update endpoints; IP addresses and session credentials are omitted. Configure CRASH_REPORT_SLACK_WEBHOOK_URL only on the Railway API service to post every new, non-duplicate incident to an existing Slack channel, then verify it with Send test alert. CRASH_REPORT_SLACK_MENTION can be here, channel, or a Slack user ID. Auto vs User badges show whether the report was silent capture or a shopkeeper clicking Send Report. Session expiry and form-validation toasts are not logged. Mark reports reviewed while investigating and Fixed only after the change is implemented and validated; add the PR or commit to admin notes when available.",
   },
   {
     topic: "mobile_invoice_full_billing",
@@ -366,8 +366,7 @@ async function main() {
       console.log(`  Skipping [${chunk.topic}] (already done)`);
       continue;
     }
-    const refreshing =
-      FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic);
+    const refreshing = FORCE_REFRESH.has(chunk.topic) && done.has(chunk.topic);
     process.stdout.write(
       refreshing
         ? `  Refreshing [${chunk.topic}]… `

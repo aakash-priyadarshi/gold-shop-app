@@ -31,6 +31,7 @@ describe("CrashReportsService", () => {
     findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
   };
@@ -49,6 +50,7 @@ describe("CrashReportsService", () => {
     crashReport.findFirst.mockResolvedValue(null);
     crashReport.create.mockResolvedValue(report);
     alerts.sendCrashReportAlert.mockResolvedValue({ delivered: true });
+    crashReport.updateMany.mockResolvedValue({ count: 2 });
   });
 
   it("alerts Slack only after a new incident is stored", async () => {
@@ -110,5 +112,35 @@ describe("CrashReportsService", () => {
     expect(markdown).toContain(report.errorStack);
     expect(markdown).not.toContain(report.ip);
     expect(markdown).not.toContain(report.sessionToken);
+  });
+
+  it("rejects invalid report statuses", async () => {
+    await expect(
+      service.update(report.id, { status: "done-ish" }),
+    ).rejects.toThrow("status must be one of: new, reviewed, resolved");
+
+    expect(crashReport.update).not.toHaveBeenCalled();
+  });
+
+  it("marks several selected reports fixed in one validated update", async () => {
+    await expect(
+      service.updateMany(["report-1", "report-1", "report-2"], {
+        status: "resolved",
+        adminNotes: "Fixed by PR #24",
+      }),
+    ).resolves.toEqual({ updated: 2, status: "resolved" });
+
+    expect(crashReport.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["report-1", "report-2"] } },
+      data: { status: "resolved", adminNotes: "Fixed by PR #24" },
+    });
+  });
+
+  it("rejects bulk updates without valid report ids", async () => {
+    await expect(
+      service.updateMany(["", "  "], { status: "resolved" }),
+    ).rejects.toThrow("At least one valid crash report id is required");
+
+    expect(crashReport.updateMany).not.toHaveBeenCalled();
   });
 });

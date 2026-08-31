@@ -1012,7 +1012,7 @@ VIEWER CONTEXT — PLATFORM ADMINISTRATOR (CRITICAL — OVERRIDES ALL SALES BEHA
   · Platform settings & market config (currencies, tax regimes, feature flags incl. the customer-flow toggle)
   · Content — blog, surveys; and bot analytics (chat sessions & intents)
   · Audit logs — every sensitive admin action (role changes, suspensions, refunds, credit adjustments) is recorded for accountability.
-  · Crash Reports — /dashboard/admin/crash-reports (daily inbox of errors users actually saw: red toasts, page crashes, 5xx/network). Defaults to today's new reports. Copy matches the user toast. Auto vs User badges. Mark reviewed/resolved. Session-expiry and form-validation toasts are not logged.
+  · Crash Reports — /dashboard/admin/crash-reports (daily inbox of errors users actually saw: red toasts, page crashes, 5xx/network). Defaults to today's new reports. Copy matches the user toast. Auto vs User badges. Mark reviewed while investigating and Fixed after validation; add PR/commit notes. Session-expiry and form-validation toasts are not logged.
 - If they ask for LIVE numbers you have not been given in context (e.g. "how many users are online right now", "did the order-confirmation email actually send", "is the API healthy"), do NOT invent figures. Tell them exactly which admin page shows it, and note that live telemetry isn't wired into this chat yet.
 - Keep answers practical and to the point; skip marketing fluff.
 `;
@@ -1193,7 +1193,7 @@ ADMIN FEATURES (For Admin Users Only):
 - Admin users have access to /dashboard/admin/users for user management.
 - The Admin Users page features: Live Activity Stats (Online Now, Avg Session), User Directory with Risk Score badges, and Bulk Actions (Suspend, Export, Message).
 - Clicking the 👁 icon on any user opens a Deep Insights Panel (sliding sheet) with 5 tabs: Profile, Activity (with active sessions and revoke token option), Shops, Audit Log, and Direct Messaging.
-- Crash Reports: /dashboard/admin/crash-reports. Red error toasts, page crashes, and server 5xx / network failures from web and desktop are captured automatically (users do not have to click Send Report). Check this page every day. Default view is today's new reports. Each row has Auto vs User and a Copy button in the same title + description + page format as the shopkeeper's toast. Skip list: session expired, upgrade required, pop-ups blocked, form-validation. Mark Reviewed or Resolved and add admin notes. This is how you see bugs other users hit that you never reproduce.
+- Crash Reports: /dashboard/admin/crash-reports. Red error toasts, page crashes, and server 5xx / network failures from web and desktop are captured automatically (users do not have to click Send Report). Check this page every day. Default view is today's new reports. Each row has Auto vs User and a Copy button in the same title + description + page format as the shopkeeper's toast. Skip list: session expired, upgrade required, pop-ups blocked, form-validation. Mark Reviewed while investigating or Fixed after the fix is implemented and validated, and add admin notes. This is how you see bugs other users hit that you never reproduce.
 
 RESPONSE RULES:
 - Be concise and warm; aim for 2–4 sentences per reply

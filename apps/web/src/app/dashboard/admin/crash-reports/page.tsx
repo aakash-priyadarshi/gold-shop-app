@@ -137,7 +137,13 @@ function StatusBadge({ status }: { status: string }) {
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-700"}`}
     >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {status === "resolved" ? (
+        <T>Fixed</T>
+      ) : status === "reviewed" ? (
+        <T>Reviewed</T>
+      ) : (
+        <T>New</T>
+      )}
     </span>
   );
 }
@@ -179,6 +185,9 @@ export default function CrashReportsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -201,6 +210,7 @@ export default function CrashReportsPage() {
         crashReportApi.getIntegrations().catch(() => null),
       ]);
       setReports(reportsRes.data.reports);
+      setSelectedIds(new Set());
       setTotalPages(reportsRes.data.totalPages);
       setTotal(reportsRes.data.total);
       setStats(statsRes.data);
@@ -301,18 +311,69 @@ export default function CrashReportsPage() {
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    setUpdatingIds((current) => new Set(current).add(id));
     try {
       await crashReportApi.update(id, { status: newStatus });
-      setReports((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)),
-      );
-      // Refresh stats
-      const statsRes = await crashReportApi.getStats();
-      setStats(statsRes.data);
+      toast({
+        title:
+          newStatus === "resolved"
+            ? t("Issue marked fixed")
+            : newStatus === "reviewed"
+              ? t("Issue marked reviewed")
+              : t("Issue reopened"),
+      });
+      await fetchReports();
     } catch (err) {
       console.error("Failed to update status:", err);
+      toast({
+        title: t("Status update failed"),
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
     }
   };
+
+  const handleBulkStatusChange = async (status: "reviewed" | "resolved") => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkUpdating(true);
+    try {
+      const response = await crashReportApi.updateMany(ids, { status });
+      toast({
+        title:
+          status === "resolved"
+            ? t("Selected issues marked fixed")
+            : t("Selected issues marked reviewed"),
+        description: `${response.data.updated} ${t("reports updated")}`,
+      });
+      await fetchReports();
+    } catch (err) {
+      console.error("Failed to update selected reports:", err);
+      toast({
+        title: t("Bulk status update failed"),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    reports.length > 0 && reports.every((report) => selectedIds.has(report.id));
 
   const handleSaveNotes = async (id: string) => {
     try {
@@ -461,159 +522,221 @@ export default function CrashReportsPage() {
         </div>
 
         {/* Stats cards */}
-        {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
-            {[
-              {
-                label: "Today",
-                value: stats.today ?? 0,
-                color: "text-orange-600 dark:text-orange-400",
-                onClick: () => {
-                  setTodayOnly(true);
-                  setPage(1);
+          {stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
+              {[
+                {
+                  label: "Today",
+                  value: stats.today ?? 0,
+                  color: "text-orange-600 dark:text-orange-400",
+                  onClick: () => {
+                    setTodayOnly(true);
+                    setPage(1);
+                  },
+                  active: todayOnly,
                 },
-                active: todayOnly,
-              },
-              {
-                label: "New",
-                value: stats.new,
-                color: "text-red-600 dark:text-red-400",
-                onClick: () => {
-                  setStatusFilter("new");
-                  setPage(1);
+                {
+                  label: "New",
+                  value: stats.new,
+                  color: "text-red-600 dark:text-red-400",
+                  onClick: () => {
+                    setStatusFilter("new");
+                    setPage(1);
+                  },
+                  active: statusFilter === "new",
                 },
-                active: statusFilter === "new",
-              },
-              {
-                label: "Reviewed",
-                value: stats.reviewed,
-                color: "text-yellow-600 dark:text-yellow-400",
-              },
-              {
-                label: "Resolved",
-                value: stats.resolved,
-                color: "text-green-600 dark:text-green-400",
-              },
-              {
-                label: "Total",
-                value: stats.total,
-                color: "text-gray-700 dark:text-gray-300",
-                onClick: () => {
-                  setTodayOnly(false);
-                  setStatusFilter("");
-                  setPage(1);
+                {
+                  label: "Reviewed",
+                  value: stats.reviewed,
+                  color: "text-yellow-600 dark:text-yellow-400",
+                  onClick: () => {
+                    setStatusFilter("reviewed");
+                    setPage(1);
+                  },
+                  active: statusFilter === "reviewed",
                 },
-              },
-              {
-                label: "Desktop",
-                value: stats.byPlatform?.desktop || 0,
-                color: "text-blue-600 dark:text-blue-400",
-              },
-            ].map((s) => (
-              <div
-                key={s.label}
-                role={s.onClick ? "button" : undefined}
-                onClick={s.onClick}
-                className={`rounded-xl border bg-white dark:bg-gray-900/50 p-4 ${
-                  s.onClick ? "cursor-pointer hover:border-gold-400" : ""
-                } ${
-                  s.active
-                    ? "border-gold-400 dark:border-gold-500"
-                    : "border-gray-200 dark:border-gray-800"
-                }`}
-              >
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {s.label}
-                </p>
-                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3" data-tour="crash-reports-filters">
-          <Filter className="h-4 w-4 text-gray-400" />
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
-            >
-              <option value="">All statuses</option>
-              <option value="new">New</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="resolved">Resolved</option>
-            </select>
-            <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
-          </div>
-          <div className="relative">
-            <select
-              value={platformFilter}
-              onChange={(e) => {
-                setPlatformFilter(e.target.value);
-                setPage(1);
-              }}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
-            >
-              <option value="">All platforms</option>
-              <option value="web">Web</option>
-              <option value="desktop">Desktop</option>
-            </select>
-            <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
-          </div>
-          <div className="relative">
-            <select
-              value={sourceFilter}
-              onChange={(e) => {
-                setSourceFilter(e.target.value);
-                setPage(1);
-              }}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
-            >
-              <option value="">All sources</option>
-              <option value="auto">Automatic</option>
-              <option value="user">User reported</option>
-            </select>
-            <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setTodayOnly((v) => !v);
-              setPage(1);
-            }}
-            className={`rounded-lg border px-3 py-1.5 text-sm ${
-              todayOnly
-                ? "border-gold-400 bg-gold-50 text-gold-800 dark:bg-gold-900/20 dark:text-gold-300"
-                : "border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
-          >
-            Today
-          </button>
-          {(statusFilter || platformFilter || sourceFilter || todayOnly) && (
-            <button
-              onClick={() => {
-                setStatusFilter("");
-                setPlatformFilter("");
-                setSourceFilter("");
-                setTodayOnly(false);
-                setPage(1);
-              }}
-              className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
-            >
-              <X className="h-3 w-3" /> Clear
-            </button>
+                {
+                  label: "Fixed",
+                  value: stats.resolved,
+                  color: "text-green-600 dark:text-green-400",
+                  onClick: () => {
+                    setStatusFilter("resolved");
+                    setPage(1);
+                  },
+                  active: statusFilter === "resolved",
+                },
+                {
+                  label: "Total",
+                  value: stats.total,
+                  color: "text-gray-700 dark:text-gray-300",
+                  onClick: () => {
+                    setTodayOnly(false);
+                    setStatusFilter("");
+                    setPage(1);
+                  },
+                },
+                {
+                  label: "Desktop",
+                  value: stats.byPlatform?.desktop || 0,
+                  color: "text-blue-600 dark:text-blue-400",
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  role={s.onClick ? "button" : undefined}
+                  onClick={s.onClick}
+                  className={`rounded-xl border bg-white dark:bg-gray-900/50 p-4 ${
+                    s.onClick ? "cursor-pointer hover:border-gold-400" : ""
+                  } ${
+                    s.active
+                      ? "border-gold-400 dark:border-gold-500"
+                      : "border-gray-200 dark:border-gray-800"
+                  }`}
+                >
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <T>{s.label}</T>
+                  </p>
+                  <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                </div>
+              ))}
+            </div>
           )}
-          <span className="ml-auto text-xs text-gray-400">
-            {total} report{total !== 1 ? "s" : ""}
-          </span>
-        </div>
 
-        {/* Reports list */}
+          {/* Filters */}
+          <div
+            className="flex flex-wrap items-center gap-3"
+            data-tour="crash-reports-filters"
+          >
+            <Filter className="h-4 w-4 text-gray-400" />
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
+              >
+                <option value="">{t("All statuses")}</option>
+                <option value="new">{t("New")}</option>
+                <option value="reviewed">{t("Reviewed")}</option>
+                <option value="resolved">{t("Fixed")}</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={platformFilter}
+                onChange={(e) => {
+                  setPlatformFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
+              >
+                <option value="">All platforms</option>
+                <option value="web">Web</option>
+                <option value="desktop">Desktop</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={sourceFilter}
+                onChange={(e) => {
+                  setSourceFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-gray-300"
+              >
+                <option value="">All sources</option>
+                <option value="auto">Automatic</option>
+                <option value="user">User reported</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTodayOnly((v) => !v);
+                setPage(1);
+              }}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${
+                todayOnly
+                  ? "border-gold-400 bg-gold-50 text-gold-800 dark:bg-gold-900/20 dark:text-gold-300"
+                  : "border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              <T>Today</T>
+            </button>
+            {reports.length > 0 && (
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={() =>
+                    setSelectedIds(
+                      allVisibleSelected
+                        ? new Set()
+                        : new Set(reports.map((report) => report.id)),
+                    )
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-gold-600 focus:ring-gold-500"
+                />
+                <T>Select page</T>
+              </label>
+            )}
+            {(statusFilter || platformFilter || sourceFilter || todayOnly) && (
+              <button
+                onClick={() => {
+                  setStatusFilter("");
+                  setPlatformFilter("");
+                  setSourceFilter("");
+                  setTodayOnly(false);
+                  setPage(1);
+                }}
+                className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
+              >
+                <X className="h-3 w-3" /> Clear
+              </button>
+            )}
+            <span className="ml-auto text-xs text-gray-400">
+              {total} report{total !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {selectedIds.size > 0 && (
+            <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-gold-300 bg-gold-50 p-3 shadow-sm dark:border-gold-800 dark:bg-gold-950/30">
+              <span className="mr-2 text-sm font-semibold text-gold-900 dark:text-gold-200">
+                {selectedIds.size} <T>selected</T>
+              </span>
+              <button
+                type="button"
+                onClick={() => handleBulkStatusChange("reviewed")}
+                disabled={bulkUpdating}
+                className="rounded-lg border border-yellow-300 bg-white px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 disabled:opacity-50 dark:border-yellow-800 dark:bg-gray-900 dark:text-yellow-300"
+              >
+                <T>Mark reviewed</T>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkStatusChange("resolved")}
+                disabled={bulkUpdating}
+                className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                <T>Mark fixed</T>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={bulkUpdating}
+                className="ml-auto rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-white/70 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-900"
+              >
+                <T>Clear selection</T>
+              </button>
+            </div>
+          )}
+
+          {/* Reports list */}
         <div className="space-y-3" data-tour="crash-reports-list">
           {loading && reports.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
@@ -632,55 +755,99 @@ export default function CrashReportsPage() {
                 className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 overflow-hidden"
               >
                 {/* Row summary */}
-                <div
-                  className="flex items-start gap-4 p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() =>
-                    setExpandedId(expandedId === report.id ? null : report.id)
-                  }
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <StatusBadge status={report.status} />
-                      <PlatformBadge platform={report.platform} />
-                      <span
-                        className={`text-xs px-1.5 py-0.5 rounded ${
-                          report.userTriggered
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                        }`}
-                      >
-                        {report.userTriggered ? "User" : "Auto"}
-                      </span>
-                      {report.frustrationType && (
-                        <span className="text-xs text-gray-400">
-                          {report.frustrationType}
+                  <div
+                    className="flex items-start gap-4 p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    onClick={() =>
+                      setExpandedId(expandedId === report.id ? null : report.id)
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(report.id)}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={() => toggleSelected(report.id)}
+                      aria-label={t("Select crash report")}
+                      className="mt-1 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-gold-600 focus:ring-gold-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <StatusBadge status={report.status} />
+                        <PlatformBadge platform={report.platform} />
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded ${
+                            report.userTriggered
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                          }`}
+                        >
+                          {report.userTriggered ? "User" : "Auto"}
                         </span>
-                      )}
-                      {report.userRole && report.userRole !== "guest" && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                          {report.userRole}
+                        {report.frustrationType && (
+                          <span className="text-xs text-gray-400">
+                            {report.frustrationType}
+                          </span>
+                        )}
+                        {report.userRole && report.userRole !== "guest" && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                            {report.userRole}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {timeAgo(report.createdAt)}
                         </span>
-                      )}
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {timeAgo(report.createdAt)}
-                      </span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {report.errorMessage}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        Page: {report.page}
+                        {report.userAction && ` · ${report.userAction}`}
+                      </p>
                     </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {report.errorMessage}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                      Page: {report.page}
-                      {report.userAction && ` · ${report.userAction}`}
-                    </p>
+                    <div
+                      className="flex flex-shrink-0 items-center gap-2"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {report.status === "new" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleStatusChange(report.id, "reviewed")
+                          }
+                          disabled={updatingIds.has(report.id)}
+                          className="hidden rounded-lg border border-yellow-300 px-2.5 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-50 disabled:opacity-50 sm:inline-flex dark:border-yellow-800 dark:text-yellow-300"
+                        >
+                          <T>Review</T>
+                        </button>
+                      )}
+                      {report.status !== "resolved" ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleStatusChange(report.id, "resolved")
+                          }
+                          disabled={updatingIds.has(report.id)}
+                          className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                        >
+                          <T>Fixed</T>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(report.id, "new")}
+                          disabled={updatingIds.has(report.id)}
+                          className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
+                          <T>Reopen</T>
+                        </button>
+                      )}
+                      <CopyTextButton text={formatAdminCopy(report)} />
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <CopyTextButton text={formatAdminCopy(report)} />
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
 
-                {/* Expanded details */}
+                  {/* Expanded details */}
                 {expandedId === report.id && (
                   <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 p-4 space-y-4">
                     {/* Error message */}
@@ -833,20 +1000,28 @@ export default function CrashReportsPage() {
                         Set status:
                       </span>
                       {["new", "reviewed", "resolved"].map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => handleStatusChange(report.id, s)}
+                            disabled={
+                              report.status === s || updatingIds.has(report.id)
+                            }
+                            className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
+                              report.status === s
+                                ? "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-default"
+                                : "border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            }`}
+                          >
+                            {s === "resolved" ? (
+                              <T>Fixed</T>
+                            ) : s === "reviewed" ? (
+                              <T>Reviewed</T>
+                            ) : (
+                              <T>New</T>
+                            )}
+                          </button>
+                        ))}
                         <button
-                          key={s}
-                          onClick={() => handleStatusChange(report.id, s)}
-                          disabled={report.status === s}
-                          className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-                            report.status === s
-                              ? "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-default"
-                              : "border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                          }`}
-                        >
-                          {s.charAt(0).toUpperCase() + s.slice(1)}
-                        </button>
-                      ))}
-                      <button
                         onClick={() => handleDelete(report.id)}
                         className="ml-auto p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
                         title="Delete report"

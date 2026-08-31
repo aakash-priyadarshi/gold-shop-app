@@ -64,7 +64,12 @@ export class CrashReportsController {
       limit: limit ? parseInt(limit, 10) : 50,
       status,
       platform,
-      userTriggered: userTriggered === "true" ? true : userTriggered === "false" ? false : undefined,
+      userTriggered:
+        userTriggered === "true"
+          ? true
+          : userTriggered === "false"
+            ? false
+            : undefined,
       since,
     });
   }
@@ -134,6 +139,21 @@ export class CrashReportsController {
       `attachment; filename="orivraa-crash-reports-${date}.md"`,
     );
     return this.crashReportsService.getMarkdownExport(query);
+  }
+
+  /** Update several reports from the admin triage queue. */
+  @Patch("bulk/status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async updateMany(
+    @Body()
+    body: {
+      ids: string[];
+      status?: string;
+      adminNotes?: string;
+    },
+  ) {
+    return this.crashReportsService.updateMany(body.ids, body);
   }
 
   /** Get a single report */
