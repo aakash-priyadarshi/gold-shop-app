@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { T } from "@/components/ui/T";
 import {
   Hammer,
@@ -358,6 +359,7 @@ export default function JewelleryManufacturingSoftwarePage() {
           </div>
         </section>
       </main>
+      <AiDiscoverySection />
       <DynamicFooter />
     </>
   );

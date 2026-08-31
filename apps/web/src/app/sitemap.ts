@@ -165,6 +165,16 @@ const ROUTE_OVERRIDES: Record<string, RouteMeta> = {
     changeFrequency: "monthly",
     priority: 0.8,
   },
+  "/ask-ai": {
+    changeFrequency: "weekly",
+    priority: 0.85,
+    lastModified: new Date("2026-09-01"),
+  },
+  "/ai-integration": {
+    changeFrequency: "weekly",
+    priority: 0.85,
+    lastModified: new Date("2026-09-01"),
+  },
   "/partner": {
     changeFrequency: "monthly",
     priority: 0.7,
@@ -436,6 +446,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   return [
+    {
+      url: `${BASE_URL}/llms.txt`,
+      lastModified: new Date("2026-09-01"),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
     ...staticPages,
     ...localizedAboutPages,
     ...localizedTutorialPages,

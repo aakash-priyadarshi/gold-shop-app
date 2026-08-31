@@ -29,8 +29,9 @@ const INTEREST_OPTIONS = [
   "AI Sales Team",
   "Enterprise / Multi-branch",
   "POS & Billing",
-  "Custom Integration",
-  "Partnership",
+    "Custom Integration",
+    "Seller AI / MCP",
+    "Partnership",
   "Other",
 ];
 

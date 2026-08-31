@@ -1,6 +1,7 @@
 "use client";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { FaqSection } from "@/components/ui/FaqSection";
 import {
     BUYER_COUNTRY_COUNT,
@@ -558,6 +559,7 @@ export default function JewelleryEcommerceSoftwarePage() {
           </div>
         </section>
       </main>
+      <AiDiscoverySection />
       <DynamicFooter />
     </>
   );

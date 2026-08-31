@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import {
     RegionalPricingSnapshot,
 } from "@/components/marketing/RegionalPricingSnapshot";
@@ -709,6 +710,7 @@ export default function JewelleryPosSoftwarePage() {
           </div>
         </section>
       </main>
+      <AiDiscoverySection />
       <DynamicFooter />
     </>
   );

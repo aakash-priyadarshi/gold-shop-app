@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { T } from "@/components/ui/T";
 import { subscriptionPlansApi } from "@/lib/api";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
@@ -599,6 +600,18 @@ const FAQS = [
   {
     q: "Does Orivraa have karigar (artisan) management?",
     a: "Yes. Orivraa includes karigar (artisan) metal and wastage tracking, job cards, and supply-chain workflows alongside POS and inventory — so gold issued to karigars and returned wastage stay audit-ready without a separate ERP.",
+  },
+  {
+    q: "Can I ask ChatGPT or Claude if Orivraa is right for my jewellery shop?",
+    a: "Yes. Open /ask-ai and choose ChatGPT, Claude, Gemini, or Perplexity. The link sends the question “How is Orivraa for jewellery business software?” plus our public product URLs. On a phone it opens the AI app when installed; on a computer it opens the website.",
+  },
+  {
+    q: "Can I connect ChatGPT or Claude to my jewellery inventory?",
+    a: "Yes. Create a seller AI integration key, choose scopes such as inventory:read, inventory:write, orders:read, or orders:write, and rotate or revoke it any time. Every AI write is audit-logged. MCP tools cannot take a payment or issue a refund without an extra confirmation step. See /ai-integration.",
+  },
+  {
+    q: "Is Orivraa a brand-new jewellery company?",
+    a: "The cloud product is new. The people behind Orivraa spent more than ten years serving jewellery customers in person. In January 2026 we brought that shop-floor practice online as cloud software you can open on a phone or laptop.",
   },
 ];
 
@@ -1349,6 +1362,7 @@ export default function JewelleryShopSoftwarePage() {
         </section>
       </main>
 
+      <AiDiscoverySection />
       <DynamicFooter />
     </div>
   );

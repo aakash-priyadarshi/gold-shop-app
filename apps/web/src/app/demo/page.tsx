@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { ArrowRight, PlayCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -166,6 +167,7 @@ export default function DemoPage() {
         </p>
       </section>
 
+      <AiDiscoverySection />
       <DynamicFooter />
     </div>
   );

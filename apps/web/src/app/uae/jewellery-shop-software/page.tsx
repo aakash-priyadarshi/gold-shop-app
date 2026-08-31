@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { FaqSection } from "@/components/ui/FaqSection";
 import { T } from "@/components/ui/T";
 import {
@@ -587,6 +588,7 @@ export default function UAEJewelleryShopSoftwarePage() {
           </div>
         </section>
       </main>
+      <AiDiscoverySection />
       <DynamicFooter />
     </div>
   );

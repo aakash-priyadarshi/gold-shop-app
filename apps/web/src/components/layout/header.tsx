@@ -77,6 +77,7 @@ import {
   DocumentTextIcon,
   HeartIcon,
   InformationCircleIcon,
+  KeyIcon,
   MapPinIcon,
   ShieldCheckIcon,
   ShoppingBagIcon,
@@ -432,6 +433,18 @@ export function Header() {
       href: "/support",
       icon: ChatBubbleLeftRightIcon,
       desc: "Get onboarding, billing, and product help",
+    },
+    {
+      name: "Ask AI about Orivraa",
+      href: "/ask-ai",
+      icon: SparklesIcon,
+      desc: "ChatGPT, Claude, Gemini, or Perplexity",
+    },
+    {
+      name: "Seller AI keys & MCP",
+      href: "/ai-integration",
+      icon: KeyIcon,
+      desc: "Scoped inventory and order tools for your shop AI",
     },
   ];
 
