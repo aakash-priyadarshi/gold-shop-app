@@ -419,8 +419,11 @@ export class FxRatesService implements OnModuleInit {
       maxRetries: 3,
     });
 
-    const { rates, date } = response.data;
-    const updatedAt = new Date(date).toISOString();
+    const { rates } = response.data;
+    // Provider responses are daily reference rates.  Their effective date can
+    // legitimately be the prior business day over a weekend or bank holiday,
+    // so use the successful fetch time for quote freshness and cache expiry.
+    const updatedAt = new Date().toISOString();
 
     if (!rates.INR) {
       throw new Error(`Missing INR rate in Frankfurter response`);
@@ -479,8 +482,10 @@ export class FxRatesService implements OnModuleInit {
       maxRetries: 2, // Fewer retries for fallback
     });
 
-    const { rates, date } = response.data;
-    const updatedAt = new Date(date).toISOString();
+    const { rates } = response.data;
+    // See the primary provider: a daily reference date is not the age of this
+    // successfully fetched quote.
+    const updatedAt = new Date().toISOString();
 
     if (!rates.INR) {
       throw new Error(`Missing INR rate in ExchangeRate.host response`);
@@ -602,8 +607,8 @@ export class FxRatesService implements OnModuleInit {
         maxRetries: 3,
       });
 
-      const { rates, date } = response.data;
-      const updatedAt = new Date(date).toISOString();
+      const { rates } = response.data;
+      const updatedAt = new Date().toISOString();
 
       const usdAed = rates.AED || this.fallbackUsdAed;
       const usdGbp = rates.GBP || this.fallbackUsdGbp;
@@ -653,8 +658,8 @@ export class FxRatesService implements OnModuleInit {
         maxRetries: 2,
       });
 
-      const { rates, date } = response.data;
-      const updatedAt = new Date(date).toISOString();
+      const { rates } = response.data;
+      const updatedAt = new Date().toISOString();
 
       return {
         ...baseSnapshot,

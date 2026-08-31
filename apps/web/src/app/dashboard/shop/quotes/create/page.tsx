@@ -115,28 +115,21 @@ const COUNTRY_CODES = [
   { code: "+81", country: "Japan", flagCode: null },
 ];
 
-interface CustomerLookupResult {
-  found: boolean;
-  customer: {
-    id: string;
-    name: string;
-    phone: string;
-    phoneCountryCode: string;
-    email?: string;
-    address: string;
-    city: string;
-    country: string;
-    isRegistered?: boolean;
-    recentOrders?: Array<{
-      id: string;
-      quoteNumber: string;
-      jewelleryType: string;
-      totalPriceNpr?: number;
-      status: string;
-      createdAt: string;
-    }>;
-  } | null;
-  source: "cache" | "database" | null;
+interface CustomerSuggestion {
+  id: string;
+  name: string;
+  phone: string;
+  phoneCountryCode: string;
+  email?: string | null;
+  address: string;
+  city: string;
+  country: string;
+  isRegistered?: boolean;
+}
+
+interface CustomerSearchResult {
+  customers: CustomerSuggestion[];
+  count: number;
 }
 
 interface MarketRates {
@@ -169,12 +162,11 @@ export default function CreateShopQuotePage() {
   );
 
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupResult, setLookupResult] = useState<CustomerLookupResult | null>(
-    null,
-  );
-  const [showReturningCustomerAlert, setShowReturningCustomerAlert] =
-    useState(false);
+  const [customerSuggestions, setCustomerSuggestions] = useState<
+    CustomerSuggestion[]
+  >([]);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const customerSearchRequestRef = useRef(0);
 
   const [customerDetails, setCustomerDetails] = useState({
     name: "",
@@ -402,58 +394,92 @@ export default function CreateShopQuotePage() {
     onError: (err) => setError(`Image upload failed: ${err}`),
   });
 
-  const lookupCustomer = useCallback(
-    async (phoneCountryCode: string, phone: string) => {
-      if (phone.length < 7) {
-        setLookupResult(null);
-        setShowReturningCustomerAlert(false);
+  const lookupCustomerSuggestions = useCallback(
+    async (phoneCountryCode: string, phone: string, requestId: number) => {
+      if (phone.length < 3) {
+        if (requestId === customerSearchRequestRef.current) {
+          setCustomerSuggestions([]);
+          setIsLookingUp(false);
+        }
         return;
       }
+
       setIsLookingUp(true);
       try {
-        const response = await shopQuotesApi.lookupCustomer({
+        const response = await shopQuotesApi.searchCustomers({
           phoneCountryCode,
           phone,
         });
-        const result = response.data as CustomerLookupResult;
-        setLookupResult(result);
-        if (result.found && result.customer)
-          setShowReturningCustomerAlert(true);
+        if (requestId === customerSearchRequestRef.current) {
+          setCustomerSuggestions(
+            (response.data as CustomerSearchResult).customers || [],
+          );
+        }
       } catch {
-        setLookupResult(null);
+        if (requestId === customerSearchRequestRef.current) {
+          setCustomerSuggestions([]);
+        }
       } finally {
-        setIsLookingUp(false);
+        if (requestId === customerSearchRequestRef.current) {
+          setIsLookingUp(false);
+        }
       }
+    },
+    [],
+  );
+
+  const scheduleCustomerLookup = useCallback(
+    (phoneCountryCode: string, phone: string) => {
+      if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
+
+      const requestId = ++customerSearchRequestRef.current;
+      if (phone.length < 3) {
+        setCustomerSuggestions([]);
+        setIsLookingUp(false);
+        return;
+      }
+
+      // Do not leave results for an older prefix selectable while the next
+      // debounced request is still pending.
+      setCustomerSuggestions([]);
+      setIsLookingUp(true);
+      phoneDebounceRef.current = setTimeout(() => {
+        void lookupCustomerSuggestions(phoneCountryCode, phone, requestId);
+      }, 300);
+    },
+    [lookupCustomerSuggestions],
+  );
+
+  useEffect(
+    () => () => {
+      if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
+      customerSearchRequestRef.current += 1;
     },
     [],
   );
 
   const handlePhoneChange = (phone: string) => {
     setCustomerDetails((prev) => ({ ...prev, phone }));
-    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
-    phoneDebounceRef.current = setTimeout(() => {
-      lookupCustomer(customerDetails.phoneCountryCode, phone);
-    }, 500);
+    scheduleCustomerLookup(customerDetails.phoneCountryCode, phone);
   };
 
-  const handleAutoFillCustomer = () => {
-    if (lookupResult?.customer) {
-      const c = lookupResult.customer;
-      setCustomerDetails({
-        name: c.name,
-        phoneCountryCode: c.phoneCountryCode,
-        phone: c.phone.replace(c.phoneCountryCode, ""),
-        email: c.email || "",
-        address: c.address,
-        city: c.city,
-        country: c.country,
-      });
-      setShowReturningCustomerAlert(false);
-      toast({
-        title: t("Customer details auto-filled"),
-        description: t("Welcome back") + `, ${c.name}!`,
-      });
-    }
+  const handleAutoFillCustomer = (customer: CustomerSuggestion) => {
+    const phone = customer.phone.startsWith(customer.phoneCountryCode)
+      ? customer.phone.slice(customer.phoneCountryCode.length)
+      : customer.phone;
+    customerSearchRequestRef.current += 1;
+    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
+    setCustomerDetails({
+      name: customer.name,
+      phoneCountryCode: customer.phoneCountryCode,
+      phone,
+      email: customer.email || "",
+      address: customer.address,
+      city: customer.city,
+      country: customer.country,
+    });
+    setCustomerSuggestions([]);
+    setIsLookingUp(false);
   };
 
   const handleReferenceImageUpload = async (
@@ -1091,87 +1117,6 @@ export default function CreateShopQuotePage() {
             </Alert>
           )}
 
-          {showReturningCustomerAlert && lookupResult?.customer && (
-            <Alert
-              className={
-                lookupResult.customer.isRegistered
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-green-500 bg-green-50"
-              }
-            >
-              <UserCheck
-                className={`h-4 w-4 ${lookupResult.customer.isRegistered ? "text-blue-600" : "text-green-600"}`}
-              />
-              <AlertTitle
-                className={
-                  lookupResult.customer.isRegistered
-                    ? "text-blue-800"
-                    : "text-green-800"
-                }
-              >
-                {lookupResult.customer.isRegistered
-                  ? t("Registered Customer Found!")
-                  : t("Returning Customer Found!")}
-              </AlertTitle>
-              <AlertDescription
-                className={
-                  lookupResult.customer.isRegistered
-                    ? "text-blue-700"
-                    : "text-green-700"
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <span>
-                    Is this <strong>{lookupResult.customer.name}</strong>
-                    {lookupResult.customer.isRegistered && (
-                      <Badge
-                        variant="outline"
-                        className="ml-2 text-xs border-blue-400 text-blue-700"
-                      >
-                        <T>Registered Account</T>
-                      </Badge>
-                    )}
-                    {lookupResult.customer.city
-                      ? ` from ${lookupResult.customer.city}`
-                      : ""}
-                    ?
-                  </span>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleAutoFillCustomer}>
-                      <Check className="h-4 w-4 mr-1" /> <T>Yes, auto-fill</T>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowReturningCustomerAlert(false)}
-                    >
-                      <T>No, new customer</T>
-                    </Button>
-                  </div>
-                </div>
-                {lookupResult.customer.recentOrders &&
-                  lookupResult.customer.recentOrders.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-green-200">
-                      <p className="text-xs mb-1"><T>Recent orders:</T></p>
-                      <div className="flex flex-wrap gap-1">
-                        {lookupResult.customer.recentOrders
-                          .slice(0, 3)
-                          .map((order) => (
-                            <Badge
-                              key={order.id}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {order.quoteNumber} - {order.jewelleryType}
-                            </Badge>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Step 1: Customer */}
           {step === 1 && (
             <Card>
@@ -1194,8 +1139,7 @@ export default function CreateShopQuotePage() {
                           ...prev,
                           phoneCountryCode: value,
                         }));
-                        if (customerDetails.phone.length >= 7)
-                          lookupCustomer(value, customerDetails.phone);
+                        scheduleCustomerLookup(value, customerDetails.phone);
                       }}
                     >
                       <SelectTrigger>
@@ -1230,16 +1174,48 @@ export default function CreateShopQuotePage() {
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         </div>
                       )}
-                      {lookupResult?.found && !showReturningCustomerAlert && (
+                      {customerSuggestions.length > 0 && !isLookingUp && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
                           <UserCheck className="h-4 w-4 text-green-500" />
                         </div>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      <T>Enter phone to check for returning customer</T>
+                      <T>Start typing a phone number to find returning customers</T>
                     </p>
                   </div>
+                  {customerSuggestions.length > 0 && (
+                    <div className="col-span-3 rounded-md border bg-background divide-y overflow-hidden">
+                      <p className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/50">
+                        <T>Matching customers</T>
+                      </p>
+                      {customerSuggestions.map((customer) => (
+                        <button
+                          key={`${customer.isRegistered ? "registered" : "walk-in"}-${customer.id}`}
+                          type="button"
+                          className="w-full px-3 py-2 text-left hover:bg-muted flex items-center justify-between gap-3"
+                          onClick={() => handleAutoFillCustomer(customer)}
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium truncate">
+                              {customer.name}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {customer.phone}
+                              {customer.city ? ` · ${customer.city}` : ""}
+                            </span>
+                          </span>
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            {customer.isRegistered ? (
+                              <T>Registered</T>
+                            ) : (
+                              <T>Walk-in</T>
+                            )}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label><T>Full Name *</T></Label>
