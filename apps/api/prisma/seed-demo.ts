@@ -4,11 +4,12 @@
  * Creates demo accounts for Y Combinator application demo.
  * These accounts have emailVerified=true so they can log in immediately.
  *
- * Usage: npx tsx prisma/seed-demo.ts
+ * Usage (disposable test databases only):
+ *   NODE_ENV=test SEED_DEMO_PASSWORD=<random-password> npx tsx prisma/seed-demo.ts
  *
  * Accounts created:
- *   - demo-customer@orivraa.com  / Demo@2026  (CUSTOMER)
- *   - demo-shop@orivraa.com      / Demo@2026  (SHOPKEEPER)
+ *   - demo-customer@orivraa.com  (CUSTOMER)
+ *   - demo-shop@orivraa.com      (SHOPKEEPER)
  *
  */
 
@@ -16,8 +17,6 @@ import { PrismaClient, UserRole, UserStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
-
-const PASSWORD = "Demo@2026";
 
 const DEMO_ACCOUNTS = [
   {
@@ -37,16 +36,18 @@ const DEMO_ACCOUNTS = [
 ];
 
 async function main() {
-  console.log("🎯 Creating YC Demo accounts...\n");
-
-  // Fail fast in production if the seed password is not provided via env var.
-  if (process.env.NODE_ENV === "production" && !process.env.SEED_DEMO_PASSWORD) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("Refusing to seed demo accounts outside NODE_ENV=test.");
+  }
+  const password = process.env.SEED_DEMO_PASSWORD;
+  if (!password || password.length < 16) {
     throw new Error(
-      "Refusing to seed demo accounts in production without SEED_DEMO_PASSWORD env var.",
+      "SEED_DEMO_PASSWORD must be a random value of at least 16 characters.",
     );
   }
 
-  const passwordHash = await bcrypt.hash(PASSWORD, 12);
+  console.log("🎯 Creating disposable demo accounts...\n");
+  const passwordHash = await bcrypt.hash(password, 12);
 
   for (const account of DEMO_ACCOUNTS) {
     const user = await prisma.user.upsert({

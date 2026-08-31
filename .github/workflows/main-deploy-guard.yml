@@ -1,5 +1,6 @@
-# Deploy Guard Pipeline
-# Runs on pushes to main - ensures safe deployments to Railway (API + Web)
+# Pre-deploy validation for Railway. Railway's Wait for CI setting can safely
+# wait for this workflow because deployment verification happens separately in
+# Post-Deploy Critical Checks.
 
 name: Deploy Guard
 
@@ -9,40 +10,33 @@ on:
 
 permissions:
   contents: read
-  deployments: write
 
 env:
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
   PNPM_VERSION: "10.27.0"
-  API_URL: ${{ secrets.PRODUCTION_API_URL }}
 
 concurrency:
   group: deploy-main
-  cancel-in-progress: false # Don't cancel in-progress deploys
+  cancel-in-progress: false
 
 jobs:
-  # ══════════════════════════════════════════════════════════
-  # Pre-deploy Validation
-  # ══════════════════════════════════════════════════════════
   validate:
     name: 🔐 Pre-Deploy Validation
     runs-on: ubuntu-latest
     outputs:
       has_migrations: ${{ steps.check-migrations.outputs.has_migrations }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          fetch-depth: 2 # Get previous commit for diff
+          fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v5
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
@@ -54,53 +48,50 @@ jobs:
         working-directory: packages/shared
         run: pnpm build
 
-      - name: Generate Prisma Client
-        working-directory: apps/api
-        run: npx prisma generate
-
-      - name: Validate Prisma Schema
+      - name: Generate and validate Prisma Client
         working-directory: apps/api
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
-        run: npx prisma validate
+        run: |
+          npx prisma generate
+          npx prisma validate
 
-      - name: Build API (verify it compiles)
+      - name: Build API
         working-directory: apps/api
         run: pnpm build
 
       - name: Check for migrations in this push
         id: check-migrations
         run: |
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD -- apps/api/prisma/migrations/)
-          if [[ -n "$CHANGED_FILES" ]]; then
-            echo "has_migrations=true" >> $GITHUB_OUTPUT
-            echo "::notice::🗃️ New migrations detected - will run migrate deploy"
+          BEFORE="${{ github.event.before }}"
+          if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            BEFORE="HEAD~1"
+          fi
+          CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- apps/api/prisma/migrations/)
+          if [[ -n "$CHANGED" ]]; then
+            echo "has_migrations=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::New migrations detected"
           else
-            echo "has_migrations=false" >> $GITHUB_OUTPUT
+            echo "has_migrations=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # ══════════════════════════════════════════════════════════
-  # Database Migration (runs before deploy)
-  # ══════════════════════════════════════════════════════════
   migrate:
-    name: 🗃️ Run Database Migrations
+    name: 🗃️ Backup and Run Migrations
     runs-on: ubuntu-latest
     needs: validate
     if: needs.validate.outputs.has_migrations == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v5
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
@@ -112,13 +103,13 @@ jobs:
         working-directory: apps/api
         run: npx prisma generate
 
-      - name: Install AWS CLI (for R2 upload)
+      - name: Install AWS CLI
         run: |
           if ! command -v aws >/dev/null 2>&1; then
             pip install --quiet awscli
           fi
 
-      - name: Pre-migration database backup (required)
+      - name: Required pre-migration backup
         working-directory: apps/api
         env:
           DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
@@ -130,185 +121,35 @@ jobs:
           chmod +x scripts/pre-migrate-backup.sh
           ./scripts/pre-migrate-backup.sh
 
-      - name: Run Migrations
+      - name: Deploy migrations
         working-directory: apps/api
-        run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL || secrets.DATABASE_URL }}
+        run: npx prisma migrate deploy
 
-      - name: Migration Success Notification
-        if: success()
-        run: |
-          echo "::notice::✅ Database migrations completed successfully"
-
-      - name: Migration Failure Alert
-        if: failure()
-        run: |
-          echo "::error::❌ DATABASE MIGRATION FAILED!"
-          echo "::error::Production database may be in an inconsistent state."
-          echo "::error::Check migration logs and consider manual intervention."
-
-  # ══════════════════════════════════════════════════════════
-  # Railway Deploy (API + Web)
-  # Both @gold-shop/api and @gold-shop/web auto-deploy from main via watchPatterns.
-  # API-only commits skip web deploy; web-only commits skip API deploy — both are expected.
-  # ══════════════════════════════════════════════════════════
-  monitor-railway-deploy:
-    name: 🚂 Monitor Railway Deploy
+  deploy-summary:
+    name: 📋 Pre-Deploy Summary
     runs-on: ubuntu-latest
     needs: [validate, migrate]
-    if: always() && needs.validate.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
-    steps:
-      - name: Wait for Railway deployment
-        run: |
-          echo "::notice::Railway auto-deploys from main branch"
-          echo "Waiting 60 seconds for deployment to start..."
-          sleep 60
-
-      - name: Health Check - Initial
-        id: health-initial
-        run: |
-          MAX_RETRIES=10
-          RETRY_DELAY=30
-
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Health check attempt $i of $MAX_RETRIES..."
-            
-            HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/api/health" || echo "000")
-            
-            if [[ "$HEALTH_RESPONSE" == "200" ]]; then
-              echo "::notice::✅ Health check passed!"
-              exit 0
-            fi
-            
-            echo "Health check returned: $HEALTH_RESPONSE"
-            
-            if [[ $i -lt $MAX_RETRIES ]]; then
-              echo "Retrying in ${RETRY_DELAY}s..."
-              sleep $RETRY_DELAY
-            fi
-          done
-
-          echo "::error::❌ Health check failed after $MAX_RETRIES attempts"
-          exit 1
-        continue-on-error: true
-        env:
-          API_URL: ${{ secrets.PRODUCTION_API_URL }}
-
-  # ══════════════════════════════════════════════════════════
-  # Post-Deploy: Clear Stale Cache
-  # ══════════════════════════════════════════════════════════
-  clear-cache:
-    name: 🧹 Clear Metal Rate Cache
-    runs-on: ubuntu-latest
-    needs: monitor-railway-deploy
-    if: always() && needs.monitor-railway-deploy.result == 'success'
-    steps:
-      - name: Clear Market Rate Cache
-        run: |
-          echo "::notice::Clearing metal rate cache..."
-
-          # Call the admin endpoint to refresh market rates
-          RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "${{ env.API_URL }}/api/market-rates/refresh" \
-            -d '{"region": "NP", "currency": "NPR"}')
-
-          echo "Cache refresh response: $RESPONSE"
-
-          if [[ "$RESPONSE" == *"error"* ]]; then
-            echo "::warning::Cache refresh may have issues, but deploy continues"
-          else
-            echo "::notice::✅ Market rate cache refreshed"
-          fi
-        continue-on-error: true
-        env:
-          API_URL: ${{ secrets.PRODUCTION_API_URL }}
-
-  # ══════════════════════════════════════════════════════════
-  # Smoke Tests
-  # ══════════════════════════════════════════════════════════
-  smoke-tests:
-    name: 💨 Smoke Tests
-    runs-on: ubuntu-latest
-    needs: [monitor-railway-deploy, clear-cache]
-    if: always() && needs.monitor-railway-deploy.result == 'success'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run Smoke Tests
-        run: |
-          # Basic endpoint checks
-          echo "Testing critical endpoints..."
-
-          # Health endpoint
-          curl -f "${{ env.API_URL }}/api/health" || echo "Health endpoint not available"
-
-          # Market rates endpoint (public)
-          RATES=$(curl -s "${{ env.API_URL }}/api/market-rates?region=NP&currency=NPR")
-          echo "Market rates response: $RATES"
-
-          if [[ "$RATES" == *"gold24k"* ]]; then
-            echo "::notice::✅ Market rates endpoint working"
-          else
-            echo "::warning::Market rates response may be unexpected"
-          fi
-
-          # Auth endpoint (should return 401 without token)
-          AUTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/api/auth/profile")
-          if [[ "$AUTH_CHECK" == "401" ]]; then
-            echo "::notice::✅ Auth protection working"
-          else
-            echo "::warning::Auth endpoint returned unexpected status: $AUTH_CHECK"
-          fi
-        continue-on-error: true
-        env:
-          API_URL: ${{ secrets.PRODUCTION_API_URL }}
-
-  # ══════════════════════════════════════════════════════════
-  # Deploy Summary
-  # ══════════════════════════════════════════════════════════
-  deploy-summary:
-    name: 📋 Deploy Summary
-    runs-on: ubuntu-latest
-    needs: [validate, migrate, monitor-railway-deploy, clear-cache, smoke-tests]
     if: always()
     steps:
-      - name: Generate Summary
+      - name: Write summary
         run: |
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Validation | ${{ needs.validate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Migrations | ${{ needs.migrate.result == 'success' && '✅' || needs.migrate.result == 'skipped' && '⏭️ Skipped' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Railway Deploy | ${{ needs.monitor-railway-deploy.result == 'success' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Cache Clear | ${{ needs.clear-cache.result == 'success' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Smoke Tests | ${{ needs.smoke-tests.result == 'success' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
-          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Pre-deploy guard" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Stage | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Validation | ${{ needs.validate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migration | ${{ needs.migrate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Notify on Critical Failure
-        if: needs.validate.result == 'failure' || needs.migrate.result == 'failure'
+      - name: Alert and fail on a critical error
+        if: needs.validate.result != 'success' || (needs.migrate.result != 'success' && needs.migrate.result != 'skipped')
         run: |
-          echo "::error::🚨 CRITICAL DEPLOYMENT FAILURE"
-          echo "::error::Manual intervention may be required"
+          jq -n \
+            --arg message "Pre-deploy guard failed for commit ${{ github.sha }} (validation=${{ needs.validate.result }}, migration=${{ needs.migrate.result }})" \
+            --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Pre-deploy validation and migration",frustrationType:"deployment"}' \
+            | curl -fsS -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @- || true
           exit 1

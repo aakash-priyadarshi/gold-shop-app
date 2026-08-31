@@ -124,8 +124,13 @@ async function main() {
         console.log(
           `   Response (first 200 chars): ${preflight.body.substring(0, 200)}`,
         );
+        if (process.env.STRICT_SMOKE === "true") {
+          throw new Error(
+            "Strict smoke checks cannot pass while the target is blocked by the CDN/WAF",
+          );
+        }
         console.log("   Skipping all tests.");
-        process.exit(0); // exit success — not a code bug
+        process.exit(0); // optional local monitor mode only
       }
       // If JSON 403, it's the NestJS security guard — continue with tests
       console.log(

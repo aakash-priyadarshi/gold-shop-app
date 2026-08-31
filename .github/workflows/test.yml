@@ -2,13 +2,9 @@
 # Tests against PRODUCTION servers (api.orivraa.com / www.orivraa.com)
 # No need to build or start local servers — everything runs online.
 
-name: Test Suite
+name: Production Monitor
 
 on:
-  push:
-    branches: [main, master, develop]
-  pull_request:
-    branches: [main, master, develop]
   workflow_dispatch: # manual trigger from GitHub UI
   schedule:
     - cron: "0 6 * * *" # daily at 6:00 UTC — monitors production health
@@ -18,7 +14,7 @@ permissions:
   checks: write
 
 env:
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
   PNPM_VERSION: "10.27.0"
   # Production URLs — all tests run against these
   API_URL: "https://api.orivraa.com"
@@ -121,6 +117,7 @@ jobs:
         run: pnpm smoke-test:full
         env:
           SMOKE_TEST_URL: "https://api.orivraa.com/api"
+          STRICT_SMOKE: "true"
 
   seller-api:
     name: Seller API pipeline (Production)
@@ -149,14 +146,17 @@ jobs:
           key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Authenticated seller API pipeline
-        continue-on-error: true
-        run: node e2e/scripts/api-core-pipeline.mjs
+        run: |
+          if [[ -z "${{ secrets.SHOP_SMOKE_TOKEN }}" ]]; then
+            echo "::error::SHOP_SMOKE_TOKEN is required for the production seller monitor"
+            exit 1
+          fi
+          node e2e/scripts/api-core-pipeline.mjs
         env:
           E2E_API_URL: "https://api.orivraa.com/api"
           E2E_TOKEN: ${{ secrets.SHOP_SMOKE_TOKEN }}
 
       - name: Admin seller-core probe
-        continue-on-error: true
         run: |
           TOKEN="${{ secrets.ORIVRAA_ADMIN_TOKEN }}"
           if [ -z "$TOKEN" ]; then
@@ -241,7 +241,7 @@ jobs:
   # ══════════════════════════════════════════════════════════
   test-summary:
     name: 📊 Test Summary
-    needs: [smoke-tests, e2e-tests]
+    needs: [smoke-tests, seller-api, e2e-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -254,4 +254,16 @@ jobs:
           echo "| Suite | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Smoke Tests | ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Seller API | ${{ needs.seller-api.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| E2E Browser | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Alert and fail when a production monitor is unhealthy
+        if: needs.smoke-tests.result != 'success' || needs.seller-api.result != 'success' || needs.e2e-tests.result != 'success'
+        run: |
+          jq -n \
+            --arg message "Production monitor failed (smoke=${{ needs.smoke-tests.result }}, seller=${{ needs.seller-api.result }}, browser=${{ needs.e2e-tests.result }})" \
+            --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Scheduled production monitoring",frustrationType:"deployment"}' \
+            | curl -fsS -X POST "https://api.orivraa.com/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @- || true
+          exit 1

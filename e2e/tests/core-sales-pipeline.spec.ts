@@ -3,7 +3,8 @@
  *
  * Setup (one-time):
  *   cd apps/api
- *   # Add to .env: TURNSTILE_BYPASS_SECRET, E2E_SHOP_EMAIL, E2E_SHOP_PASSWORD
+ *   # Set E2E_API_URL, E2E_WEB_URL, TURNSTILE_BYPASS_SECRET,
+ *   # E2E_SHOP_EMAIL, and E2E_SHOP_PASSWORD explicitly.
  *   railway run node ../../e2e/scripts/api-login.mjs
  *
  * Run:
@@ -83,7 +84,7 @@ test.describe("Public pages (no auth)", () => {
 });
 
 test.describe("Authenticated core pipeline", () => {
-  test.skip(!hasAuth, "Run api-login.mjs first (needs E2E_SHOP_EMAIL/PASSWORD in apps/api/.env)");
+  test.skip(!hasAuth, "Run api-login.mjs first with explicit E2E URLs, account credentials, and bypass secret");
 
   test.use({
     storageState: AUTH_FILE,

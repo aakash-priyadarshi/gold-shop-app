@@ -42,7 +42,7 @@ permissions:
   deployments: write
 
 env:
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
   PNPM_VERSION: "10.27.0"
 
 jobs:
@@ -140,18 +140,18 @@ jobs:
     runs-on: ubuntu-latest
     if: inputs.operation == 'db-health-check'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v5
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"

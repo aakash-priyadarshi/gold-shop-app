@@ -1,0 +1,94 @@
+name: Railway PR Preview Smoke
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Railway web preview URL
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.27.0"
+
+jobs:
+  preview-smoke:
+    name: Railway PR Preview Smoke
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment != 'production' &&
+       contains(github.event.deployment.environment, 'pr'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.deployment.sha || github.sha }}
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Require a public preview URL
+        run: |
+          if [[ -z "$BASE_URL" || "$BASE_URL" != https://* ]]; then
+            echo "::error::Railway did not publish an HTTPS preview URL"
+            exit 1
+          fi
+
+      - name: Detect the service and verify its commit
+        id: service
+        run: |
+          EXPECTED="${{ github.event.deployment.sha || github.sha }}"
+          STATUS=$(curl -sS -o /tmp/build-info.json -w "%{http_code}" "$BASE_URL/api/build-info" || true)
+          if [[ "$STATUS" == "200" ]]; then
+            ACTUAL=$(jq -r '.sha // ""' /tmp/build-info.json)
+            [[ "$ACTUAL" == "$EXPECTED" ]] || {
+              echo "::error::Web preview serves $ACTUAL, expected $EXPECTED"
+              exit 1
+            }
+            echo "is_web=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          API_STATUS=$(curl -sS -o /tmp/health.json -w "%{http_code}" "$BASE_URL/api/health" || true)
+          [[ "$API_STATUS" == "200" ]] || {
+            echo "::error::Preview is neither a healthy web nor API service (web $STATUS, API $API_STATUS)"
+            exit 1
+          }
+          ACTUAL=$(jq -r '.release.sha // .data.release.sha // ""' /tmp/health.json)
+          [[ "$ACTUAL" == "$EXPECTED" ]] || {
+            echo "::error::API preview serves $ACTUAL, expected $EXPECTED"
+            exit 1
+          }
+          echo "is_web=false" >> "$GITHUB_OUTPUT"
+
+      - name: Install browser test dependencies
+        if: steps.service.outputs.is_web == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        if: steps.service.outputs.is_web == 'true'
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Test the deployed preview
+        if: steps.service.outputs.is_web == 'true'
+        working-directory: e2e
+        run: npx playwright test homepage.spec.ts auth.spec.ts --project=chromium --workers=1
+        env:
+          CI: "true"

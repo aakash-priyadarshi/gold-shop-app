@@ -2313,6 +2313,62 @@ export const crashReportApi = {
   remove: (id: string) => api.delete(`/crash-reports/${id}`),
 };
 
+export interface RecoveryOfferPreview {
+  campaignKey: string;
+  days: number;
+  selectedReports: number;
+  eligible: Array<{
+    userId: string;
+    shopId: string;
+    email: string;
+    firstName: string;
+    shopName: string;
+    reportCount: number;
+  }>;
+  excluded: Array<{ userId?: string; email?: string; reason: string }>;
+}
+
+export const recoveryOffersApi = {
+  preview: (reportIds: string[], campaignKey?: string) =>
+    api.post<RecoveryOfferPreview>("/recovery-offers/admin/preview", {
+      reportIds,
+      campaignKey,
+    }),
+  send: (data: {
+    reportIds: string[];
+    campaignKey?: string;
+    expiresInDays?: number;
+  }) => api.post("/recovery-offers/admin/send", { ...data, confirmed: true }),
+  lookup: (token: string) =>
+    api.post<{
+      recipient: string;
+      days: number;
+      status: string;
+      expiresAt: string;
+      claimedAt?: string;
+      claimable: boolean;
+    }>("/recovery-offers/lookup", { token }),
+  claim: (token: string) =>
+    api.post<{
+      claimed: boolean;
+      alreadyClaimed: boolean;
+      days: number;
+      currentPeriodEnd?: string;
+      planName?: string;
+    }>("/recovery-offers/claim", { token }),
+  recent: () =>
+    api.get<
+      Array<{
+        id: string;
+        email: string;
+        status: string;
+        sentAt?: string;
+        claimedAt?: string;
+        expiresAt: string;
+      }>
+    >("/recovery-offers/admin/recent"),
+};
+
 // ── Testing (admin-only) ────────────────────────────────
 export const testingApi = {
   // Smoke tests
