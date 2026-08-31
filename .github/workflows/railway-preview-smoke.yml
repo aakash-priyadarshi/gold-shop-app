@@ -23,8 +23,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.deployment_status.state == 'success' &&
-       github.event.deployment.environment != 'production' &&
-       contains(github.event.deployment.environment, 'pr'))
+       contains(github.event.deployment.environment, ' / gold-shop-app-pr-'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

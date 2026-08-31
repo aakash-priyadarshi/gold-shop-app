@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import {
     BUYER_COUNTRY_COUNT,
     RegionalPricingSnapshot,
@@ -587,6 +588,7 @@ export default function JewellerBillingSoftwarePage() {
           </div>
         </section>
       </main>
+      <AiDiscoverySection />
       <DynamicFooter />
     </>
   );

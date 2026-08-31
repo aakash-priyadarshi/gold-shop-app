@@ -52,6 +52,11 @@ export function TrustSignals({
       title: "Bank-grade security",
       desc: "TLS 1.3, encrypted at rest, SOC2-aligned controls.",
     },
+    {
+      icon: CheckCircle2,
+      title: "10+ years at the counter — cloud since Jan 2026",
+      desc: "Jewellery customer service first. The software went online as cloud in January 2026.",
+    },
   ];
 
   if (variant === "compact") {
@@ -74,7 +79,7 @@ export function TrustSignals({
 
   return (
     <div
-      className={`grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 ${className}`}
+      className={`grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6 ${className}`}
     >
       {items.map((item) => {
         const Icon = item.icon;

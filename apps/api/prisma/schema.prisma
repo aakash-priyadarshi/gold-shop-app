@@ -303,6 +303,9 @@ model RefreshToken {
 model ApiToken {
   id                 String    @id @default(uuid())
   userId             String
+  /// Set only for the read-only seller smoke token. Binding the token to a
+  /// single shop prevents a later active-shop switch from widening its scope.
+  shopId             String?
   name               String
   tokenHash          String    @unique
   tokenPrefix        String
@@ -314,8 +317,10 @@ model ApiToken {
   encryptedToken     String?
   tokenViewableUntil DateTime?
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop               Shop?     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([shopId])
   @@index([tokenHash])
   @@index([tokenPrefix])
 }
@@ -453,6 +458,7 @@ model Shop {
   branches                     ShopBranch[]
   staffAccounts                StaffAccount[]
   apiKeys                      ShopApiKey[]
+  apiTokens                    ApiToken[]
   webhookSubscriptions         WebhookSubscription[]
   whiteLabelConfig             WhiteLabelConfig?
   scheduledReports             ScheduledReport[]

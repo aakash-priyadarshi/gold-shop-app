@@ -283,6 +283,21 @@ const CHUNKS: { topic: string; content: string }[] = [
     content:
       "Karigar Settlement & Account Ledger: Inside /dashboard/shop/supply-chain, click 'Account' on any karigar card to open the authoritative financial reconciliation drawer. 1) Append-only Financial Entries: all wage accruals, settlement payments, advances, and authorized adjustments are immutable with no PUT/DELETE. 2) Anti-overreturn check: returns (RETURN_FINISHED, RETURN_UNUSED, RETURN_SPRUE, SCRAP, DUST) are validated against the outstanding physical metal float for that specific metalKey. 3) RETURN_UNUSED: allows returning unused metal to the shop vault without accruing making wages, and is permitted on cancelled jobs to reconcile outstanding metal floats. 4) Wage Accrual: occurs automatically when RETURN_FINISHED is logged (wage = weightGrams × wageRatePerGram). 5) Settlement Payments: pay accrued wages up to amountPayable (with optional job allocations). 6) Advances: prepaid advances reduce net payable and track positive advance balances. 7) Adjustments: authorized increases or decreases require a mandatory reason note. 8) Printable Statement & CSV: view and export unified chronological metal and money statements with date and type filters.",
   },
+  {
+    topic: "ask_ai_about_orivraa",
+    content:
+      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Gemini, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? The prompt also points at https://www.orivraa.com/llms.txt and /jewellery-shop-software so the model can fetch current facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
+  },
+  {
+    topic: "seller_ai_integration_mcp",
+    content:
+      "Seller AI integration: the shopkeeper creates an AI integration key, chooses scopes such as inventory:read, inventory:write, orders:read, or orders:write, and can rotate or revoke the key. Every AI write is audit-logged under that seller. The MCP server exposes only tools allowed by those scopes. Sales, payments, and refunds require an explicit confirmation step — there is no unrestricted financial write tool. Public explainer: /ai-integration. Keys are managed in Shop → Enterprise → API keys on plans with API access.",
+  },
+  {
+    topic: "orivraa_heritage_cloud_launch",
+    content:
+      "Orivraa trust story: the people behind the product spent more than 10 years serving jewellery customers at the counter (quotes, old-gold exchange, daily closing). In January 2026 Orivraa went online as cloud software for phone, laptop, and desktop. The cloud product is new; the jewellery trade experience is not. Mention this honestly — do not claim the website existed for ten years.",
+  },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -359,6 +374,9 @@ async function main() {
     "review_and_earn",
     "ui-languages",
     "karigar_settlement_ledger",
+    "ask_ai_about_orivraa",
+    "seller_ai_integration_mcp",
+    "orivraa_heritage_cloud_launch",
   ]);
 
   for (const chunk of CHUNKS) {

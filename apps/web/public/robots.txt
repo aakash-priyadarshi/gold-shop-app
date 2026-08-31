@@ -58,11 +58,13 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
-# ─── Keep training and low-value crawlers blocked ────────────────
+# ─── Keep training crawlers off the site, but allow the public AI brief
 User-agent: GPTBot
+Allow: /llms.txt
 Disallow: /
 
 User-agent: ClaudeBot
+Allow: /llms.txt
 Disallow: /
 
 User-agent: MJ12bot

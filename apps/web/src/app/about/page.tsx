@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
+import { HeritageTrust } from "@/components/marketing/HeritageTrust";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
@@ -253,6 +255,8 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <HeritageTrust variant="story" />
+
       {/* Our Story Section */}
       <section className="py-16 md:py-24 bg-white dark:bg-gray-950">
         <div className="container mx-auto px-4">
@@ -278,6 +282,15 @@ export default function AboutPage() {
               </p>
               <p>
                 <T>
+                  That observation sat on more than ten years of serving
+                  jewellery customers in person. In January 2026 we made the
+                  software cloud-based and opened it on the public internet —
+                  so the same counter discipline could run from a phone or a
+                  laptop, not only a shop PC.
+                </T>
+              </p>
+              <p>
+                <T>
                   We are building one connected platform where verified sellers
                   can run day-to-day operations and buyers can discover trusted
                   jewellers with more confidence. That means marketplace
@@ -297,6 +310,7 @@ export default function AboutPage() {
               <div className="grid sm:grid-cols-2 gap-3 pt-3">
                 {[
                   "Founded in Patna, Bihar, India (Problem discovered in Butwal, Nepal)",
+                  "10+ years serving jewellery customers; cloud software since January 2026",
                   "Serving jewellery teams across key global markets",
                   "Built around verified sellers and transparent pricing",
                   "Designed for both walk-in and online jewellery sales",
@@ -735,6 +749,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      <AiDiscoverySection />
       <DynamicFooter />
     </div>
   );

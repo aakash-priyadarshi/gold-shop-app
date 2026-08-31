@@ -10,6 +10,7 @@ import {
 import { BillingCalculationSpotlight } from "@/components/home/BillingCalculationSpotlight";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
@@ -70,6 +71,8 @@ export default async function HomePage() {
       "Weight-based billing in gram, tola, ounce, and laal",
       "GST/VAT-ready invoices and mobile POS",
       "Artisan (karigar) metal and wastage tracking",
+      "Ask ChatGPT, Claude, Gemini, or Perplexity about Orivraa",
+      "Seller AI integration keys and scoped MCP tools",
     ],
     offers: {
       "@type": "Offer",
@@ -79,11 +82,31 @@ export default async function HomePage() {
     },
   };
 
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: BRAND.name,
+    url: SITE_URL,
+    foundingDate: BRAND.heritage.cloudLaunchIso,
+    description:
+      "Cloud jewellery shop software launched January 2026, built by a team with more than ten years serving jewellery customers at the counter.",
+    knowsAbout: [
+      "Jewellery billing",
+      "Gold shop POS",
+      "Karigar metal tracking",
+      "GST and VAT for jewellery",
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
       {/* Preconnect to video/image CDN for faster hero load */}
       <link rel="preconnect" href="https://images.orivraa.com" />
@@ -143,6 +166,8 @@ export default async function HomePage() {
 
           {/* 7: Blog articles section (ONE instance only) */}
           <BlogSection />
+
+          <AiDiscoverySection />
 
           {/* 8: Seller CTA section */}
           <SellerCtaSection />

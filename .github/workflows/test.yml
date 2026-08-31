@@ -153,7 +153,7 @@ jobs:
       - name: Authenticated seller API pipeline
         run: |
           if [[ -z "${{ secrets.SHOP_SMOKE_TOKEN }}" ]]; then
-            echo "::error::SHOP_SMOKE_TOKEN is required for the production seller monitor"
+            echo "::error::SHOP_SMOKE_TOKEN must be an active seller smoke token created in Admin → Testing"
             exit 1
           fi
           node e2e/scripts/api-core-pipeline.mjs

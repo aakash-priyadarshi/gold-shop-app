@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsEnum, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsEnum, IsUUID, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum TokenDuration {
@@ -53,6 +53,24 @@ export class CreateApiTokenDto {
   @IsEnum(TokenType)
   @IsOptional()
   tokenType?: TokenType;
+}
+
+/**
+ * An admin-created token for a dedicated test shop. The API only accepts it
+ * for read-only seller requests, so it is safe to use from GitHub Actions.
+ */
+export class CreateSellerSmokeTokenDto {
+  @ApiProperty({ description: 'Shop account that the monitor should impersonate' })
+  @IsUUID()
+  shopId: string;
+
+  @ApiProperty({
+    description: 'Token validity duration. Seller smoke tokens deliberately cannot be non-expiring.',
+    enum: [TokenDuration.DAYS_30, TokenDuration.DAYS_90, TokenDuration.DAYS_180, TokenDuration.DAYS_365],
+    example: TokenDuration.DAYS_365,
+  })
+  @IsEnum(TokenDuration)
+  duration: TokenDuration;
 }
 
 export class RevokeApiTokenDto {

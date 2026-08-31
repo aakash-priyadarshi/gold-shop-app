@@ -361,6 +361,8 @@ const softwareLinks = [
   { href: "/jewellery-pos-software", label: "Mobile POS" },
   { href: "/jewellery-ecommerce-software", label: "Ecommerce software" },
   { href: "/seller-guide", label: "Seller guide" },
+  { href: "/ask-ai", label: "Ask ChatGPT, Claude, Gemini, or Perplexity" },
+  { href: "/ai-integration", label: "Seller AI keys & MCP" },
 ];
 
 const comparisonLinks = [

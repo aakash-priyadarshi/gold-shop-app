@@ -20,6 +20,7 @@ import {
 import { ApiTokenService, API_TOKEN_SCOPES } from './api-token.service';
 import { 
   CreateApiTokenDto, 
+  CreateSellerSmokeTokenDto,
   ApiTokenResponseDto, 
   CreateApiTokenResponseDto 
 } from './dto/api-token.dto';
@@ -93,6 +94,31 @@ export class ApiTokenController {
   })
   async getExpiringTokens(@Request() req: any): Promise<ApiTokenResponseDto[]> {
     return this.apiTokenService.getExpiringTokens(req.user.id);
+  }
+
+  @Post('seller-smoke')
+  @Roles('ADMIN')
+  @ApiOperation({
+    summary: 'Create a read-only seller smoke token',
+    description: 'Creates a revocable token bound to one active shopkeeper. Replaces any earlier active smoke token for that shop.',
+  })
+  async createSellerSmokeToken(@Body() dto: CreateSellerSmokeTokenDto) {
+    return this.apiTokenService.createSellerSmokeToken(dto);
+  }
+
+  @Get('seller-smoke')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'List seller smoke tokens' })
+  async listSellerSmokeTokens() {
+    return this.apiTokenService.listSellerSmokeTokens();
+  }
+
+  @Delete('seller-smoke/:tokenId')
+  @Roles('ADMIN')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Revoke a seller smoke token' })
+  async revokeSellerSmokeToken(@Param('tokenId') tokenId: string): Promise<void> {
+    await this.apiTokenService.revokeSellerSmokeToken(tokenId);
   }
 
   @Get(':tokenId/value')

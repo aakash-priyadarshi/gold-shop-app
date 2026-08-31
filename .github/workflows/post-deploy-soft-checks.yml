@@ -124,7 +124,7 @@ jobs:
         run: |
           TOKEN="${{ secrets.SHOP_SMOKE_TOKEN }}"
           if [ -z "$TOKEN" ]; then
-            echo "::error::SHOP_SMOKE_TOKEN is required for critical production verification"
+            echo "::error::SHOP_SMOKE_TOKEN must be an active seller smoke token created in Admin → Testing"
             exit 1
           fi
           API="${{ secrets.PRODUCTION_API_URL }}/api"

@@ -1,6 +1,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import {
@@ -411,6 +412,7 @@ export default function ForSellersPage() {
         </section>
       </main>
 
+      <AiDiscoverySection />
       <DynamicFooter />
     </div>
   );

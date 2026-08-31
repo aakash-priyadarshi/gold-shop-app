@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { AskAiAboutUs } from "@/components/marketing/AskAiAboutUs";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import {
@@ -81,12 +82,15 @@ export function DynamicFooter() {
     },
     { href: "/seller-guide", label: "Seller Guide" },
     { href: "/download", label: "Download App" },
+    { href: "/ask-ai", label: "Ask AI about Orivraa" },
+    { href: "/ai-integration", label: "Seller AI keys & MCP" },
     { href: "/support", label: "Support" },
   ];
 
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="container mx-auto px-4 py-8 lg:py-12">
+        <AskAiAboutUs variant="footer" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-4">
@@ -105,6 +109,10 @@ export function DynamicFooter() {
                 with verified jewellers across Nepal, India, Dubai, USA & UK for
                 ready-made and custom jewelry orders.
               </T>
+            </p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              <T>More than 10 years serving jewellery customers. Cloud software since</T>{" "}
+              <time dateTime="2026-01">January 2026</time>.
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">

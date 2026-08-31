@@ -23,6 +23,11 @@ export const BRAND: {
   };
   companyName: string;
   foundedYear: number;
+  heritage: {
+    servingYears: number;
+    cloudLaunchLabel: string;
+    cloudLaunchIso: string;
+  };
   seo: {
     title: string;
     titleTemplate: string;
@@ -67,6 +72,11 @@ export const BRAND: {
   // Legal
   companyName: "Orivraa Technologies Pvt. Ltd.",
   foundedYear: 2024,
+  heritage: {
+    servingYears: 10,
+    cloudLaunchLabel: "January 2026",
+    cloudLaunchIso: "2026-01",
+  },
 
   // SEO
   seo: {

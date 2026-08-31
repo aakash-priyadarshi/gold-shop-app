@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { FaqSection } from "@/components/ui/FaqSection";
 import { T } from "@/components/ui/T";
@@ -444,6 +445,7 @@ export default function SellerGuidePage() {
         </section>
       </main>
 
+      <AiDiscoverySection />
       <DynamicFooter />
     </div>
   );
