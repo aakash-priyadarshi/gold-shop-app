@@ -537,7 +537,9 @@ export class RecoveryOffersService {
               ? "Recovery offer was already claimed"
               : existingOffer.status === RecoveryOfferStatus.SENT
                 ? "Recovery offer was already sent"
-                : "Recovery offer is already being processed",
+                : existingOffer.status === RecoveryOfferStatus.EXPIRED
+                  ? "Recovery offer expired unclaimed"
+                  : "Recovery offer is already being processed",
         });
         continue;
       }

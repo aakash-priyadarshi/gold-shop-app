@@ -205,6 +205,44 @@ describe("RecoveryOffersService", () => {
     expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
   });
 
+  it("reports an expired offer accurately without reissuing the campaign", async () => {
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-1" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        recoveryOffers: [
+          { shopId: "shop-1", status: RecoveryOfferStatus.EXPIRED },
+        ],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+
+    const result = await service.preview(["report-1"]);
+
+    expect(result.eligible).toEqual([]);
+    expect(result.excluded).toEqual([
+      expect.objectContaining({
+        reason: "Recovery offer expired unclaimed",
+      }),
+    ]);
+    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
+  });
+
   it("delivers a queued offer idempotently before marking it sent", async () => {
     const rawToken = "delivery-token";
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");

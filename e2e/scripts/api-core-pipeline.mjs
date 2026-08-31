@@ -13,8 +13,30 @@ function required(name) {
   return value;
 }
 
-const API = required('E2E_API_URL').replace(/\/$/, '');
-const WEB = required('E2E_WEB_URL').replace(/\/$/, '');
+function assertSafeCredentialDestination(value, name) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
+  const loopback = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(
+    url.hostname,
+  );
+  if (url.username || url.password) {
+    throw new Error(`${name} must not contain embedded credentials`);
+  }
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+    throw new Error(`${name} must use HTTPS unless it targets loopback`);
+  }
+}
+
+const apiTarget = required('E2E_API_URL');
+const webTarget = required('E2E_WEB_URL');
+assertSafeCredentialDestination(apiTarget, 'E2E_API_URL');
+assertSafeCredentialDestination(webTarget, 'E2E_WEB_URL');
+const API = apiTarget.replace(/\/$/, '');
+const WEB = webTarget.replace(/\/$/, '');
 
 let token = process.env.E2E_TOKEN;
 if (!token && existsSync(resolve(__dirname, '../.auth/session.json'))) {
@@ -35,6 +57,7 @@ const BROWSER_HEADERS = {
 async function api(method, path, body) {
   const res = await fetch(`${API}${path}`, {
     method,
+    redirect: 'error',
     headers: BROWSER_HEADERS,
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -104,6 +127,7 @@ if (shopId) {
     const invoiceId = first?.id;
     if (invoiceId) {
       const pdfRes = await fetch(`${API}/invoices/${invoiceId}/pdf`, {
+        redirect: 'error',
         headers: { ...BROWSER_HEADERS, Accept: 'application/pdf' },
       });
       const buf = Buffer.from(await pdfRes.arrayBuffer());

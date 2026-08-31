@@ -36,6 +36,7 @@ const headers = {
 async function request(name, method, path, body) {
   const response = await fetch(`${API}${path}`, {
     method,
+    redirect: "error",
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });

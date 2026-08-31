@@ -60,6 +60,7 @@ export class MailService {
   private transporter: nodemailer.Transporter | null = null;
   private resend: Resend | null = null;
   private provider: EmailProvider = 'none';
+  private smtpHost: string | null = null;
   private templateCache: Map<string, handlebars.TemplateDelegate> = new Map();
   private readonly templatesDir: string;
 
@@ -122,6 +123,7 @@ export class MailService {
       rateLimit: 5,
     });
 
+    this.smtpHost = host.toLowerCase();
     this.provider = 'smtp';
 
     // Verify connection asynchronously
@@ -282,7 +284,15 @@ export class MailService {
 
       // Fallback to SMTP
       if (this.provider === 'smtp' && this.transporter) {
-        return this.sendWithSmtp(from, to, options.subject, html, options.replyTo, options.attachments);
+        return this.sendWithSmtp(
+          from,
+          to,
+          options.subject,
+          html,
+          options.replyTo,
+          options.attachments,
+          options.idempotencyKey,
+        );
       }
 
       return { success: false, error: 'No email provider available' };
@@ -346,9 +356,19 @@ export class MailService {
     html: string,
     replyTo?: string,
     attachments?: EmailOptions['attachments'],
+    idempotencyKey?: string,
   ): Promise<SendResult> {
     const maxRetries = 3;
     let lastError: Error | null = null;
+    const resendHeaders =
+      idempotencyKey && this.smtpHost === 'smtp.resend.com'
+        ? { 'Resend-Idempotency-Key': idempotencyKey }
+        : undefined;
+    if (idempotencyKey && !resendHeaders) {
+      this.logger.warn(
+        `SMTP provider ${this.smtpHost || 'unknown'} does not support provider-side idempotency`,
+      );
+    }
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -359,6 +379,7 @@ export class MailService {
           html,
           replyTo,
           attachments,
+          headers: resendHeaders,
         });
 
         this.logger.log(`✅ Email sent via SMTP: ${info.messageId} to ${to.join(', ')}`);

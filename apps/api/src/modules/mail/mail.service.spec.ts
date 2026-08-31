@@ -35,4 +35,38 @@ describe("MailService template rendering", () => {
     expect(html).toContain("123456");
     expect(html).toContain("Orivraa");
   });
+
+  it("preserves idempotency keys for Resend SMTP delivery", async () => {
+    const smtpService = new MailService({
+      get: (_key: string, fallback?: unknown) => fallback,
+    } as any);
+    const sendMail = jest
+      .fn()
+      .mockResolvedValue({ messageId: "smtp-message-1" });
+    Object.assign(smtpService as any, {
+      provider: "smtp",
+      smtpHost: "smtp.resend.com",
+      transporter: { sendMail },
+    });
+    jest
+      .spyOn(smtpService as any, "loadTemplate")
+      .mockResolvedValue(() => "<p>Recovery offer</p>");
+
+    const result = await smtpService.send({
+      to: "owner@example.com",
+      subject: "Recovery offer",
+      template: "recovery-offer",
+      context: {},
+      idempotencyKey: "recovery-offer-1",
+    });
+
+    expect(result).toEqual({ success: true, messageId: "smtp-message-1" });
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: {
+          "Resend-Idempotency-Key": "recovery-offer-1",
+        },
+      }),
+    );
+  });
 });
