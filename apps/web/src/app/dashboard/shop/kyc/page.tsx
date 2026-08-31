@@ -152,8 +152,9 @@ export default function ShopKycPage() {
       await shopsApi.remindAdminKyc();
       toast({
         title: "Admin Notified",
-        description:
+        description: t(
           "Your verification request has been resubmitted for fresh review.",
+        ),
       });
       loadKyc();
     } catch (error: any) {
@@ -454,15 +455,17 @@ export default function ShopKycPage() {
                             }
                           >
                             <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select ID Type" />
+                              <SelectValue placeholder={t("Select ID Type")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="passport">Passport</SelectItem>
+                              <SelectItem value="passport">
+                                <T>Passport</T>
+                              </SelectItem>
                               <SelectItem value="national_id">
-                                National ID Card
+                                <T>National ID Card</T>
                               </SelectItem>
                               <SelectItem value="drivers_license">
-                                Driver's License
+                                <T>Driver&apos;s License</T>
                               </SelectItem>
                             </SelectContent>
                           </Select>
@@ -473,7 +476,7 @@ export default function ShopKycPage() {
                           </Label>
                           <Input
                             className="h-8 text-xs"
-                            placeholder="Enter ID Number"
+                            placeholder={t("Enter ID Number")}
                             value={
                               kycData.verificationDocuments
                                 .governmentIdNumber || ""
@@ -523,7 +526,7 @@ export default function ShopKycPage() {
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic mb-4">
-                          No file uploaded.
+                          <T>No file uploaded.</T>
                         </p>
                       )}
                     </div>
@@ -594,7 +597,7 @@ export default function ShopKycPage() {
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic mt-4 mb-4">
-                          No file uploaded.
+                          <T>No file uploaded.</T>
                         </p>
                       )}
                     </div>
@@ -659,7 +662,7 @@ export default function ShopKycPage() {
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic mt-4 mb-4">
-                          No file uploaded.
+                          <T>No file uploaded.</T>
                         </p>
                       )}
                     </div>
