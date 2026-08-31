@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { isChunkLoadError } from "../ServiceWorkerRegistrar";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  isChunkLoadError,
+  recoverFromChunkLoadError,
+} from "../ServiceWorkerRegistrar";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("isChunkLoadError", () => {
   it.each([
@@ -15,5 +23,28 @@ describe("isChunkLoadError", () => {
     expect(
       isChunkLoadError(new Error("Cannot read properties of undefined")),
     ).toBe(false);
+  });
+});
+
+describe("recoverFromChunkLoadError", () => {
+  it("does not reload when the recovery marker cannot be read", async () => {
+    vi.stubGlobal("sessionStorage", {
+      getItem: () => {
+        throw new Error("storage blocked");
+      },
+    });
+
+    await expect(recoverFromChunkLoadError()).resolves.toBe(false);
+  });
+
+  it("does not reload when the recovery marker cannot be written", async () => {
+    vi.stubGlobal("sessionStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("storage blocked");
+      },
+    });
+
+    await expect(recoverFromChunkLoadError()).resolves.toBe(false);
   });
 });

@@ -273,6 +273,7 @@ function LoginForm() {
         const email = String(error.email || data.email || "").trim();
         setVerificationUserId(error.userId);
         setVerificationEmail(email);
+        resetTurnstile();
         setShowVerification(true);
 
         // Send verification OTP

@@ -40,7 +40,8 @@ export async function recoverFromChunkLoadError(): Promise<boolean> {
   try {
     lastRecovery = Number(sessionStorage.getItem(CHUNK_RECOVERY_KEY));
   } catch {
-    // Storage may be unavailable in privacy-restricted browser contexts.
+    // Without a readable marker, reloading could loop forever.
+    return false;
   }
   if (
     Number.isFinite(lastRecovery) &&
@@ -51,7 +52,8 @@ export async function recoverFromChunkLoadError(): Promise<boolean> {
   try {
     sessionStorage.setItem(CHUNK_RECOVERY_KEY, String(now));
   } catch {
-    // The reload still helps; it simply cannot be guarded through storage.
+    // Do not reload unless the loop-prevention marker was recorded.
+    return false;
   }
 
   try {

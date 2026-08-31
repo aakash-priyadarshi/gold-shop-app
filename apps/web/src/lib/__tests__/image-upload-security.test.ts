@@ -1,4 +1,8 @@
-import { readUploadResult, validateImageWorkerUrl } from "../image-upload";
+import {
+  isExpectedUploadValidationError,
+  readUploadResult,
+  validateImageWorkerUrl,
+} from "../image-upload";
 
 describe("image worker URL validation", () => {
   it("accepts the default HTTPS worker URL", () => {
@@ -28,17 +32,41 @@ describe("image worker responses", () => {
       ),
     );
 
-    expect(result).toEqual({ success: false, error: "File too large" });
+    expect(result).toEqual({
+      success: false,
+      error: "File too large",
+      errorCode: "FILE_TOO_LARGE",
+      httpStatus: 413,
+    });
+    expect(isExpectedUploadValidationError(result)).toBe(true);
   });
 
-  it("turns a non-JSON edge response into a useful error", async () => {
+  it("turns a non-JSON edge response into a translatable fallback", async () => {
     const result = await readUploadResult(
       new Response("Bad gateway", { status: 502 }),
     );
 
     expect(result).toEqual({
       success: false,
-      error: "Upload service returned HTTP 502",
+      error: "Upload failed. Please try again.",
+      errorCode: "HTTP_ERROR",
+      httpStatus: 502,
+    });
+  });
+
+  it("handles a null JSON response without accessing payload fields", async () => {
+    const result = await readUploadResult(
+      new Response("null", {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: "Upload failed. Please try again.",
+      errorCode: "HTTP_ERROR",
+      httpStatus: 502,
     });
   });
 });

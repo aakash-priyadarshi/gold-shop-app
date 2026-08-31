@@ -203,6 +203,10 @@ describe("reportApiFailure", () => {
       message: "Request was aborted",
       config: { url: "/inventory/shop/1", method: "get" },
     });
+    reportApiFailure({
+      message: "The user aborted a request",
+      config: { url: "/inventory/shop/2", method: "get" },
+    });
 
     await Promise.resolve();
     expect(fetchMock).not.toHaveBeenCalled();

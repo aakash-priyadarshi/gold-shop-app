@@ -176,19 +176,13 @@ const withPWAConfigured = withPWA({
         },
       },
       {
-        // API GET reads — serve cached data instantly, revalidate in background.
-        // Skip opaque (status 0) responses so timeouts never poison the cache.
+        // Authenticated API reads must never be persisted in a shared browser
+        // cache because another account may subsequently use this device.
         urlPattern: ({ url, request }) =>
           request.method === 'GET' &&
           /\/api\//.test(url.pathname) &&
           !/\/api\/invoices\/[^/]+\/pdf(\?|$)/.test(url.pathname),
-        handler: 'NetworkFirst',
-        options: {
-          cacheName: 'api-reads',
-          networkTimeoutSeconds: 15,
-          expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
-          cacheableResponse: { statuses: [200] },
-        },
+        handler: 'NetworkOnly',
       },
       {
         // Images from the CDN.

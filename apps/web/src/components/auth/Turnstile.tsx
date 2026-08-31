@@ -123,9 +123,14 @@ export function Turnstile({
     try {
       window.turnstile.reset(widgetIdRef.current);
     } catch {
-      // A concurrent widget refresh can make the previous id temporarily stale.
+      // A concurrent widget refresh can make the previous id stale. Clear both
+      // guards so renderWidget can create a new challenge instead of remaining
+      // blocked behind the failed widget.
+      widgetIdRef.current = null;
+      isRenderedRef.current = false;
+      renderWidget();
     }
-  }, [resetKey]);
+  }, [renderWidget, resetKey]);
 
   // Don't render anything if no site key
   if (!TURNSTILE_SITE_KEY) {

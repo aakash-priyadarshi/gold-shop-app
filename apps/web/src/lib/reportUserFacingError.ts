@@ -244,7 +244,7 @@ export function reportApiFailure(error: {
   if (requestUrlLooksLikeCrashReports(url)) return;
   if (requestUrlLooksLikeSessionAnalytics(url)) return;
   if (error.code === "ERR_CANCELED") return;
-  if (/request (?:was )?(?:aborted|canceled)/i.test(error.message || "")) {
+  if (/\b(?:aborted|cancel(?:ed|led))\b/i.test(error.message || "")) {
     return;
   }
 

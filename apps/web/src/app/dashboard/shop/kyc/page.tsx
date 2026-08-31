@@ -23,7 +23,10 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { shopsApi } from "@/lib/api";
-import { uploadAuthenticatedFile } from "@/lib/image-upload";
+import {
+  isExpectedUploadValidationError,
+  uploadAuthenticatedFile,
+} from "@/lib/image-upload";
 import {
   getKycIdentifierConfig,
   validateKycIdentifiers,
@@ -86,16 +89,24 @@ export default function ShopKycPage() {
         verificationRequests: response.data.verificationRequests || [],
         vatRegistrationStatus: response.data.vatRegistrationStatus,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const caught =
+        error !== null && typeof error === "object"
+          ? (error as {
+              response?: { data?: { message?: unknown } };
+              message?: unknown;
+            })
+          : {};
+      const candidate = caught.response?.data?.message ?? caught.message;
+      const message =
+        typeof candidate === "string" && candidate.trim()
+          ? candidate
+          : "Please check your connection and try again.";
       console.error("Failed to load KYC:", error);
       toast({
         variant: "destructive",
         title: t("Could not load verification status"),
-        description: t(
-          error.response?.data?.message ||
-            error.message ||
-            "Please check your connection and try again.",
-        ),
+        description: t(message),
       });
     } finally {
       setIsLoading(false);
@@ -105,6 +116,15 @@ export default function ShopKycPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user?.shop?.id) {
+      setKycData({
+        panNumber: "",
+        vatNumber: "",
+        bisLicenseNumber: "",
+        isVerified: false,
+        verificationDocuments: {},
+        verificationRequests: [],
+        vatRegistrationStatus: undefined,
+      });
       setIsLoading(false);
       return;
     }
@@ -177,8 +197,16 @@ export default function ShopKycPage() {
     setIsUploading(true);
     try {
       const data = await uploadAuthenticatedFile(file, "kyc");
-      if (!data.success || !data.url)
-        throw new Error(data.error || "Upload failed");
+      if (!data.success || !data.url) {
+        const message = data.error || "Upload failed. Please try again.";
+        toast({
+          variant: "destructive",
+          title: t("Upload failed"),
+          description: t(message),
+          reportToAdmin: !isExpectedUploadValidationError(data),
+        });
+        return;
+      }
       const uploadedUrl = data.url;
 
       setKycData((prev) => ({
@@ -203,9 +231,6 @@ export default function ShopKycPage() {
         variant: "destructive",
         title: t("Upload failed"),
         description: t(message),
-        reportToAdmin: !/too large|unsupported file type|maximum size/i.test(
-          message,
-        ),
       });
     } finally {
       setIsUploading(false);
@@ -348,7 +373,7 @@ export default function ShopKycPage() {
               {isSriLanka && (
                 <div className="rounded-md border bg-muted/40 p-3 text-sm">
                   <T>Sri Lanka VAT registration status</T>:{" "}
-                  {kycData.vatRegistrationStatus || "NOT_REGISTERED"}
+                  {kycData.vatRegistrationStatus || <T>Not registered</T>}
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
