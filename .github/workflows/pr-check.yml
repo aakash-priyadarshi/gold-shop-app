@@ -492,6 +492,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://e2e:e2e@localhost:5432/orivraa_e2e
       DIRECT_DATABASE_URL: postgresql://e2e:e2e@localhost:5432/orivraa_e2e
+      TEST_DATABASE_URL: postgresql://e2e:e2e@localhost:5432/orivraa_e2e
       REDIS_URL: redis://localhost:6379
       NODE_ENV: test
     steps:
@@ -520,14 +521,17 @@ jobs:
           E2E_JWT=$(openssl rand -hex 32)
           E2E_BYPASS=$(openssl rand -hex 32)
           E2E_NEXTAUTH=$(openssl rand -hex 32)
+          E2E_TOKEN_ENCRYPTION=$(openssl rand -hex 32)
           echo "::add-mask::$E2E_PASSWORD"
           echo "::add-mask::$E2E_JWT"
           echo "::add-mask::$E2E_BYPASS"
           echo "::add-mask::$E2E_NEXTAUTH"
+          echo "::add-mask::$E2E_TOKEN_ENCRYPTION"
           echo "E2E_SHOP_PASSWORD=$E2E_PASSWORD" >> "$GITHUB_ENV"
           echo "JWT_SECRET=$E2E_JWT" >> "$GITHUB_ENV"
           echo "TURNSTILE_BYPASS_SECRET=$E2E_BYPASS" >> "$GITHUB_ENV"
           echo "NEXTAUTH_SECRET=$E2E_NEXTAUTH" >> "$GITHUB_ENV"
+          echo "TOKEN_ENCRYPTION_KEY=$E2E_TOKEN_ENCRYPTION" >> "$GITHUB_ENV"
 
       - name: Build and seed the PR application
         run: |

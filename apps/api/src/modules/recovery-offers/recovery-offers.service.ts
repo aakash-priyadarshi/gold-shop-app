@@ -13,12 +13,21 @@ import {
 } from "@prisma/client";
 import { createHash, randomBytes } from "crypto";
 import { ConfigService } from "@nestjs/config";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 
 const DEFAULT_CAMPAIGN_KEY = "incident-recovery-2026-08";
 const RECOVERY_DAYS = 40;
 const DAY_MS = 24 * 60 * 60 * 1000;
+export const RECOVERY_OFFERS_QUEUE = "recovery-offers";
+export const DELIVER_RECOVERY_OFFER_JOB = "deliver";
+
+export type RecoveryOfferDeliveryJob = {
+  offerId: string;
+  rawToken: string;
+};
 
 type Candidate = {
   userId: string;
@@ -42,6 +51,8 @@ export class RecoveryOffersService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    @InjectQueue(RECOVERY_OFFERS_QUEUE)
+    private readonly queue: Queue<RecoveryOfferDeliveryJob>,
   ) {}
 
   async preview(reportIds: string[], campaignKey?: string) {
@@ -89,7 +100,7 @@ export class RecoveryOffersService {
     const results: Array<{
       userId: string;
       email: string;
-      status: "sent" | "failed";
+      status: "queued" | "failed";
       reason?: string;
     }> = [];
 
@@ -97,121 +108,186 @@ export class RecoveryOffersService {
       const rawToken = randomBytes(32).toString("base64url");
       const tokenHash = this.hashToken(rawToken);
       const expiresAt = new Date(Date.now() + expiresInDays * DAY_MS);
-      const offer = await this.prisma.recoveryOffer.upsert({
+      let offerId: string | null = null;
+      const existing = await this.prisma.recoveryOffer.findUnique({
         where: {
-          campaignKey_shopId: {
-            campaignKey: key,
-            shopId: candidate.shopId,
-          },
+          campaignKey_shopId: { campaignKey: key, shopId: candidate.shopId },
         },
-        create: {
-          campaignKey: key,
-          userId: candidate.userId,
-          shopId: candidate.shopId,
-          email: candidate.email,
-          tokenHash,
-          days: RECOVERY_DAYS,
-          status: RecoveryOfferStatus.PREPARED,
-          sourceReportIds: candidate.reportIds,
-          expiresAt,
-          createdBy: input.adminId,
-        },
-        update: {
-          email: candidate.email,
-          tokenHash,
-          days: RECOVERY_DAYS,
-          status: RecoveryOfferStatus.PREPARED,
-          sourceReportIds: candidate.reportIds,
-          expiresAt,
-          sentAt: null,
-          claimedAt: null,
-          deliveryMessageId: null,
-          failureReason: null,
-          createdBy: input.adminId,
-        },
+        select: { id: true, status: true },
       });
 
-      const appUrl = (
-        this.config.get<string>("FRONTEND_URL") ||
-        this.config.get<string>("APP_URL") ||
-        "https://www.orivraa.com"
-      ).replace(/\/$/, "");
-      // Keep the bearer token in the URL fragment so it is not sent in the
-      // initial HTTP request, CDN logs, or referrer headers.
-      const claimUrl = `${appUrl}/recovery/pro#token=${encodeURIComponent(rawToken)}`;
-      const delivery = await this.mail.send({
-        to: candidate.email,
-        subject: "We let you down — 40 days of Orivraa Pro on us",
-        template: "recovery-offer",
-        from: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
-        replyTo: EMAIL_SENDERS.SUPPORT,
-        context: {
-          firstName: candidate.firstName,
-          shopName: candidate.shopName,
-          days: RECOVERY_DAYS,
-          claimUrl,
-          offerExpiresAt: expiresAt,
-        },
-      });
-
-      if (!delivery.success) {
-        await this.prisma.recoveryOffer.update({
-          where: { id: offer.id },
+      if (existing) {
+        const prepared = await this.prisma.recoveryOffer.updateMany({
+          where: { id: existing.id, status: RecoveryOfferStatus.SEND_FAILED },
           data: {
-            status: RecoveryOfferStatus.SEND_FAILED,
-            failureReason: (delivery.error || "Email delivery failed").slice(
-              0,
-              2000,
-            ),
+            email: candidate.email,
+            tokenHash,
+            sourceReportIds: candidate.reportIds,
+            expiresAt,
+            status: RecoveryOfferStatus.PREPARED,
+            failureReason: null,
+            createdBy: input.adminId,
           },
         });
-        results.push({
+        if (prepared.count === 1) offerId = existing.id;
+      } else {
+        try {
+          const created = await this.prisma.recoveryOffer.create({
+            data: {
+              campaignKey: key,
+              userId: candidate.userId,
+              shopId: candidate.shopId,
+              email: candidate.email,
+              tokenHash,
+              days: RECOVERY_DAYS,
+              status: RecoveryOfferStatus.PREPARED,
+              sourceReportIds: candidate.reportIds,
+              expiresAt,
+              createdBy: input.adminId,
+            },
+          });
+          offerId = created.id;
+        } catch (error) {
+          if (
+            !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+            error.code !== "P2002"
+          ) {
+            throw error;
+          }
+        }
+      }
+
+      if (!offerId) {
+        excluded.push({
           userId: candidate.userId,
           email: candidate.email,
-          status: "failed",
-          reason: delivery.error || "Email delivery failed",
+          reason: "Recovery offer is already being processed",
         });
         continue;
       }
 
-      await this.prisma.$transaction([
-        this.prisma.recoveryOffer.update({
-          where: { id: offer.id },
-          data: {
-            status: RecoveryOfferStatus.SENT,
-            sentAt: new Date(),
-            deliveryMessageId: delivery.messageId,
+      try {
+        await this.queue.add(
+          DELIVER_RECOVERY_OFFER_JOB,
+          { offerId, rawToken },
+          {
+            jobId: `${offerId}-${tokenHash}`,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5_000 },
+            removeOnComplete: true,
+            removeOnFail: true,
           },
-        }),
-        this.prisma.emailLog.create({
-          data: {
-            direction: "OUTBOUND",
-            fromAddress: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
-            toAddress: candidate.email,
-            subject: "We let you down — 40 days of Orivraa Pro on us",
-            body: `Service recovery offer: ${RECOVERY_DAYS} days of PRO; no card or automatic renewal.`,
-            userId: candidate.userId,
-            adminId: input.adminId,
-            messageId: delivery.messageId,
-            templateKey: "recovery_offer",
-            threadId: offer.id,
-          },
-        }),
-      ]);
+        );
+      } catch (error) {
+        const reason =
+          error instanceof Error ? error.message : "Queueing failed";
+        await this.markDeliveryFailed(offerId, tokenHash, reason);
+        results.push({
+          userId: candidate.userId,
+          email: candidate.email,
+          status: "failed",
+          reason,
+        });
+        continue;
+      }
       results.push({
         userId: candidate.userId,
         email: candidate.email,
-        status: "sent",
+        status: "queued",
       });
     }
 
     return {
       campaignKey: key,
-      sent: results.filter((result) => result.status === "sent").length,
+      queued: results.filter((result) => result.status === "queued").length,
       failed: results.filter((result) => result.status === "failed").length,
       excluded,
       results,
     };
+  }
+
+  async deliverQueuedOffer(job: RecoveryOfferDeliveryJob) {
+    const tokenHash = this.hashToken(job.rawToken);
+    const offer = await this.prisma.recoveryOffer.findUnique({
+      where: { id: job.offerId },
+      include: {
+        user: { select: { firstName: true } },
+        shop: { select: { shopName: true } },
+      },
+    });
+    if (
+      !offer ||
+      offer.status !== RecoveryOfferStatus.PREPARED ||
+      offer.tokenHash !== tokenHash
+    ) {
+      return { skipped: true };
+    }
+
+    const appUrl = (
+      this.config.get<string>("FRONTEND_URL") ||
+      this.config.get<string>("APP_URL") ||
+      "https://www.orivraa.com"
+    ).replace(/\/$/, "");
+    const claimUrl = `${appUrl}/recovery/pro#token=${encodeURIComponent(job.rawToken)}`;
+    const delivery = await this.mail.send({
+      to: offer.email,
+      subject: "We let you down — 40 days of Orivraa Pro on us",
+      template: "recovery-offer",
+      from: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
+      replyTo: EMAIL_SENDERS.SUPPORT,
+      idempotencyKey: `recovery-offer/${offer.id}/${tokenHash}`,
+      context: {
+        firstName: offer.user.firstName || "there",
+        shopName: offer.shop.shopName,
+        days: offer.days,
+        claimUrl,
+        offerExpiresAt: offer.expiresAt,
+      },
+    });
+    if (!delivery.success) {
+      throw new Error(delivery.error || "Email delivery failed");
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const sent = await tx.recoveryOffer.updateMany({
+        where: {
+          id: offer.id,
+          status: RecoveryOfferStatus.PREPARED,
+          tokenHash,
+        },
+        data: {
+          status: RecoveryOfferStatus.SENT,
+          sentAt: new Date(),
+          deliveryMessageId: delivery.messageId,
+        },
+      });
+      if (sent.count !== 1) return;
+      await tx.emailLog.create({
+        data: {
+          direction: "OUTBOUND",
+          fromAddress: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
+          toAddress: offer.email,
+          subject: "We let you down — 40 days of Orivraa Pro on us",
+          body: `Service recovery offer: ${offer.days} days of PRO; no card or automatic renewal.`,
+          userId: offer.userId,
+          adminId: offer.createdBy,
+          messageId: delivery.messageId,
+          templateKey: "recovery_offer",
+          threadId: offer.id,
+        },
+      });
+    });
+    return { skipped: false };
+  }
+
+  async markDeliveryFailed(offerId: string, tokenHash: string, reason: string) {
+    await this.prisma.recoveryOffer.updateMany({
+      where: { id: offerId, status: RecoveryOfferStatus.PREPARED, tokenHash },
+      data: {
+        status: RecoveryOfferStatus.SEND_FAILED,
+        failureReason: reason.slice(0, 2000),
+      },
+    });
   }
 
   async lookup(rawToken: string) {
@@ -451,8 +527,7 @@ export class RecoveryOffersService {
       );
       if (
         existingOffer &&
-        (existingOffer.status === RecoveryOfferStatus.SENT ||
-          existingOffer.status === RecoveryOfferStatus.CLAIMED)
+        existingOffer.status !== RecoveryOfferStatus.SEND_FAILED
       ) {
         excluded.push({
           userId: user.id,
@@ -460,7 +535,9 @@ export class RecoveryOffersService {
           reason:
             existingOffer.status === RecoveryOfferStatus.CLAIMED
               ? "Recovery offer was already claimed"
-              : "Recovery offer was already sent",
+              : existingOffer.status === RecoveryOfferStatus.SENT
+                ? "Recovery offer was already sent"
+                : "Recovery offer is already being processed",
         });
         continue;
       }

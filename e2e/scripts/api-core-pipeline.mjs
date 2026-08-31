@@ -7,8 +7,14 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const API = process.env.E2E_API_URL || 'https://api.orivraa.com/api';
-const WEB = (process.env.E2E_WEB_URL || 'https://www.orivraa.com').replace(/\/$/, '');
+function required(name) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required; this write-capable test has no production default`);
+  return value;
+}
+
+const API = required('E2E_API_URL').replace(/\/$/, '');
+const WEB = required('E2E_WEB_URL').replace(/\/$/, '');
 
 let token = process.env.E2E_TOKEN;
 if (!token && existsSync(resolve(__dirname, '../.auth/session.json'))) {

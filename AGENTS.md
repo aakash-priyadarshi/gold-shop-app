@@ -250,7 +250,9 @@ Pass the Railway secret as `turnstileToken` (not a real Turnstile widget token).
 | `pentest-shop@orivraa.com`  | SHOPKEEPER             |
 | `pentest-admin@orivraa.com` | ADMIN                  |
 
-`seed-demo.ts` and `seed-pentest.ts` refuse to run unless `NODE_ENV=test`.
+`seed-demo.ts`, `seed-e2e.ts`, and `seed-pentest.ts` refuse to run unless
+`NODE_ENV=test`, `DATABASE_URL` exactly matches an explicit `TEST_DATABASE_URL`,
+and the database name contains `test` or `e2e`.
 Supply a fresh random `SEED_DEMO_PASSWORD` or `SEED_PENTEST_PASSWORD` for each
 disposable environment; never reuse a production account password.
 

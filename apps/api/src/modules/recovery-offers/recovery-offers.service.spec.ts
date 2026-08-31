@@ -3,6 +3,7 @@ import {
   SubscriptionStatus,
   UserRole,
 } from "@prisma/client";
+import { createHash } from "crypto";
 import { RecoveryOffersService } from "./recovery-offers.service";
 
 describe("RecoveryOffersService", () => {
@@ -22,7 +23,7 @@ describe("RecoveryOffersService", () => {
       findMany: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
-      upsert: jest.fn(),
+      create: jest.fn(),
     },
     emailLog: { create: jest.fn() },
     $transaction: jest.fn(),
@@ -31,7 +32,8 @@ describe("RecoveryOffersService", () => {
   const config: any = {
     get: jest.fn((_key: string, fallback: string) => fallback),
   };
-  const service = new RecoveryOffersService(prisma, mail, config);
+  const queue: any = { add: jest.fn() };
+  const service = new RecoveryOffersService(prisma, mail, config, queue);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -120,6 +122,128 @@ describe("RecoveryOffersService", () => {
         reason: "Account already has an active paid plan",
       }),
     ]);
+  });
+
+  it("queues delivery without sending email in the admin request", async () => {
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-1" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.create.mockResolvedValue({ id: "offer-1" });
+    queue.add.mockResolvedValue({ id: "job-1" });
+
+    const result = await service.send({
+      reportIds: ["report-1"],
+      confirmed: true,
+      adminId: "admin-1",
+    });
+
+    expect(result.queued).toBe(1);
+    expect(queue.add).toHaveBeenCalledWith(
+      "deliver",
+      expect.objectContaining({ offerId: "offer-1" }),
+      expect.objectContaining({ attempts: 3 }),
+    );
+    expect(mail.send).not.toHaveBeenCalled();
+  });
+
+  it("never reopens an offer that is already prepared", async () => {
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-1" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        recoveryOffers: [
+          { shopId: "shop-1", status: RecoveryOfferStatus.PREPARED },
+        ],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+
+    const result = await service.preview(["report-1"]);
+
+    expect(result.eligible).toEqual([]);
+    expect(result.excluded).toEqual([
+      expect.objectContaining({
+        reason: "Recovery offer is already being processed",
+      }),
+    ]);
+    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("delivers a queued offer idempotently before marking it sent", async () => {
+    const rawToken = "delivery-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-1",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 40,
+      status: RecoveryOfferStatus.PREPARED,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: "admin-1",
+      user: { firstName: "Owner" },
+      shop: { shopName: "Owner Gold" },
+    });
+    mail.send.mockResolvedValue({ success: true, messageId: "message-1" });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emailLog.create.mockResolvedValue({ id: "log-1" });
+
+    const result = await service.deliverQueuedOffer({
+      offerId: "offer-1",
+      rawToken,
+    });
+
+    expect(result).toEqual({ skipped: false });
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: `recovery-offer/offer-1/${tokenHash}`,
+      }),
+    );
+    expect(prisma.recoveryOffer.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: RecoveryOfferStatus.PREPARED,
+          tokenHash,
+        }),
+      }),
+    );
+    expect(prisma.emailLog.create).toHaveBeenCalled();
   });
 
   it("extends an existing trial by exactly the offered days", async () => {

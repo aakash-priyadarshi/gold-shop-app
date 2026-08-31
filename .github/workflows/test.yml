@@ -154,14 +154,15 @@ jobs:
           node e2e/scripts/api-core-pipeline.mjs
         env:
           E2E_API_URL: "https://api.orivraa.com/api"
+          E2E_WEB_URL: "https://www.orivraa.com"
           E2E_TOKEN: ${{ secrets.SHOP_SMOKE_TOKEN }}
 
       - name: Admin seller-core probe
         run: |
           TOKEN="${{ secrets.ORIVRAA_ADMIN_TOKEN }}"
           if [ -z "$TOKEN" ]; then
-            echo "::notice::ORIVRAA_ADMIN_TOKEN not set — skip in-process seller-core"
-            exit 0
+            echo "::error::ORIVRAA_ADMIN_TOKEN is required for the admin seller-core monitor"
+            exit 1
           fi
           CODE=$(curl -s -o /tmp/seller_core.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer $TOKEN" \
@@ -260,10 +261,13 @@ jobs:
       - name: Alert and fail when a production monitor is unhealthy
         if: needs.smoke-tests.result != 'success' || needs.seller-api.result != 'success' || needs.e2e-tests.result != 'success'
         run: |
-          jq -n \
+          if ! jq -n \
             --arg message "Production monitor failed (smoke=${{ needs.smoke-tests.result }}, seller=${{ needs.seller-api.result }}, browser=${{ needs.e2e-tests.result }})" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Scheduled production monitoring",frustrationType:"deployment"}' \
-            | curl -fsS -X POST "https://api.orivraa.com/api/crash-reports" \
-                -H "Content-Type: application/json" --data-binary @- || true
+            | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
+                -X POST "https://api.orivraa.com/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @-; then
+            echo "::error::Failed to deliver the production-monitor incident alert"
+          fi
           exit 1

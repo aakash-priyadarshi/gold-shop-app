@@ -71,7 +71,6 @@ export default function RecoveryProPage() {
     setError("");
     try {
       const response = await recoveryOffersApi.claim(token);
-      await refreshUser();
       window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       setOffer((current) =>
         current
@@ -84,6 +83,14 @@ export default function RecoveryProPage() {
             }
           : current,
       );
+      try {
+        await refreshUser();
+      } catch (refreshError) {
+        console.warn(
+          "Recovery was claimed but the session refresh failed:",
+          refreshError,
+        );
+      }
     } catch (claimError: any) {
       setError(
         claimError?.response?.data?.message ||

@@ -3,11 +3,9 @@
  * Never run this against production.
  */
 import { PrismaClient } from "@prisma/client";
+import { assertDisposableTestDatabase } from "./test-seed-guard";
 
-if (process.env.NODE_ENV === "production") {
-  throw new Error("Refusing to seed E2E data in production");
-}
-
+assertDisposableTestDatabase();
 const prisma = new PrismaClient();
 
 async function main() {

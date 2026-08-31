@@ -422,13 +422,18 @@ export default function CrashReportsPage() {
         expiresInDays: 30,
       });
       toast({
-        title: t("Recovery offers sent"),
-        description: `${response.data.sent} ${t("sent")}, ${response.data.failed} ${t("failed")}`,
+        title: t("Recovery offers queued"),
+        description: `${response.data.queued} ${t("queued")}, ${response.data.failed} ${t("failed")}`,
         variant: response.data.failed > 0 ? "destructive" : "default",
       });
       setRecoveryPreview(null);
-      const recent = await recoveryOffersApi.recent();
-      setRecentRecoveryOffers(recent.data);
+      try {
+        const recent = await recoveryOffersApi.recent();
+        setRecentRecoveryOffers(recent.data);
+      } catch (refreshError) {
+        console.error("Recovery offers were queued but refresh failed:", refreshError);
+        toast({ title: t("Offers queued; refresh the page to update the list") });
+      }
     } catch (error) {
       console.error("Failed to send recovery offers:", error);
       toast({

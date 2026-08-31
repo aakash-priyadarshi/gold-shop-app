@@ -2338,7 +2338,12 @@ export const recoveryOffersApi = {
     reportIds: string[];
     campaignKey?: string;
     expiresInDays?: number;
-  }) => api.post("/recovery-offers/admin/send", { ...data, confirmed: true }),
+  }) =>
+    api.post<{
+      queued: number;
+      failed: number;
+      excluded: Array<{ userId?: string; email?: string; reason: string }>;
+    }>("/recovery-offers/admin/send", { ...data, confirmed: true }),
   lookup: (token: string) =>
     api.post<{
       recipient: string;

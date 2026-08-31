@@ -30,11 +30,41 @@ function required(name) {
   return value;
 }
 
+function requiredSecret(name) {
+  const value = process.env[name];
+  if (!value) {
+    console.error(name + " is required");
+    process.exit(1);
+  }
+  return value;
+}
+
+function assertSafeCredentialDestination(value, name) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
+  const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
+    url.hostname,
+  );
+  if (url.username || url.password) {
+    throw new Error(`${name} must not contain embedded credentials`);
+  }
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error(`${name} must use HTTPS unless it targets loopback`);
+  }
+}
+
 const API = required("E2E_API_URL").replace(/\/$/, "");
 const WEB = required("E2E_WEB_URL").replace(/\/$/, "");
 const email = required("E2E_SHOP_EMAIL");
-const password = required("E2E_SHOP_PASSWORD");
+const password = requiredSecret("E2E_SHOP_PASSWORD");
 const bypass = process.env.TURNSTILE_BYPASS_SECRET;
+
+assertSafeCredentialDestination(API, "E2E_API_URL");
+assertSafeCredentialDestination(WEB, "E2E_WEB_URL");
 
 if (!bypass) {
   console.error(
@@ -45,6 +75,7 @@ if (!bypass) {
 
 const res = await fetch(`${API}/auth/login`, {
   method: "POST",
+  redirect: "error",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ email, password, turnstileToken: bypass }),
 });

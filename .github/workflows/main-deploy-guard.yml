@@ -31,6 +31,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v5
         with:
@@ -76,6 +77,19 @@ jobs:
             echo "has_migrations=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Record exact push range
+        run: |
+          mkdir -p .deploy-range
+          jq -n --arg before "${{ github.event.before }}" --arg after "${{ github.sha }}" \
+            '{before:$before,after:$after}' > .deploy-range/range.json
+
+      - name: Upload push range
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deploy-range
+          path: .deploy-range/range.json
+          retention-days: 1
+
   migrate:
     name: 🗃️ Backup and Run Migrations
     runs-on: ubuntu-latest
@@ -86,6 +100,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v5
         with:
@@ -136,20 +151,25 @@ jobs:
     steps:
       - name: Write summary
         run: |
-          echo "## Pre-deploy guard" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Stage | Result |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Validation | ${{ needs.validate.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Migration | ${{ needs.migrate.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Commit | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Pre-deploy guard"
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| Validation | ${{ needs.validate.result }} |"
+            echo "| Migration | ${{ needs.migrate.result }} |"
+            echo "| Commit | ${{ github.sha }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Alert and fail on a critical error
         if: needs.validate.result != 'success' || (needs.migrate.result != 'success' && needs.migrate.result != 'skipped')
         run: |
-          jq -n \
+          if ! jq -n \
             --arg message "Pre-deploy guard failed for commit ${{ github.sha }} (validation=${{ needs.validate.result }}, migration=${{ needs.migrate.result }})" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Pre-deploy validation and migration",frustrationType:"deployment"}' \
-            | curl -fsS -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
-                -H "Content-Type: application/json" --data-binary @- || true
+            | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
+                -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @-; then
+            echo "::error::Failed to deliver the pre-deploy incident alert"
+          fi
           exit 1

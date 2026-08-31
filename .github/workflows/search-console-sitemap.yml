@@ -69,8 +69,8 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "submit=false" >> "$GITHUB_OUTPUT"
             echo "auth_mode=missing-property" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping Search Console submission. Add SEARCH_CONSOLE_PROPERTY to enable automation."
-            exit 0
+            echo "::error::SEARCH_CONSOLE_PROPERTY is required for live sitemap submission."
+            exit 1
           fi
 
           if [[ "$HAS_OAUTH" == "true" ]]; then
@@ -90,11 +90,13 @@ jobs:
           echo "ready=false" >> "$GITHUB_OUTPUT"
           echo "submit=false" >> "$GITHUB_OUTPUT"
           echo "auth_mode=missing-auth" >> "$GITHUB_OUTPUT"
-          echo "::notice::Skipping Search Console submission. Add either GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON or GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID, GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET, and GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN."
-          exit 0
+          echo "::error::Search Console authentication is required for live sitemap submission."
+          exit 1
 
       - uses: actions/checkout@v5
         if: steps.config.outputs.ready == 'true'
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         if: steps.config.outputs.ready == 'true'

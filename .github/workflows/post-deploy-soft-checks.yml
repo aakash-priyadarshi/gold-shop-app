@@ -33,12 +33,35 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download exact push range
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: deploy-range
+          path: .deploy-range
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
 
       - name: Wait until changed services expose the merged SHA
         run: |
           EXPECTED="${{ github.event.workflow_run.head_sha || github.sha }}"
-          CHANGED=$(git diff --name-only HEAD^ HEAD)
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            BEFORE=$(jq -r '.before' .deploy-range/range.json)
+            RANGE_AFTER=$(jq -r '.after' .deploy-range/range.json)
+            if [[ "$RANGE_AFTER" != "$EXPECTED" ]]; then
+              echo "::error::Deploy range does not match expected commit"
+              exit 1
+            fi
+            if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+              BEFORE="HEAD^"
+            fi
+          else
+            BEFORE="HEAD^"
+          fi
+          CHANGED=$(git diff --name-only "$BEFORE" "$EXPECTED")
           API_CHANGED=false
           WEB_CHANGED=false
           if echo "$CHANGED" | grep -qE '^(apps/api/|packages/shared/|package.json$|pnpm-lock.yaml$|pnpm-workspace.yaml$|turbo.json$)'; then
@@ -52,12 +75,12 @@ jobs:
             API_READY=true
             WEB_READY=true
             if [[ "$API_CHANGED" == "true" ]]; then
-              API_SHA=$(curl -fsS "${{ secrets.PRODUCTION_API_URL }}/api/health" | jq -r '.release.sha // .data.release.sha // ""' || true)
+              API_SHA=$(curl -fsS --connect-timeout 10 --max-time 20 "${{ secrets.PRODUCTION_API_URL }}/api/health" | jq -r '.release.sha // .data.release.sha // ""' || true)
               [[ "$API_SHA" == "$EXPECTED" ]] || API_READY=false
               echo "API release: ${API_SHA:-unavailable}"
             fi
             if [[ "$WEB_CHANGED" == "true" ]]; then
-              WEB_SHA=$(curl -fsS "https://www.orivraa.com/api/build-info" | jq -r '.sha // ""' || true)
+              WEB_SHA=$(curl -fsS --connect-timeout 10 --max-time 20 "https://www.orivraa.com/api/build-info" | jq -r '.sha // ""' || true)
               [[ "$WEB_SHA" == "$EXPECTED" ]] || WEB_READY=false
               echo "Web release: ${WEB_SHA:-unavailable}"
             fi
@@ -74,12 +97,15 @@ jobs:
       - name: Alert Orivraa incident channel on failure
         if: failure()
         run: |
-          jq -n \
+          if ! jq -n \
             --arg message "Railway did not deploy the expected commit ${{ github.event.workflow_run.head_sha || github.sha }}" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Exact production release verification",frustrationType:"deployment"}' \
-            | curl -fsS -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
-                -H "Content-Type: application/json" --data-binary @- || true
+            | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
+                -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @-; then
+            echo "::error::Failed to deliver the release-verification incident alert"
+          fi
 
   critical-smoke:
     name: Critical API smoke
@@ -159,17 +185,21 @@ jobs:
         run: node e2e/scripts/api-core-pipeline.mjs
         env:
           E2E_API_URL: ${{ secrets.PRODUCTION_API_URL }}/api
+          E2E_WEB_URL: https://www.orivraa.com
           E2E_TOKEN: ${{ secrets.SHOP_SMOKE_TOKEN }}
 
       - name: Alert Orivraa incident channel on failure
         if: failure()
         run: |
-          jq -n \
+          if ! jq -n \
             --arg message "Critical authenticated production canary failed for commit ${{ github.event.workflow_run.head_sha || github.sha }}" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Authenticated post-deploy canary",frustrationType:"deployment"}' \
-            | curl -fsS -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
-                -H "Content-Type: application/json" --data-binary @- || true
+            | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
+                -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @-; then
+            echo "::error::Failed to deliver the API-canary incident alert"
+          fi
 
   critical-e2e:
     name: Critical Playwright
@@ -226,9 +256,12 @@ jobs:
       - name: Alert Orivraa incident channel on failure
         if: failure()
         run: |
-          jq -n \
+          if ! jq -n \
             --arg message "Production Playwright canary failed for commit ${{ github.event.workflow_run.head_sha || github.sha }}" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Post-deploy browser canary",frustrationType:"deployment"}' \
-            | curl -fsS -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
-                -H "Content-Type: application/json" --data-binary @- || true
+            | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
+                -X POST "${{ secrets.PRODUCTION_API_URL }}/api/crash-reports" \
+                -H "Content-Type: application/json" --data-binary @-; then
+            echo "::error::Failed to deliver the browser-canary incident alert"
+          fi

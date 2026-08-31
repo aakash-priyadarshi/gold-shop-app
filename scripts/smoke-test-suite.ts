@@ -140,6 +140,7 @@ async function main() {
     }
   } catch (err: any) {
     console.log(`⚠️  Pre-flight check failed: ${err.message}`);
+    if (process.env.STRICT_SMOKE === "true") throw err;
     console.log(`   Continuing with tests anyway...\n`);
   }
 

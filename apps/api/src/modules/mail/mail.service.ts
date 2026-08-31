@@ -14,6 +14,7 @@ export interface EmailOptions {
   from?: string;
   replyTo?: string;
   allowAdminLinks?: boolean;
+  idempotencyKey?: string;
   attachments?: Array<{
     filename: string;
     content?: Buffer | string;
@@ -276,7 +277,7 @@ export class MailService {
 
       // Use Resend if available
       if (this.provider === 'resend' && this.resend) {
-        return this.sendWithResend(from, to, options.subject, html, options.replyTo, options.attachments);
+        return this.sendWithResend(from, to, options.subject, html, options.replyTo, options.attachments, options.idempotencyKey);
       }
 
       // Fallback to SMTP
@@ -298,6 +299,7 @@ export class MailService {
     html: string,
     replyTo?: string,
     attachments?: EmailOptions['attachments'],
+    idempotencyKey?: string,
   ): Promise<SendResult> {
     try {
       const resendAttachments = attachments?.map((a) => ({
@@ -310,16 +312,19 @@ export class MailService {
         contentType: a.contentType,
       })).filter((a) => a.content);
 
-      const { data, error } = await this.resend!.emails.send({
-        from,
-        to,
-        subject,
-        html,
-        replyTo,
-        ...(resendAttachments?.length
-          ? { attachments: resendAttachments }
-          : {}),
-      });
+      const { data, error } = await this.resend!.emails.send(
+        {
+          from,
+          to,
+          subject,
+          html,
+          replyTo,
+          ...(resendAttachments?.length
+            ? { attachments: resendAttachments }
+            : {}),
+        },
+        idempotencyKey ? { idempotencyKey } : undefined,
+      );
 
       if (error) {
         this.logger.error(`❌ Resend error: ${error.message}`);

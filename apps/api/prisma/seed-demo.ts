@@ -5,7 +5,8 @@
  * These accounts have emailVerified=true so they can log in immediately.
  *
  * Usage (disposable test databases only):
- *   NODE_ENV=test SEED_DEMO_PASSWORD=<random-password> npx tsx prisma/seed-demo.ts
+ *   NODE_ENV=test DATABASE_URL=<test-url> TEST_DATABASE_URL=<same-test-url>
+ *   SEED_DEMO_PASSWORD=<random-password> npx tsx prisma/seed-demo.ts
  *
  * Accounts created:
  *   - demo-customer@orivraa.com  (CUSTOMER)
@@ -15,7 +16,9 @@
 
 import { PrismaClient, UserRole, UserStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { assertDisposableTestDatabase } from "./test-seed-guard";
 
+assertDisposableTestDatabase();
 const prisma = new PrismaClient();
 
 const DEMO_ACCOUNTS = [
@@ -36,9 +39,6 @@ const DEMO_ACCOUNTS = [
 ];
 
 async function main() {
-  if (process.env.NODE_ENV !== "test") {
-    throw new Error("Refusing to seed demo accounts outside NODE_ENV=test.");
-  }
   const password = process.env.SEED_DEMO_PASSWORD;
   if (!password || password.length < 16) {
     throw new Error(

@@ -20,9 +20,10 @@ jobs:
     name: 📝 Publish Web Changelog
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 50 # Enough to get commit messages
+          persist-credentials: false
 
       - name: Collect commit messages
         id: changelog
