@@ -126,6 +126,11 @@ const statusConfig: Record<
   },
 };
 
+/** Unknown/null balance is treated as unpaid so delivery cannot sneak through. */
+function quoteBlocksDelivery(balanceDueNpr?: number | null) {
+  return balanceDueNpr == null || balanceDueNpr > 0;
+}
+
 export default function ShopQuotesPage() {
   const t = useT();
   const { locale } = useTranslation();
@@ -196,7 +201,7 @@ export default function ShopQuotesPage() {
     if (
       newStatus === "COMPLETED" &&
       quote &&
-      (quote.balanceDueNpr ?? 0) > 0
+      quoteBlocksDelivery(quote.balanceDueNpr)
     ) {
       toast({
         variant: "destructive",
@@ -573,7 +578,9 @@ export default function ShopQuotesPage() {
                                     )}
                                     {quote.status === "READY" && (
                                       <DropdownMenuItem
-                                        disabled={(quote.balanceDueNpr ?? 0) > 0}
+                                        disabled={quoteBlocksDelivery(
+                                          quote.balanceDueNpr,
+                                        )}
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,
