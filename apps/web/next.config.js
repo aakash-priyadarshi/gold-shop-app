@@ -10,6 +10,34 @@ const withPWA = require('@ducanh2912/next-pwa').default;
 // When building for Tauri desktop, export static HTML (no Node server)
 const isTauriBuild = process.env.TAURI_BUILD === '1';
 
+function getConfiguredApiConnectSource(value) {
+  if (!value) return '';
+
+  try {
+    const url = new URL(value);
+    const isLoopback = ['localhost', '127.0.0.1', '[::1]'].includes(
+      url.hostname,
+    );
+    if (
+      url.protocol !== 'https:' &&
+      !(url.protocol === 'http:' && isLoopback)
+    ) {
+      return '';
+    }
+    return url.origin;
+  } catch {
+    return '';
+  }
+}
+
+const configuredApiConnectSource = getConfiguredApiConnectSource(
+  process.env.NEXT_PUBLIC_API_URL,
+);
+const contentSecurityPolicy =
+  "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://va.vercel-scripts.com https://*.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.orivraa.com https://challenges.cloudflare.com https://cloudflareinsights.com https://*.cloudflareinsights.com https://static.cloudflareinsights.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io wss:" +
+  (configuredApiConnectSource ? ` ${configuredApiConnectSource}` : '') +
+  "; worker-src 'self' blob:; media-src 'self' blob: https://images.orivraa.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';";
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -88,8 +116,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://va.vercel-scripts.com https://*.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.orivraa.com https://challenges.cloudflare.com https://cloudflareinsights.com https://*.cloudflareinsights.com https://static.cloudflareinsights.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io wss:; worker-src 'self' blob:; media-src 'self' blob: https://images.orivraa.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: contentSecurityPolicy,
           },
         ],
       },

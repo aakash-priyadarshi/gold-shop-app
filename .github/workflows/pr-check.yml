@@ -544,7 +544,7 @@ jobs:
           SEED_DEMO_PASSWORD="$E2E_SHOP_PASSWORD" pnpm --filter @gold-shop/api exec tsx prisma/seed-demo.ts
           pnpm --filter @gold-shop/api exec tsx prisma/seed-e2e.ts
           pnpm --filter @gold-shop/api build
-          pnpm --filter gold-shop-web build
+          NODE_ENV=production pnpm --filter gold-shop-web build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001/api
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
@@ -555,7 +555,7 @@ jobs:
         run: |
           nohup env PORT=3001 pnpm --filter @gold-shop/api start:prod > api-e2e.log 2>&1 &
           API_PID=$!
-          nohup env PORT=3000 pnpm --filter gold-shop-web start > web-e2e.log 2>&1 &
+          nohup env PORT=3000 NODE_ENV=production pnpm --filter gold-shop-web start > web-e2e.log 2>&1 &
           WEB_PID=$!
           for attempt in $(seq 1 60); do
             API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health || true)

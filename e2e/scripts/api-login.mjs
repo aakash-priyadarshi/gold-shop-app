@@ -119,7 +119,11 @@ writeFileSync(
     {
       token,
       refresh,
-      user: { email: user?.email, role: user?.role, shopId: user?.shop?.id },
+      user: {
+        email: user?.email,
+        role: user?.role,
+        shopId: user?.shopId || user?.shop?.id,
+      },
     },
     null,
     2,
