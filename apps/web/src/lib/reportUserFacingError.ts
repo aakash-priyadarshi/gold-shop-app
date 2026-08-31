@@ -13,6 +13,9 @@ const API_BASE_URL = rawApiUrl.endsWith("/api")
 const DEDUPE_WINDOW_MS = 2 * 60 * 1000;
 const SESSION_MAX_PER_MINUTE = 8;
 
+const BOT_USER_AGENT_PATTERN =
+  /bot|crawl|spider|slurp|ia_archiver|prerender|headless|bingpreview|applewebkit\/compatible/i;
+
 /** Validation / session noise — not product bugs. */
 const SKIP_PATTERNS: RegExp[] = [
   /session expired/i,
@@ -28,6 +31,19 @@ const SKIP_PATTERNS: RegExp[] = [
   /incorrect (password|pin|otp)/i,
   /wrong password/i,
   /clipboard/i,
+  /invalid credentials/i,
+  /balance must be paid before completing/i,
+  /cash drawer kick needs a paired thermal printer/i,
+  /printer not configured/i,
+  /stripe connect is not available/i,
+  /no item with sku/i,
+  /shop\.address should not be empty/i,
+  /tax-exempt invoices require both a reason and supporting evidence reference/i,
+  /captcha (verification required|expired|verification failed)/i,
+  /invalid captcha/i,
+  /file (?:is )?too large/i,
+  /maximum (?:file )?size/i,
+  /unsupported file type/i,
 ];
 
 const recentKeys = new Map<string, number>();
@@ -106,9 +122,7 @@ function readJwtUser(): { userId?: string; userRole: string } {
   let userId: string | undefined;
   try {
     const token =
-      localStorage.getItem("token") ||
-      sessionStorage.getItem("token") ||
-      "";
+      localStorage.getItem("token") || sessionStorage.getItem("token") || "";
     if (token) {
       const parts = token.split(".");
       if (parts.length === 3) {
@@ -142,6 +156,14 @@ function requestUrlLooksLikeCrashReports(url?: string): boolean {
   return !!url && /\/crash-reports(?:\?|$|\/)/.test(url);
 }
 
+function requestUrlLooksLikeSessionAnalytics(url?: string): boolean {
+  return !!url && /\/sessions\/web(?:\?|$|\/)/.test(url);
+}
+
+export function isAutomatedUserAgent(userAgent?: string): boolean {
+  return BOT_USER_AGENT_PATTERN.test(userAgent || "");
+}
+
 /**
  * Fire-and-forget. Never throws. Safe to call from toast(), interceptors,
  * and error boundaries.
@@ -156,6 +178,7 @@ export async function submitUserFacingError(
   try {
     if (typeof window === "undefined") return false;
     if (input.reportToAdmin === false) return false;
+    if (isAutomatedUserAgent(navigator.userAgent)) return false;
 
     const title = (input.title || "").trim();
     const description = (input.description || "").trim();
@@ -163,12 +186,11 @@ export async function submitUserFacingError(
       return false;
     }
 
-    const page =
-      (input.page || window.location.pathname + window.location.search).slice(
-        0,
-        2000,
-      );
+    const page = (
+      input.page || window.location.pathname + window.location.search
+    ).slice(0, 2000);
     if (page.includes("/crash-reports")) return false;
+    if (page.includes("/system/slack-alert-test")) return false;
 
     const copy = formatUserFacingErrorCopy({ title, description, page });
     if (!copy) return false;
@@ -192,8 +214,7 @@ export async function submitUserFacingError(
       userRole,
       userId,
       userAgent: navigator.userAgent,
-      sessionToken:
-        sessionStorage.getItem("orivraa_ws_token") || undefined,
+      sessionToken: sessionStorage.getItem("orivraa_ws_token") || undefined,
       userTriggered: input.userTriggered ?? false,
       userDescription: input.userDescription,
       screenshotUrl: input.screenshotUrl,
@@ -221,7 +242,11 @@ export function reportApiFailure(error: {
 }): void {
   const url = String(error.config?.url || "");
   if (requestUrlLooksLikeCrashReports(url)) return;
+  if (requestUrlLooksLikeSessionAnalytics(url)) return;
   if (error.code === "ERR_CANCELED") return;
+  if (/request (?:was )?(?:aborted|canceled)/i.test(error.message || "")) {
+    return;
+  }
 
   const status = error.response?.status;
   if (status && status < 500) return;
@@ -229,9 +254,7 @@ export function reportApiFailure(error: {
   const method = (error.config?.method || "GET").toUpperCase();
   const path = url.replace(/^https?:\/\/[^/]+/i, "") || url || "(unknown)";
   const apiMessage = extractApiErrorMessage(error.response?.data);
-  const title = status
-    ? `Server error ${status}`
-    : "Network error";
+  const title = status ? `Server error ${status}` : "Network error";
   const description = [
     `${method} ${path}`,
     apiMessage || error.message || error.response?.statusText,

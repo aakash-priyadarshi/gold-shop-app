@@ -78,6 +78,27 @@ export interface UploadOptions {
   onProgress?: (progress: number) => void;
 }
 
+export async function readUploadResult(
+  response: Response,
+): Promise<UploadResult> {
+  let payload: Partial<UploadResult> = {};
+  try {
+    payload = JSON.parse(await response.text()) as Partial<UploadResult>;
+  } catch {
+    // The worker or an edge proxy can return HTML/plain text during an outage.
+  }
+
+  if (response.ok && payload.success) return payload as UploadResult;
+
+  return {
+    ...payload,
+    success: false,
+    error:
+      (typeof payload.error === "string" && payload.error.trim()) ||
+      `Upload service returned HTTP ${response.status}`,
+  };
+}
+
 // Default sizing options by upload type
 const DEFAULT_OPTIONS: Record<
   UploadType,
@@ -139,7 +160,8 @@ export async function compressImage(
         ctx.drawImage(img, 0, 0, width, height);
 
         const mimeType = options.mimeType || "image/webp";
-        const quality = mimeType === "image/png" ? undefined : options.quality / 100;
+        const quality =
+          mimeType === "image/png" ? undefined : options.quality / 100;
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -277,8 +299,7 @@ const CERTIFICATE_MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 function isPdfFile(file: File): boolean {
   return (
-    file.type === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
 }
 
@@ -303,7 +324,8 @@ export async function uploadCertificate(
   if (pdf && file.size > CERTIFICATE_MAX_PDF_BYTES) {
     return {
       success: false,
-      error: "PDF must be 5MB or smaller. Photograph the certificate instead to save space.",
+      error:
+        "PDF must be 5MB or smaller. Photograph the certificate instead to save space.",
     };
   }
   if (image && file.size > CERTIFICATE_MAX_IMAGE_BYTES) {
@@ -441,7 +463,7 @@ export async function uploadAuthenticatedFile(
       },
       body: formData,
     });
-    return (await response.json()) as UploadResult;
+    return readUploadResult(response);
   } catch (error) {
     return {
       success: false,

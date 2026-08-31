@@ -30,6 +30,8 @@ interface TurnstileProps {
   onVerify: (token: string) => void;
   onError?: () => void;
   onExpire?: () => void;
+  /** Increment to discard a consumed/expired token and render a fresh challenge. */
+  resetKey?: number;
   theme?: "light" | "dark" | "auto";
   size?: "normal" | "compact";
   className?: string;
@@ -41,6 +43,7 @@ export function Turnstile({
   onVerify,
   onError,
   onExpire,
+  resetKey = 0,
   theme = "auto",
   size = "normal",
   className = "",
@@ -114,6 +117,15 @@ export function Turnstile({
       widgetIdRef.current = null;
     };
   }, [renderWidget]);
+
+  useEffect(() => {
+    if (!resetKey || !widgetIdRef.current || !window.turnstile) return;
+    try {
+      window.turnstile.reset(widgetIdRef.current);
+    } catch {
+      // A concurrent widget refresh can make the previous id temporarily stale.
+    }
+  }, [resetKey]);
 
   // Don't render anything if no site key
   if (!TURNSTILE_SITE_KEY) {

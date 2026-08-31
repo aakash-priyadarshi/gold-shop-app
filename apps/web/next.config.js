@@ -51,7 +51,7 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
     ],
   },
-  
+
   // Security + Performance headers
   async headers() {
     return [
@@ -88,7 +88,8 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://va.vercel-scripts.com https://*.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.orivraa.com https://challenges.cloudflare.com https://cloudflareinsights.com https://*.cloudflareinsights.com https://static.cloudflareinsights.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io wss:; worker-src 'self' blob:; media-src 'self' blob: https://images.orivraa.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://va.vercel-scripts.com https://*.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.orivraa.com https://challenges.cloudflare.com https://cloudflareinsights.com https://*.cloudflareinsights.com https://static.cloudflareinsights.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io wss:; worker-src 'self' blob:; media-src 'self' blob: https://images.orivraa.com; frame-src 'self' https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },
@@ -96,26 +97,38 @@ const nextConfig = {
       {
         source: '/brand/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
       {
         source: '/patterns/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
       // Preconnect hints for external resources
       {
         source: '/',
         headers: [
-          { key: 'Link', value: '<https://images.orivraa.com>; rel=preconnect' },
-          { key: 'Link', value: '<https://res.cloudinary.com>; rel=preconnect' },
+          {
+            key: 'Link',
+            value: '<https://images.orivraa.com>; rel=preconnect',
+          },
+          {
+            key: 'Link',
+            value: '<https://res.cloudinary.com>; rel=preconnect',
+          },
         ],
       },
     ];
   },
-  
+
   // Only use rewrites in development - in production, api.ts uses NEXT_PUBLIC_API_URL directly
   async rewrites() {
     // In production, don't rewrite - the frontend makes direct calls to the API
@@ -141,10 +154,15 @@ const withPWAConfigured = withPWA({
   dest: 'public',
   disable: isTauriBuild || process.env.NODE_ENV === 'development',
   register: false,
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  // Navigation HTML must come from the current deploy. Caching an old app
+  // shell is what leaves clients requesting chunks removed by a new release.
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
   workboxOptions: {
+    skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
     runtimeCaching: [
       {
         // Invoice PDFs are generated on-demand (logo + QR can take >5s).
@@ -184,12 +202,14 @@ const withPWAConfigured = withPWA({
         },
       },
       {
-        // Next.js static assets and fonts.
+        // Revalidate Next.js assets on each use so a newly deployed app shell
+        // cannot be held behind a month-old service-worker response.
         urlPattern: ({ url }) => /\/_next\/static\//.test(url.pathname),
-        handler: 'CacheFirst',
+        handler: 'StaleWhileRevalidate',
         options: {
           cacheName: 'next-static',
-          expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+          cacheableResponse: { statuses: [200] },
         },
       },
     ],
@@ -201,16 +221,16 @@ module.exports = (() => {
   // Soft-wrap with Sentry when the SDK is installed. Source map upload runs only
   // when SENTRY_AUTH_TOKEN is present (CI / Vercel), so local builds stay fast.
   try {
-    const { withSentryConfig } = require("@sentry/nextjs");
+    const { withSentryConfig } = require('@sentry/nextjs');
     return withSentryConfig(base, {
-      org: process.env.SENTRY_ORG || "aakash-priyadarshi",
-      project: process.env.SENTRY_PROJECT || "orivraa-web",
+      org: process.env.SENTRY_ORG || 'aakash-priyadarshi',
+      project: process.env.SENTRY_PROJECT || 'orivraa-web',
       silent: true,
       widenClientFileUpload: true,
       disableLogger: true,
       automaticVercelMonitors: true,
       // Bypass ad blockers by proxying events through our domain
-      tunnelRoute: "/monitoring",
+      tunnelRoute: '/monitoring',
       sourcemaps: {
         disable: !process.env.SENTRY_AUTH_TOKEN,
       },

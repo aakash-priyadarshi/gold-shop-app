@@ -4,6 +4,7 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { HttpClientModule } from "../../common";
 import { AuditModule } from "../audit/audit.module";
+import { CrashReportsModule } from "../crash-reports/crash-reports.module";
 import { MailModule } from "../mail/mail.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { SubscriptionPlansModule } from "../core/subscriptions/subscription-plans.module";
@@ -27,6 +28,7 @@ import { TwoFactorService } from "./two-factor.service";
   imports: [
     UsersModule,
     AuditModule,
+    CrashReportsModule,
     NotificationsModule,
     MailModule,
     HttpClientModule,
