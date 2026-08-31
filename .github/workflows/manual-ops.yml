@@ -42,7 +42,7 @@ permissions:
   deployments: write
 
 env:
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
   PNPM_VERSION: "10.27.0"
 
 jobs:
@@ -140,18 +140,19 @@ jobs:
     runs-on: ubuntu-latest
     if: inputs.operation == 'db-health-check'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
+          persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
@@ -180,11 +181,15 @@ jobs:
       - name: Check Migration Status
         working-directory: apps/api
         run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "::notice::DRY RUN - Would check migration status"
+            exit 0
+          fi
+
           echo "Checking migration status..."
           npx prisma migrate status
         env:
           DATABASE_URL: ${{ inputs.environment == 'production' && secrets.DATABASE_URL || secrets.STAGING_DATABASE_URL }}
-        continue-on-error: true
 
   # ══════════════════════════════════════════════════════════
   # Full Smoke Test

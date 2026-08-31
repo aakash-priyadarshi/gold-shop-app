@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   PNPM_VERSION: "10.27.0"
 
 concurrency:
@@ -69,8 +69,8 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "submit=false" >> "$GITHUB_OUTPUT"
             echo "auth_mode=missing-property" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping Search Console submission. Add SEARCH_CONSOLE_PROPERTY to enable automation."
-            exit 0
+            echo "::error::SEARCH_CONSOLE_PROPERTY is required for live sitemap submission."
+            exit 1
           fi
 
           if [[ "$HAS_OAUTH" == "true" ]]; then
@@ -90,21 +90,23 @@ jobs:
           echo "ready=false" >> "$GITHUB_OUTPUT"
           echo "submit=false" >> "$GITHUB_OUTPUT"
           echo "auth_mode=missing-auth" >> "$GITHUB_OUTPUT"
-          echo "::notice::Skipping Search Console submission. Add either GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON or GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_ID, GOOGLE_SEARCH_CONSOLE_OAUTH_CLIENT_SECRET, and GOOGLE_SEARCH_CONSOLE_OAUTH_REFRESH_TOKEN."
-          exit 0
+          echo "::error::Search Console authentication is required for live sitemap submission."
+          exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         if: steps.config.outputs.ready == 'true'
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         if: steps.config.outputs.ready == 'true'
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         if: steps.config.outputs.ready == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -122,9 +124,6 @@ jobs:
 
       - name: Wait for sitemap to become reachable
         if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
-        # Non-fatal: slow Vercel deploys should not block the submission.
-        # The daily scheduled run at 04:17 UTC is the reliable path.
-        continue-on-error: true
         shell: bash
         run: |
           for attempt in $(seq 1 30); do
@@ -137,8 +136,8 @@ jobs:
             sleep 30
           done
 
-          echo "::warning::Sitemap not reachable after 30 attempts — proceeding with submission anyway. The scheduled run will confirm."
-          exit 0
+          echo "::error::Sitemap not reachable after 30 attempts"
+          exit 1
 
       - name: Submit sitemap to Search Console
         if: steps.config.outputs.ready == 'true'

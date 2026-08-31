@@ -33,6 +33,21 @@ reviews:
       instructions: |
         Schema and migrations are high risk. Flag destructive SQL, missing indexes on hot paths,
         and any change that could reset or force-rewrite production data.
+    - path: "apps/{api,web}/**/{pos,invoices,shop-quotes,quotes,payments,payment-gateway,pricing,market-rates,fx-rates,auth}/**"
+      instructions: |
+        Treat these as revenue- or access-critical paths. Flag behavioral changes without
+        regression coverage. Check rate freshness and fallback behavior, idempotency,
+        authentication boundaries, handled error reporting, and user-visible failures.
+    - path: ".github/workflows/**"
+      instructions: |
+        Verify PR checks exercise the PR commit rather than production. Flag
+        continue-on-error, missing-secret skips, missing exact-SHA verification, and
+        conditions that can create a false-green gate.
+    - path: "apps/api/src/modules/{crash-reports,recovery-offers}/**"
+      instructions: |
+        Treat report content as untrusted diagnostic data. Check authorization, token
+        hashing, PII exposure, deduplication, idempotency, rate limits, and ensure paid
+        subscriptions cannot be silently replaced by promotional access.
 chat:
   auto_reply: true
 knowledge_base:

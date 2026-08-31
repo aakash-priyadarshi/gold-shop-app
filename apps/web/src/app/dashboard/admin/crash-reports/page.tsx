@@ -4,7 +4,11 @@ import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { T } from "@/components/ui/T";
 import { useToast } from "@/hooks/use-toast";
-import { crashReportApi } from "@/lib/api";
+import {
+  crashReportApi,
+  recoveryOffersApi,
+  type RecoveryOfferPreview,
+} from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
   BellRing,
@@ -19,6 +23,7 @@ import {
   Eye,
   FileText,
   Filter,
+  Gift,
   Monitor,
   RefreshCw,
   Smartphone,
@@ -67,6 +72,15 @@ interface IntegrationsStatus {
     mentionEnabled: boolean;
   };
 }
+
+type RecentRecoveryOffer = {
+  id: string;
+  email: string;
+  status: string;
+  sentAt?: string;
+  claimedAt?: string;
+  expiresAt: string;
+};
 
 function startOfLocalDayIso() {
   const d = new Date();
@@ -188,11 +202,17 @@ export default function CrashReportsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryPreview, setRecoveryPreview] =
+    useState<RecoveryOfferPreview | null>(null);
+  const [recentRecoveryOffers, setRecentRecoveryOffers] = useState<
+    RecentRecoveryOffer[]
+  >([]);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const [reportsRes, statsRes, integrationsRes] = await Promise.all([
+      const [reportsRes, statsRes, integrationsRes, recoveryRes] = await Promise.all([
         crashReportApi.getAll({
           page,
           limit: 25,
@@ -208,13 +228,16 @@ export default function CrashReportsPage() {
         }),
         crashReportApi.getStats(),
         crashReportApi.getIntegrations().catch(() => null),
+        recoveryOffersApi.recent().catch(() => null),
       ]);
       setReports(reportsRes.data.reports);
       setSelectedIds(new Set());
+      setRecoveryPreview(null);
       setTotalPages(reportsRes.data.totalPages);
       setTotal(reportsRes.data.total);
       setStats(statsRes.data);
       if (integrationsRes) setIntegrations(integrationsRes.data);
+      if (recoveryRes) setRecentRecoveryOffers(recoveryRes.data);
     } catch (err) {
       console.error("Failed to fetch crash reports:", err);
     } finally {
@@ -363,7 +386,68 @@ export default function CrashReportsPage() {
     }
   };
 
+  const handlePreviewRecovery = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setRecoveryLoading(true);
+    try {
+      const response = await recoveryOffersApi.preview(ids);
+      setRecoveryPreview(response.data);
+      if (response.data.eligible.length === 0) {
+        toast({
+          title: t("No eligible recovery recipients"),
+          description: t(
+            "The selected reports are anonymous, already offered recovery, or belong to accounts that already have a paid plan.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to preview recovery recipients:", error);
+      toast({
+        title: t("Recovery preview failed"),
+        variant: "destructive",
+      });
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const handleSendRecovery = async () => {
+    if (!recoveryPreview || recoveryPreview.eligible.length === 0) return;
+    setRecoveryLoading(true);
+    try {
+      const response = await recoveryOffersApi.send({
+        reportIds: [...selectedIds],
+        campaignKey: recoveryPreview.campaignKey,
+        expiresInDays: 30,
+      });
+      toast({
+        title: t("Recovery offers queued"),
+        description: `${response.data.queued} ${t("queued")}, ${response.data.failed} ${t("failed")}`,
+        variant: response.data.failed > 0 ? "destructive" : "default",
+      });
+      setRecoveryPreview(null);
+      try {
+        const recent = await recoveryOffersApi.recent();
+        setRecentRecoveryOffers(recent.data);
+      } catch (refreshError) {
+        console.error("Recovery offers were queued but refresh failed:", refreshError);
+        toast({ title: t("Offers queued; refresh the page to update the list") });
+      }
+    } catch (error) {
+      console.error("Failed to send recovery offers:", error);
+      toast({
+        title: t("Recovery send failed"),
+        description: t("No subscription time was granted automatically."),
+        variant: "destructive",
+      });
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
   const toggleSelected = (id: string) => {
+    setRecoveryPreview(null);
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
@@ -521,6 +605,45 @@ export default function CrashReportsPage() {
           </button>
         </div>
 
+        {recentRecoveryOffers.length > 0 && (
+          <div className="rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-900/60 dark:bg-gray-900/50">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-amber-600" />
+                <p className="text-sm font-semibold">
+                  <T>Customer recovery offers</T>
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {recentRecoveryOffers.filter((offer) => offer.status === "SENT").length}{" "}
+                <T>awaiting claim</T>
+                {" · "}
+                {recentRecoveryOffers.filter((offer) => offer.status === "CLAIMED").length}{" "}
+                <T>claimed</T>
+                {" · "}
+                {recentRecoveryOffers.filter((offer) => offer.status === "SEND_FAILED").length}{" "}
+                <T>delivery failed</T>
+              </p>
+            </div>
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-muted-foreground">
+                <T>View recent recipients</T>
+              </summary>
+              <ul className="mt-2 divide-y dark:divide-gray-800">
+                {recentRecoveryOffers.slice(0, 20).map((offer) => (
+                  <li
+                    key={offer.id}
+                    className="flex flex-wrap justify-between gap-2 py-2"
+                  >
+                    <span>{offer.email}</span>
+                    <span className="font-medium">{offer.status}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        )}
+
         {/* Stats cards */}
           {stats && (
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
@@ -673,13 +796,14 @@ export default function CrashReportsPage() {
                 <input
                   type="checkbox"
                   checked={allVisibleSelected}
-                  onChange={() =>
+                  onChange={() => {
+                    setRecoveryPreview(null);
                     setSelectedIds(
                       allVisibleSelected
                         ? new Set()
                         : new Set(reports.map((report) => report.id)),
-                    )
-                  }
+                    );
+                  }}
                   className="h-4 w-4 rounded border-gray-300 text-gold-600 focus:ring-gold-500"
                 />
                 <T>Select page</T>
@@ -727,12 +851,87 @@ export default function CrashReportsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedIds(new Set())}
+                onClick={handlePreviewRecovery}
+                disabled={bulkUpdating || recoveryLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {recoveryLoading ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Gift className="h-3.5 w-3.5" />
+                )}
+                <T>Preview 40-day recovery offer</T>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedIds(new Set());
+                  setRecoveryPreview(null);
+                }}
                 disabled={bulkUpdating}
                 className="ml-auto rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-white/70 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-900"
               >
                 <T>Clear selection</T>
               </button>
+            </div>
+          )}
+
+          {recoveryPreview && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-amber-950 dark:text-amber-100">
+                    <T>Confirm service-recovery email</T>
+                  </h3>
+                  <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-200/80">
+                    {recoveryPreview.eligible.length} <T>eligible account(s)</T>
+                    {" · "}
+                    {recoveryPreview.excluded.length} <T>excluded</T>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={
+                    recoveryLoading || recoveryPreview.eligible.length === 0
+                  }
+                  onClick={handleSendRecovery}
+                  className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+                >
+                  <T>Send account-bound offers</T>
+                </button>
+              </div>
+              {recoveryPreview.eligible.length > 0 && (
+                <ul className="mt-3 space-y-1 text-sm text-amber-950 dark:text-amber-100">
+                  {recoveryPreview.eligible.map((recipient) => (
+                    <li key={recipient.shopId}>
+                      {recipient.firstName} · {recipient.shopName} · {recipient.email}
+                      {" · "}
+                      {recipient.reportCount} <T>report(s)</T>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {recoveryPreview.excluded.length > 0 && (
+                <details className="mt-3 text-sm text-amber-900/80 dark:text-amber-200/80">
+                  <summary className="cursor-pointer font-medium">
+                    <T>Why some reports were excluded</T>
+                  </summary>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {recoveryPreview.excluded.map((item, index) => (
+                      <li key={`${item.userId || "report"}-${index}`}>
+                        {item.email ? `${item.email}: ` : ""}
+                        {t(item.reason)}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <p className="mt-3 text-xs text-amber-800 dark:text-amber-300">
+                <T>
+                  Sending does not mark reports fixed. Each recipient must sign
+                  in and claim the offer; paid accounts are never modified.
+                </T>
+              </p>
             </div>
           )}
 

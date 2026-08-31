@@ -7,7 +7,36 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const API = process.env.E2E_API_URL || 'https://api.orivraa.com/api';
+function required(name) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required; this write-capable test has no production default`);
+  return value;
+}
+
+function assertSafeCredentialDestination(value, name) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
+  const loopback = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(
+    url.hostname,
+  );
+  if (url.username || url.password) {
+    throw new Error(`${name} must not contain embedded credentials`);
+  }
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+    throw new Error(`${name} must use HTTPS unless it targets loopback`);
+  }
+}
+
+const apiTarget = required('E2E_API_URL');
+const webTarget = required('E2E_WEB_URL');
+assertSafeCredentialDestination(apiTarget, 'E2E_API_URL');
+assertSafeCredentialDestination(webTarget, 'E2E_WEB_URL');
+const API = apiTarget.replace(/\/$/, '');
+const WEB = webTarget.replace(/\/$/, '');
 
 let token = process.env.E2E_TOKEN;
 if (!token && existsSync(resolve(__dirname, '../.auth/session.json'))) {
@@ -21,13 +50,14 @@ const BROWSER_HEADERS = {
   'Content-Type': 'application/json',
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
-  Origin: 'https://www.orivraa.com',
-  Referer: 'https://www.orivraa.com/dashboard',
+  Origin: WEB,
+  Referer: `${WEB}/dashboard`,
 };
 
 async function api(method, path, body) {
   const res = await fetch(`${API}${path}`, {
     method,
+    redirect: 'error',
     headers: BROWSER_HEADERS,
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -52,7 +82,7 @@ record('health', 'API health', health.ok, `status ${health.status}`);
 
 if (!token) {
   console.log('\n⚠️  No auth token — skipping authenticated API tests.');
-  console.log('Add E2E_SHOP_EMAIL + E2E_SHOP_PASSWORD to apps/api/.env, then:');
+  console.log('Set explicit E2E API/web URLs, shop credentials, and bypass secret, then:');
   console.log('  cd apps/api && railway run node ../../e2e/scripts/api-login.mjs');
   process.exit(results.every((r) => r.ok) ? 0 : 1);
 }
@@ -89,7 +119,7 @@ if (shopId) {
     const list = inv.data?.data || inv.data;
     const first = Array.isArray(list) ? list[0] : list?.items?.[0];
     if (first?.verificationToken) {
-      const verify = await fetch(`https://www.orivraa.com/verify-bill/${first.verificationToken}`);
+      const verify = await fetch(`${WEB}/verify-bill/${first.verificationToken}`);
       record('verify-bill', 'Public verify-bill page', verify.status === 200, `HTTP ${verify.status}`);
     } else {
       record('verify-bill', 'Public verify-bill page', true, 'skipped (no invoice with token)');
@@ -97,6 +127,7 @@ if (shopId) {
     const invoiceId = first?.id;
     if (invoiceId) {
       const pdfRes = await fetch(`${API}/invoices/${invoiceId}/pdf`, {
+        redirect: 'error',
         headers: { ...BROWSER_HEADERS, Accept: 'application/pdf' },
       });
       const buf = Buffer.from(await pdfRes.arrayBuffer());

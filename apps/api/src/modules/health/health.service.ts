@@ -6,6 +6,11 @@ export interface HealthStatus {
   timestamp: string;
   version: string;
   uptime: number;
+  release: {
+    sha: string;
+    environment: string;
+    service: string;
+  };
   checks: {
     database: ComponentHealth;
     redis?: ComponentHealth;
@@ -45,6 +50,17 @@ export class HealthService {
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
+      release: {
+        sha:
+          process.env.RAILWAY_GIT_COMMIT_SHA ||
+          process.env.GITHUB_SHA ||
+          'unknown',
+        environment:
+          process.env.RAILWAY_ENVIRONMENT_NAME ||
+          process.env.NODE_ENV ||
+          'unknown',
+        service: process.env.RAILWAY_SERVICE_NAME || '@gold-shop/api',
+      },
       checks,
     };
   }
