@@ -1,6 +1,7 @@
 "use client";
 
 import { GitHubTokenManager } from "@/components/admin/GitHubTokenManager";
+import { SellerSmokeTokenManager } from "@/components/admin/SellerSmokeTokenManager";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -2144,6 +2145,9 @@ export default function TestingDashboardPage() {
 
                     {/* GitHub Token Expiry Tracker */}
                     <GitHubTokenManager />
+
+                    {/* Dedicated read-only credential for authenticated seller canaries */}
+                    <SellerSmokeTokenManager />
                   </div>
                 </div>
 
