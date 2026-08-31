@@ -2279,6 +2279,26 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='crash-reports-alerts']",
+      popover: {
+        title: "Instant Slack alerts",
+        description:
+          "Once the server-side Slack webhook is configured, every new incident is posted to your existing alert channel. Use Send test alert to verify delivery without exposing the webhook in the browser.",
+        side: "bottom",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='crash-reports-export']",
+      popover: {
+        title: "AI-ready incident export",
+        description:
+          "Copy or download every report matching the current filters as one Markdown investigation prompt. The export groups issues with stable fingerprints and omits IP and session credentials.",
+        side: "bottom",
+        align: "end",
+      },
+    },
+    {
       element: "[data-tour='crash-reports-filters']",
       popover: {
         title: "Today and source",
