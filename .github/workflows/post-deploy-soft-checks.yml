@@ -4,9 +4,7 @@
 name: Post-Deploy Critical Checks
 
 on:
-  workflow_run:
-    workflows: ["Deploy Guard"]
-    types: [completed]
+  deployment_status:
   workflow_dispatch:
 
 permissions:
@@ -15,7 +13,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: post-deploy-critical-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: post-deploy-critical-${{ github.event.deployment.sha || github.sha }}
   cancel-in-progress: true
 
 env:
@@ -28,39 +26,19 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'eloquent-respect / production')
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.deployment.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Download exact push range
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: deploy-range
-          path: .deploy-range
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-
       - name: Wait until changed services expose the merged SHA
         run: |
-          EXPECTED="${{ github.event.workflow_run.head_sha || github.sha }}"
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            BEFORE=$(jq -r '.before' .deploy-range/range.json)
-            RANGE_AFTER=$(jq -r '.after' .deploy-range/range.json)
-            if [[ "$RANGE_AFTER" != "$EXPECTED" ]]; then
-              echo "::error::Deploy range does not match expected commit"
-              exit 1
-            fi
-            if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
-              BEFORE="HEAD^"
-            fi
-          else
-            BEFORE="HEAD^"
-          fi
+          EXPECTED="${{ github.event.deployment.sha || github.sha }}"
+          BEFORE="HEAD^"
           CHANGED=$(git diff --name-only "$BEFORE" "$EXPECTED")
           API_CHANGED=false
           WEB_CHANGED=false
@@ -98,7 +76,7 @@ jobs:
         if: failure()
         run: |
           if ! jq -n \
-            --arg message "Railway did not deploy the expected commit ${{ github.event.workflow_run.head_sha || github.sha }}" \
+            --arg message "Railway did not deploy the expected commit ${{ github.event.deployment.sha || github.sha }}" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Exact production release verification",frustrationType:"deployment"}' \
             | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
@@ -111,14 +89,11 @@ jobs:
     name: Critical API smoke
     runs-on: ubuntu-latest
     needs: wait-for-release
-    if: >
-      needs.wait-for-release.result == 'success' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+    if: needs.wait-for-release.result == 'success'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.deployment.sha || github.sha }}
           submodules: recursive
           token: ${{ secrets.SUBMODULE_PAT }}
           persist-credentials: false
@@ -193,7 +168,7 @@ jobs:
         if: failure()
         run: |
           if ! jq -n \
-            --arg message "Critical authenticated production canary failed for commit ${{ github.event.workflow_run.head_sha || github.sha }}" \
+            --arg message "Critical authenticated production canary failed for commit ${{ github.event.deployment.sha || github.sha }}" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Authenticated post-deploy canary",frustrationType:"deployment"}' \
             | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \
@@ -206,14 +181,11 @@ jobs:
     name: Critical Playwright
     runs-on: ubuntu-latest
     needs: wait-for-release
-    if: >
-      needs.wait-for-release.result == 'success' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+    if: needs.wait-for-release.result == 'success'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.deployment.sha || github.sha }}
           persist-credentials: false
 
       - name: Setup pnpm
@@ -247,7 +219,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: post-deploy-playwright-${{ github.event.workflow_run.head_sha || github.sha }}
+          name: post-deploy-playwright-${{ github.event.deployment.sha || github.sha }}
           path: |
             playwright-report/
             e2e-results/
@@ -259,7 +231,7 @@ jobs:
         if: failure()
         run: |
           if ! jq -n \
-            --arg message "Production Playwright canary failed for commit ${{ github.event.workflow_run.head_sha || github.sha }}" \
+            --arg message "Production Playwright canary failed for commit ${{ github.event.deployment.sha || github.sha }}" \
             --arg page "github-actions://${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{errorMessage:$message,page:$page,platform:"web",userRole:"SYSTEM",userAction:"Post-deploy browser canary",frustrationType:"deployment"}' \
             | curl -fsS --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 \

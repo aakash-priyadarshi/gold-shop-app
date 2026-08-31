@@ -9,8 +9,7 @@ name: Search Console URL Indexing
 # not granted previously.
 
 on:
-  push:
-    branches: [master, main]
+  deployment_status:
   schedule:
     # Daily at 04:30 UTC (after sitemap sync at 04:17 UTC)
     - cron: "30 4 * * *"
@@ -45,8 +44,11 @@ concurrency:
 
 jobs:
   submit-urls:
+    if: >
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'eloquent-respect / production')
     runs-on: ubuntu-latest
-
     steps:
       - name: Check secrets
         id: config
@@ -87,13 +89,6 @@ jobs:
       - name: Install dependencies
         if: steps.config.outputs.ready == 'true'
         run: pnpm install --frozen-lockfile
-
-      - name: Wait for production deploy to settle
-        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
-        shell: bash
-        run: |
-          echo "Push trigger detected, waiting 6 minutes for production deploy"
-          sleep 360
 
       - name: Restore submitted-URL state
         if: steps.config.outputs.ready == 'true'
