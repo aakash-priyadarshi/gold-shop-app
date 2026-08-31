@@ -87,6 +87,12 @@ function LoginForm() {
   // Turnstile state
   const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [turnstileError, setTurnstileError] = useState(false);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken("");
+    setTurnstileError(true);
+    setTurnstileResetKey((value) => value + 1);
+  }, []);
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
     setTurnstileError(false);
@@ -97,7 +103,8 @@ function LoginForm() {
     toast({
       variant: "destructive",
       title: t("Verification failed"),
-      description: t("Please try again or refresh the page."),
+      description: t("Security check expired — please verify again."),
+      reportToAdmin: false,
     });
   }, [toast, t]);
   const handleTurnstileExpire = useCallback(() => {
@@ -263,13 +270,15 @@ function LoginForm() {
     } catch (error: any) {
       // Check if email not verified
       if (error.message === "EMAIL_NOT_VERIFIED") {
+        const email = String(error.email || data.email || "").trim();
         setVerificationUserId(error.userId);
-        setVerificationEmail(error.email);
+        setVerificationEmail(email);
+        resetTurnstile();
         setShowVerification(true);
 
         // Send verification OTP
         try {
-          await resendVerificationOtp(error.email);
+          await resendVerificationOtp(email);
           setResendCooldown(60);
           toast({
             title: t("Verification required"),
@@ -288,6 +297,8 @@ function LoginForm() {
           });
         }
       } else {
+        // Turnstile tokens are single-use even when login itself fails.
+        resetTurnstile();
         toast({
           variant: "destructive",
           title: t("Login failed"),
@@ -353,8 +364,19 @@ function LoginForm() {
 
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
+    const email = (verificationEmail || getValues("email") || "").trim();
+    if (!email) {
+      toast({
+        variant: "destructive",
+        title: t("Email required"),
+        description: t("Enter your email again before requesting a code."),
+        reportToAdmin: false,
+      });
+      return;
+    }
     try {
-      await resendVerificationOtp(verificationEmail);
+      await resendVerificationOtp(email);
+      setVerificationEmail(email);
       setResendCooldown(60);
       setOtpCode(["", "", "", "", "", ""]);
       setOtpError("");
@@ -685,19 +707,20 @@ function LoginForm() {
                 onVerify={handleTurnstileVerify}
                 onError={handleTurnstileError}
                 onExpire={handleTurnstileExpire}
+                resetKey={turnstileResetKey}
                 theme="auto"
               />
               {/* Show message if captcha has error or expired */}
               {turnstileError && (
                 <p className="text-sm text-amber-600 flex items-center gap-1">
                   <ExclamationCircleIcon className="h-4 w-4" />
-                  <T>Captcha expired or failed.</T>{" "}
+                  <T>Security check expired. Please verify again.</T>{" "}
                   <button
                     type="button"
-                    onClick={() => window.location.reload()}
+                    onClick={resetTurnstile}
                     className="underline font-medium hover:text-amber-700"
                   >
-                    <T>Reload page</T>
+                    <T>Retry security check</T>
                   </button>
                 </p>
               )}

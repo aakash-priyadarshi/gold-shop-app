@@ -1,9 +1,12 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
-import { OtpType, UserRole, UserStatus } from '@prisma/client';
+import { CurrencyCode, OtpType, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { CreateShopDto } from './dto/register.dto';
 import { OtpService } from './otp.service';
 
 describe('password-reset verification', () => {
@@ -14,13 +17,21 @@ describe('password-reset verification', () => {
   };
 
   function createResendVerificationService(
-    user: { id: string; email: string; firstName: string; emailVerified: boolean } | null,
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      emailVerified: boolean;
+    } | null,
+    crashReports?: { submit: jest.Mock },
   ) {
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue(user) },
     };
     const otpService = {
-      sendVerificationOtpByEmail: jest.fn().mockResolvedValue({ success: true }),
+      sendVerificationOtpByEmail: jest
+        .fn()
+        .mockResolvedValue({ success: true }),
     };
     const service = new AuthService(
       prisma as any,
@@ -32,6 +43,7 @@ describe('password-reset verification', () => {
       {} as any,
       {} as any,
       {} as any,
+      crashReports as any,
     );
     return { service, otpService };
   }
@@ -80,20 +92,60 @@ describe('password-reset verification', () => {
     });
 
     it('returns the generic response when an existing unverified email is rate limited', async () => {
-      const { service, otpService } = createResendVerificationService({
-        id: 'user-1',
-        email: 'unverified@example.com',
-        firstName: 'Unverified',
-        emailVerified: false,
-      });
+      const crashReports = { submit: jest.fn() };
+      const { service, otpService } = createResendVerificationService(
+        {
+          id: 'user-1',
+          email: 'unverified@example.com',
+          firstName: 'Unverified',
+          emailVerified: false,
+        },
+        crashReports,
+      );
       otpService.sendVerificationOtpByEmail.mockRejectedValue(
-        new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
+        new HttpException(
+          'Too many OTP requests',
+          HttpStatus.TOO_MANY_REQUESTS,
+        ),
       );
 
       await expect(
         service.resendVerificationOtp('unverified@example.com', '203.0.113.10'),
       ).resolves.toEqual(genericVerificationResponse);
       expect(otpService.sendVerificationOtpByEmail).toHaveBeenCalledTimes(1);
+      expect(crashReports.submit).not.toHaveBeenCalled();
+    });
+
+    it('records delivery failures without changing the public response', async () => {
+      const crashReports = {
+        submit: jest.fn().mockResolvedValue({ id: 'crash-1' }),
+      };
+      const { service, otpService } = createResendVerificationService(
+        {
+          id: 'user-1',
+          email: 'unverified@example.com',
+          firstName: 'Unverified',
+          emailVerified: false,
+        },
+        crashReports,
+      );
+      otpService.sendVerificationOtpByEmail.mockRejectedValue(
+        new Error('Provider unavailable'),
+      );
+
+      await expect(
+        service.resendVerificationOtp('unverified@example.com'),
+      ).resolves.toEqual(genericVerificationResponse);
+      await Promise.resolve();
+
+      expect(crashReports.submit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errorMessage: 'Email verification OTP delivery failed',
+          page: '/auth/login',
+          userId: 'user-1',
+          userAgent: 'server:auth-service',
+        }),
+      );
     });
 
     it('does not disclose verification state or OTP rate limiting in a successful 200 public response', async () => {
@@ -117,7 +169,10 @@ describe('password-reset verification', () => {
         emailVerified: false,
       });
       rateLimited.otpService.sendVerificationOtpByEmail.mockRejectedValue(
-        new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
+        new HttpException(
+          'Too many OTP requests',
+          HttpStatus.TOO_MANY_REQUESTS,
+        ),
       );
 
       await expect(
@@ -169,7 +224,10 @@ describe('password-reset verification', () => {
     );
 
     await expect(
-      service.login({ email: 'seller@example.com', password: 'Password1!' } as any),
+      service.login({
+        email: 'seller@example.com',
+        password: 'Password1!',
+      } as any),
     ).rejects.toMatchObject({
       response: expect.objectContaining({
         code: 'EMAIL_NOT_VERIFIED',
@@ -204,7 +262,11 @@ describe('password-reset verification', () => {
       {} as any,
     );
 
-    await service.resetPassword('seller@example.com', '123456', 'NewPassword1!');
+    await service.resetPassword(
+      'seller@example.com',
+      '123456',
+      'NewPassword1!',
+    );
 
     expect(otpService.verifyOtpByEmail).toHaveBeenCalledWith(
       'seller@example.com',
@@ -247,10 +309,7 @@ describe('password-reset verification', () => {
       .spyOn(service as any, 'checkRateLimit')
       .mockResolvedValue(undefined);
 
-    await service.sendPasswordResetOtp(
-      'Seller@Example.com',
-      '203.0.113.10',
-    );
+    await service.sendPasswordResetOtp('Seller@Example.com', '203.0.113.10');
 
     expect(checkRateLimit).toHaveBeenCalledTimes(2);
     expect(checkRateLimit).toHaveBeenNthCalledWith(
@@ -289,15 +348,21 @@ describe('password-reset verification', () => {
       {} as any,
       {} as any,
     );
-    jest.spyOn(service, 'sendOtp').mockRejectedValue(
-      new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
-    );
+    jest
+      .spyOn(service, 'sendOtp')
+      .mockRejectedValue(
+        new HttpException(
+          'Too many OTP requests',
+          HttpStatus.TOO_MANY_REQUESTS,
+        ),
+      );
 
     await expect(
       service.sendPasswordResetOtp('seller@example.com', '203.0.113.10'),
     ).resolves.toEqual({
       success: true,
-      message: 'If an account exists with this email, a reset code has been sent.',
+      message:
+        'If an account exists with this email, a reset code has been sent.',
     });
   });
 
@@ -311,15 +376,87 @@ describe('password-reset verification', () => {
       {} as any,
       {} as any,
     );
-    jest.spyOn(service as any, 'checkRateLimit').mockRejectedValue(
-      new HttpException('Too many OTP requests', HttpStatus.TOO_MANY_REQUESTS),
-    );
+    jest
+      .spyOn(service as any, 'checkRateLimit')
+      .mockRejectedValue(
+        new HttpException(
+          'Too many OTP requests',
+          HttpStatus.TOO_MANY_REQUESTS,
+        ),
+      );
 
     await expect(
       service.sendPasswordResetOtp('unknown@example.com', '203.0.113.10'),
     ).resolves.toEqual({
       success: true,
-      message: 'If an account exists with this email, a reset code has been sent.',
+      message:
+        'If an account exists with this email, a reset code has been sent.',
+    });
+  });
+});
+
+describe('shopkeeper registration address', () => {
+  it('accepts an omitted address and stores a safe empty value', async () => {
+    const shopDto = plainToInstance(CreateShopDto, {
+      shopName: 'Address Optional Jewellers',
+      country: 'IN',
+      currency: CurrencyCode.INR,
+      city: 'Patna',
+      contactPhone: '+919876543210',
+    });
+    await expect(validate(shopDto)).resolves.toHaveLength(0);
+
+    const tx = {
+      user: {
+        create: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          email: 'seller@example.com',
+          firstName: 'Seller',
+          role: UserRole.SHOPKEEPER,
+        }),
+      },
+      shop: { create: jest.fn().mockResolvedValue({ id: 'shop-1' }) },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue(null) },
+      $transaction: jest.fn((callback) => callback(tx)),
+    };
+    const redis = {
+      getCachedEmailExists: jest.fn().mockResolvedValue(null),
+      cacheEmailExists: jest.fn().mockResolvedValue(undefined),
+      invalidateEmailCache: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new AuthService(
+      prisma as any,
+      {} as any,
+      { log: jest.fn().mockResolvedValue(undefined) } as any,
+      {} as any,
+      {
+        sendVerificationOtpByEmail: jest.fn().mockResolvedValue(undefined),
+      } as any,
+      redis as any,
+      { autoActivateFreePlan: jest.fn().mockResolvedValue(undefined) } as any,
+      { processReferralSignup: jest.fn().mockResolvedValue(undefined) } as any,
+      {} as any,
+    );
+
+    await service.register({
+      email: 'seller@example.com',
+      password: 'Password1!',
+      firstName: 'Seller',
+      lastName: 'Account',
+      role: UserRole.SHOPKEEPER,
+      shop: {
+        shopName: 'Address Optional Jewellers',
+        country: 'IN',
+        currency: CurrencyCode.INR,
+        city: 'Patna',
+        contactPhone: '+919876543210',
+      },
+    });
+
+    expect(tx.shop.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ address: '' }),
     });
   });
 });

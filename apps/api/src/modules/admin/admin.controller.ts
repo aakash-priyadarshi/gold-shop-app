@@ -1,22 +1,23 @@
 import { randomUUID } from "crypto";
 import {
-    BadRequestException,
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Logger,
-    Param,
-    Patch,
-    Post,
-    Query,
-    UseGuards,
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import axios from "axios";
 import * as bcrypt from "bcryptjs";
 import { RedisService } from "../../common/redis";
@@ -30,6 +31,7 @@ import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { SellerEngagementService } from "../core/seller-performance/seller-engagement.service";
 import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
+import { CreateAdminUserDto } from "./dto/create-admin-user.dto";
 import {
   CreateEmailTemplateDto,
   PreviewEmailTemplateDto,
@@ -203,30 +205,41 @@ export class AdminController {
   @Post("users")
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Create a new user" })
-  async createUser(
-    @Body()
-    data: {
-      email: string;
-      password: string;
-      firstName: string;
-      lastName: string;
-      role: UserRole;
-      phone?: string;
-    },
-  ) {
+  async createUser(@Body() data: CreateAdminUserDto) {
+    const email = data.email.trim().toLowerCase();
+    const phone = data.phone?.trim() || undefined;
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: data.role,
-        phone: data.phone,
-        status: "ACTIVE",
-      },
-    });
+    let user;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          role: data.role,
+          phone,
+          status: "ACTIVE",
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const target = Array.isArray(error.meta?.target)
+          ? error.meta.target.join(",")
+          : String(error.meta?.target || "");
+        const field = target.includes("phone") ? "Phone number" : "Email";
+        throw new ConflictException(`${field} is already registered`);
+      }
+      this.logger.error(
+        "Admin user creation failed",
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
+    }
 
     return {
       success: true,
@@ -779,10 +792,11 @@ export class AdminController {
       const pct = ((current - previous) / previous) * 100;
       return {
         changePct: Math.round(pct * 10) / 10,
-        changeType: (pct > 0 ? "positive" : pct < 0 ? "negative" : "neutral") as
-          | "positive"
-          | "negative"
-          | "neutral",
+        changeType: (pct > 0
+          ? "positive"
+          : pct < 0
+            ? "negative"
+            : "neutral") as "positive" | "negative" | "neutral",
       };
     };
 
@@ -851,7 +865,6 @@ export class AdminController {
     };
   }
 
-
   // ═══════════════════════════════════════
   // USER SEARCH (for compose / messaging)
   // ═══════════════════════════════════════
@@ -869,7 +882,13 @@ export class AdminController {
           { email: { contains: q, mode: "insensitive" } },
         ],
       },
-      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
       take: 10,
       orderBy: { firstName: "asc" },
     });
@@ -995,7 +1014,9 @@ export class AdminController {
           quoteCount: 0,
           totalSpent: c.purchaseStats[0]?.totalSpent || 0,
           isOnlineNow,
-          lastActive: (latestSession?.lastActive ?? c.lastLoginAt ?? c.createdAt) as any,
+          lastActive: (latestSession?.lastActive ??
+            c.lastLoginAt ??
+            c.createdAt) as any,
           createdAt: c.createdAt,
         };
       }),
@@ -1380,7 +1401,7 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   async checkApisHealth() {
     const results: Record<string, any> = {};
-    
+
     // Check Database - use Prisma direct query
     try {
       const start = Date.now();
@@ -1411,12 +1432,16 @@ export class AdminController {
       status: emailStatus.configured ? "up" : "not-configured",
       provider: emailStatus.provider,
       sender: emailStatus.sender,
-      message: emailStatus.configured ? "Email service ready" : "Email service not configured",
+      message: emailStatus.configured
+        ? "Email service ready"
+        : "Email service not configured",
     };
 
     // Determine overall status
-    const hasErrors = Object.values(results).some((r: any) => r.status === "down" || r.error);
-    
+    const hasErrors = Object.values(results).some(
+      (r: any) => r.status === "down" || r.error,
+    );
+
     return {
       overallStatus: hasErrors ? "degraded" : "healthy",
       timestamp: new Date().toISOString(),
@@ -1426,7 +1451,9 @@ export class AdminController {
 
   @Post("health/test-sms")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Send a test SMS via Twilio to verify SMS configuration" })
+  @ApiOperation({
+    summary: "Send a test SMS via Twilio to verify SMS configuration",
+  })
   @HttpCode(HttpStatus.OK)
   async testTwilioSms(
     @Body() data: { phoneNumber: string },
@@ -1443,12 +1470,15 @@ export class AdminController {
     const accountSid = this.configService.get<string>("TWILIO_ACCOUNT_SID");
     const authToken = this.configService.get<string>("TWILIO_AUTH_TOKEN");
     const fromNumber = this.configService.get<string>("TWILIO_PHONE_NUMBER");
-    const messagingServiceSid = this.configService.get<string>("TWILIO_MESSAGING_SERVICE_SID");
+    const messagingServiceSid = this.configService.get<string>(
+      "TWILIO_MESSAGING_SERVICE_SID",
+    );
 
     if (!accountSid || !authToken || (!fromNumber && !messagingServiceSid)) {
       return {
         success: false,
-        error: "Twilio SMS is not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and either TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.",
+        error:
+          "Twilio SMS is not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and either TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.",
       };
     }
 
@@ -1524,7 +1554,7 @@ export class AdminController {
 
     try {
       const start = Date.now();
-      
+
       // Try to verify account by making a simple API call
       const response = await axios.get(
         `https://api.twilio.com/2010-04-01/Accounts/${accountSid}`,
@@ -1549,7 +1579,10 @@ export class AdminController {
       return {
         status: "down",
         service: "Twilio SMS API",
-        message: error?.response?.data?.message || error?.message || "API check failed",
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          "API check failed",
         error: true,
       };
     }
@@ -1587,10 +1620,13 @@ export class AdminController {
   async getEmailLogs(
     @Query("limit") limit?: string,
     @Query("page") page?: string,
-    @Query("type") type?: string,      // 'manual' | 'automated' | 'all'
+    @Query("type") type?: string, // 'manual' | 'automated' | 'all'
     @Query("direction") direction?: string, // 'OUTBOUND' | 'INBOUND' | 'all'
   ) {
-    const limitNum = Math.min(200, Math.max(1, parseInt(limit || "50", 10) || 50));
+    const limitNum = Math.min(
+      200,
+      Math.max(1, parseInt(limit || "50", 10) || 50),
+    );
     const pageNum = Math.max(1, parseInt(page || "1", 10) || 1);
     const skip = (pageNum - 1) * limitNum;
 
@@ -1642,12 +1678,22 @@ export class AdminController {
         key: "manual_user_message",
         name: "Manual support message",
         audience: "Selected customer, seller, or user",
-        trigger: "Admin sends a manual message from CRM, user detail, or email reply views",
+        trigger:
+          "Admin sends a manual message from CRM, user detail, or email reply views",
         backend: "POST /admin/messages/send",
         template: "support-message",
         sender: supportSender,
         replyTo: EMAIL_SENDERS.SUPPORT,
-        variables: ["title", "recipientName", "message", "sentAt", "appName", "appUrl", "supportEmail", "year"],
+        variables: [
+          "title",
+          "recipientName",
+          "message",
+          "sentAt",
+          "appName",
+          "appUrl",
+          "supportEmail",
+          "year",
+        ],
         editable: true,
         notes: "Customer-safe template with no admin dashboard links.",
       },
@@ -1660,7 +1706,15 @@ export class AdminController {
         template: "otp",
         sender: defaultNoReply,
         replyTo: null,
-        variables: ["name", "otp", "expiresIn", "appName", "appUrl", "supportEmail", "year"],
+        variables: [
+          "name",
+          "otp",
+          "expiresIn",
+          "appName",
+          "appUrl",
+          "supportEmail",
+          "year",
+        ],
         editable: false,
         notes: "Transactional security email.",
       },
@@ -1673,7 +1727,15 @@ export class AdminController {
         template: "password-reset-otp",
         sender: defaultNoReply,
         replyTo: null,
-        variables: ["name", "otp", "expiresIn", "appName", "appUrl", "supportEmail", "year"],
+        variables: [
+          "name",
+          "otp",
+          "expiresIn",
+          "appName",
+          "appUrl",
+          "supportEmail",
+          "year",
+        ],
         editable: false,
         notes: "Transactional security email.",
       },
@@ -1712,7 +1774,18 @@ export class AdminController {
         template: "order-confirmation",
         sender: ordersSender,
         replyTo: null,
-        variables: ["customerName", "orderNumber", "items", "subtotal", "shipping", "tax", "total", "currency", "shippingAddress", "shopName"],
+        variables: [
+          "customerName",
+          "orderNumber",
+          "items",
+          "subtotal",
+          "shipping",
+          "tax",
+          "total",
+          "currency",
+          "shippingAddress",
+          "shopName",
+        ],
         editable: false,
         notes: "Transactional order receipt.",
       },
@@ -1725,9 +1798,19 @@ export class AdminController {
         template: "order-status / order-shipped / order-delivered",
         sender: ordersSender,
         replyTo: null,
-        variables: ["customerName", "orderNumber", "status", "trackingNumber", "trackingUrl", "carrier", "estimatedDelivery", "shopName"],
+        variables: [
+          "customerName",
+          "orderNumber",
+          "status",
+          "trackingNumber",
+          "trackingUrl",
+          "carrier",
+          "estimatedDelivery",
+          "shopName",
+        ],
         editable: false,
-        notes: "Uses a more specific template for shipped and delivered events.",
+        notes:
+          "Uses a more specific template for shipped and delivered events.",
       },
       {
         key: "seller_new_order",
@@ -1738,7 +1821,15 @@ export class AdminController {
         template: "seller-new-order",
         sender: ordersSender,
         replyTo: null,
-        variables: ["shopOwnerName", "orderNumber", "customerName", "items", "total", "currency", "dashboardUrl"],
+        variables: [
+          "shopOwnerName",
+          "orderNumber",
+          "customerName",
+          "items",
+          "total",
+          "currency",
+          "dashboardUrl",
+        ],
         editable: false,
         notes: "Seller-facing order alert.",
       },
@@ -1751,7 +1842,15 @@ export class AdminController {
         template: "seller-new-rfq",
         sender: defaultNoReply,
         replyTo: null,
-        variables: ["shopOwnerName", "rfqNumber", "customerName", "itemDescription", "material", "weight", "dashboardUrl"],
+        variables: [
+          "shopOwnerName",
+          "rfqNumber",
+          "customerName",
+          "itemDescription",
+          "material",
+          "weight",
+          "dashboardUrl",
+        ],
         editable: false,
         notes: "Seller-facing quote request alert.",
       },
@@ -1764,7 +1863,14 @@ export class AdminController {
         template: "tracking-link",
         sender: ordersSender,
         replyTo: null,
-        variables: ["customerName", "quoteNumber", "shopName", "jewelleryType", "estimatedDays", "trackingUrl"],
+        variables: [
+          "customerName",
+          "quoteNumber",
+          "shopName",
+          "jewelleryType",
+          "estimatedDays",
+          "trackingUrl",
+        ],
         editable: false,
         notes: "Sent only when the shop chooses email delivery.",
       },
@@ -1777,7 +1883,13 @@ export class AdminController {
         template: "shop-verification",
         sender: adminSender,
         replyTo: null,
-        variables: ["shopOwnerName", "shopName", "status", "reason", "dashboardUrl"],
+        variables: [
+          "shopOwnerName",
+          "shopName",
+          "status",
+          "reason",
+          "dashboardUrl",
+        ],
         editable: false,
         notes: "Admin-originated seller account status email.",
       },
@@ -1790,7 +1902,14 @@ export class AdminController {
         template: "commission-reminder",
         sender: adminSender,
         replyTo: null,
-        variables: ["shopOwnerName", "shopName", "pendingAmount", "currency", "dueDate", "paymentUrl"],
+        variables: [
+          "shopOwnerName",
+          "shopName",
+          "pendingAmount",
+          "currency",
+          "dueDate",
+          "paymentUrl",
+        ],
         editable: false,
         notes: "Finance/admin-originated reminder.",
       },
@@ -1798,12 +1917,21 @@ export class AdminController {
         key: "system_admin_alert",
         name: "Internal admin alert",
         audience: "Admins only",
-        trigger: "Backup, AI description, or system health service sends an admin alert",
+        trigger:
+          "Backup, AI description, or system health service sends an admin alert",
         backend: "MailService.sendAdminAlert",
         template: "admin-alert",
         sender: `Orivraa System <${EMAIL_SENDERS.ADMIN}>`,
         replyTo: null,
-        variables: ["alertType", "title", "message", "details", "actionUrl", "actionText", "now"],
+        variables: [
+          "alertType",
+          "title",
+          "message",
+          "details",
+          "actionUrl",
+          "actionText",
+          "now",
+        ],
         editable: false,
         notes: "Only internal/admin emails may contain admin dashboard links.",
       },
@@ -1816,7 +1944,15 @@ export class AdminController {
         template: "contact-form",
         sender: defaultNoReply,
         replyTo: "Visitor email address",
-        variables: ["name", "email", "phone", "company", "interest", "message", "source"],
+        variables: [
+          "name",
+          "email",
+          "phone",
+          "company",
+          "interest",
+          "message",
+          "source",
+        ],
         editable: false,
         notes: "Reply-to is the visitor's submitted email.",
       },
@@ -1852,7 +1988,10 @@ export class AdminController {
     @Body() data: CreateEmailTemplateDto,
     @CurrentUser("id") adminId: string,
   ) {
-    const template = await this.emailTemplateService.createTemplate(data as any, adminId);
+    const template = await this.emailTemplateService.createTemplate(
+      data as any,
+      adminId,
+    );
     return { template };
   }
 
@@ -1864,7 +2003,11 @@ export class AdminController {
     @Body() data: UpdateEmailTemplateDto,
     @CurrentUser("id") adminId: string,
   ) {
-    const template = await this.emailTemplateService.updateTemplate(id, data as any, adminId);
+    const template = await this.emailTemplateService.updateTemplate(
+      id,
+      data as any,
+      adminId,
+    );
     return { template };
   }
 
@@ -1894,7 +2037,10 @@ export class AdminController {
 
   @Post("messages/send")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Send an email/message to a registered user or a manual email address" })
+  @ApiOperation({
+    summary:
+      "Send an email/message to a registered user or a manual email address",
+  })
   async sendMessage(
     @Body()
     data: {
@@ -1933,7 +2079,9 @@ export class AdminController {
       toEmail = data.recipientEmail.trim();
       toName = data.recipientName?.trim() || toEmail;
     } else {
-      throw new BadRequestException("Either recipientId or recipientEmail is required");
+      throw new BadRequestException(
+        "Either recipientId or recipientEmail is required",
+      );
     }
 
     // ── Render template ────────────────────────────────────────────────────
@@ -1996,16 +2144,29 @@ export class AdminController {
       });
     }
 
-    this.logger.log(`Admin ${adminId} sent email to ${toEmail}${toUserId ? ` (userId: ${toUserId})` : " (external)"}`);
+    this.logger.log(
+      `Admin ${adminId} sent email to ${toEmail}${toUserId ? ` (userId: ${toUserId})` : " (external)"}`,
+    );
 
-    return { success: true, messageId: result.messageId, threadId: loggedThreadId };
+    return {
+      success: true,
+      messageId: result.messageId,
+      threadId: loggedThreadId,
+    };
   }
 
   @Post("messages/ai-compose")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Generate an email subject + body using Gemini 2.5 Flash" })
+  @ApiOperation({
+    summary: "Generate an email subject + body using Gemini 2.5 Flash",
+  })
   async aiComposeMessage(
-    @Body() data: { prompt: string; recipientName?: string; recipientRole?: string },
+    @Body()
+    data: {
+      prompt: string;
+      recipientName?: string;
+      recipientRole?: string;
+    },
   ) {
     if (!data.prompt?.trim()) {
       throw new BadRequestException("Prompt is required");
@@ -2043,7 +2204,8 @@ Rules:
         },
       );
 
-      const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const raw =
+        response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
       let parsed: { subject?: string; message?: string };
       try {
         parsed = JSON.parse(raw);

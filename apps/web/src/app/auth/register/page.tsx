@@ -4,46 +4,46 @@ import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import OrivraaLoader, {
-    useMinLoadingTime,
+  useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import {
-    FlagImage,
-    needsCountryCode,
-    PhoneInput,
-    type FlagCode,
+  FlagImage,
+  needsCountryCode,
+  PhoneInput,
+  type FlagCode,
 } from "@/components/ui/phone-input";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BRAND } from "@/config/brand";
 import { useToast } from "@/hooks/use-toast";
 import {
-    getDashboardRoute,
-    RegisterResponse,
-    useAuth,
-    UserRole,
+  getDashboardRoute,
+  RegisterResponse,
+  useAuth,
+  UserRole,
 } from "@/hooks/useAuth";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
 import { authApi } from "@/lib/api";
@@ -51,19 +51,19 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import { usePreferencesStore } from "@/store/preferences";
 import {
-    ArrowPathIcon,
-    ArrowRightIcon,
-    BuildingStorefrontIcon,
-    CheckCircleIcon,
-    EnvelopeIcon,
-    ExclamationCircleIcon,
-    EyeIcon,
-    EyeSlashIcon,
-    InformationCircleIcon,
-    LockClosedIcon,
-    MapPinIcon,
-    PhoneIcon,
-    UserIcon,
+  ArrowPathIcon,
+  ArrowRightIcon,
+  BuildingStorefrontIcon,
+  CheckCircleIcon,
+  EnvelopeIcon,
+  ExclamationCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  InformationCircleIcon,
+  LockClosedIcon,
+  MapPinIcon,
+  PhoneIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -264,6 +264,12 @@ function RegisterForm() {
   // Turnstile state
   const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [turnstileError, setTurnstileError] = useState(false);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken("");
+    setTurnstileError(true);
+    setTurnstileResetKey((value) => value + 1);
+  }, []);
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
     setTurnstileError(false);
@@ -274,7 +280,8 @@ function RegisterForm() {
     toast({
       variant: "destructive",
       title: t("Verification failed"),
-      description: t("Please try again or refresh the page."),
+      description: t("Security check expired — please verify again."),
+      reportToAdmin: false,
     });
   }, [toast, t]);
   const handleTurnstileExpire = useCallback(() => {
@@ -445,6 +452,8 @@ function RegisterForm() {
         description: t(`Please check your email for the 6-digit code.`),
       });
     } catch (error: any) {
+      // Turnstile tokens are single-use even when registration itself fails.
+      resetTurnstile();
       toast({
         variant: "destructive",
         title: t("Registration failed"),
@@ -505,6 +514,8 @@ function RegisterForm() {
         description: t(`Please check your email for the 6-digit code.`),
       });
     } catch (error: any) {
+      // Turnstile tokens are single-use even when registration itself fails.
+      resetTurnstile();
       toast({
         variant: "destructive",
         title: t("Registration failed"),
@@ -1018,19 +1029,20 @@ function RegisterForm() {
                     onVerify={handleTurnstileVerify}
                     onError={handleTurnstileError}
                     onExpire={handleTurnstileExpire}
+                    resetKey={turnstileResetKey}
                     theme="auto"
                   />
                   {/* Show message if captcha has error or expired */}
                   {turnstileError && (
                     <p className="text-sm text-amber-600 flex items-center gap-1">
                       <ExclamationCircleIcon className="h-4 w-4" />
-                      Captcha expired or failed.{" "}
+                      <T>Security check expired. Please verify again.</T>{" "}
                       <button
                         type="button"
-                        onClick={() => window.location.reload()}
+                        onClick={resetTurnstile}
                         className="underline font-medium hover:text-amber-700"
                       >
-                        Reload page
+                        <T>Retry security check</T>
                       </button>
                     </p>
                   )}
@@ -1505,19 +1517,20 @@ function RegisterForm() {
                     onVerify={handleTurnstileVerify}
                     onError={handleTurnstileError}
                     onExpire={handleTurnstileExpire}
+                    resetKey={turnstileResetKey}
                     theme="auto"
                   />
                   {/* Show message if captcha has error or expired */}
                   {turnstileError && (
                     <p className="text-sm text-amber-600 flex items-center gap-1">
                       <ExclamationCircleIcon className="h-4 w-4" />
-                      Captcha expired or failed.{" "}
+                      <T>Security check expired. Please verify again.</T>{" "}
                       <button
                         type="button"
-                        onClick={() => window.location.reload()}
+                        onClick={resetTurnstile}
                         className="underline font-medium hover:text-amber-700"
                       >
-                        Reload page
+                        <T>Retry security check</T>
                       </button>
                     </p>
                   )}

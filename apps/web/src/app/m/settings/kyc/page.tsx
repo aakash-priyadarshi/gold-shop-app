@@ -5,7 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { toast } from "@/hooks/use-toast";
 import { shopsApi } from "@/lib/api";
-import { uploadAuthenticatedFile } from "@/lib/image-upload";
+import {
+  isExpectedUploadValidationError,
+  uploadAuthenticatedFile,
+} from "@/lib/image-upload";
 import {
   getKycIdentifierConfig,
   validateKycIdentifiers,
@@ -24,10 +27,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function MobileKycPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isLoading: authLoading } = useAuth();
   const t = useT();
   const shopCountry = user?.shop?.country?.toUpperCase();
   const identifierConfig = getKycIdentifierConfig(shopCountry);
@@ -40,7 +43,9 @@ export default function MobileKycPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isReminding, setIsReminding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [activeUploadField, setActiveUploadField] = useState<string | null>(null);
+  const [activeUploadField, setActiveUploadField] = useState<string | null>(
+    null,
+  );
 
   const [kycData, setKycData] = useState<{
     panNumber: string;
@@ -60,11 +65,8 @@ export default function MobileKycPage() {
     vatRegistrationStatus: undefined,
   });
 
-  useEffect(() => {
-    loadKyc();
-  }, []);
-
-  const loadKyc = async () => {
+  const loadKyc = useCallback(async () => {
+    setIsLoading(true);
     try {
       const response = await shopsApi.getKyc();
       const data = response.data ?? response;
@@ -77,16 +79,46 @@ export default function MobileKycPage() {
         verificationRequests: data.verificationRequests || [],
         vatRegistrationStatus: data.vatRegistrationStatus,
       });
-    } catch {
+    } catch (error: unknown) {
+      const caught =
+        error !== null && typeof error === "object"
+          ? (error as {
+              response?: { data?: { message?: unknown } };
+              message?: unknown;
+            })
+          : {};
+      const candidate = caught.response?.data?.message ?? caught.message;
+      const message =
+        typeof candidate === "string" && candidate.trim()
+          ? candidate
+          : "Please check your connection and try again.";
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load KYC verification status.",
+        title: t("Could not load verification status"),
+        description: t(message),
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.shop?.id) {
+      setKycData({
+        panNumber: "",
+        vatNumber: "",
+        bisLicenseNumber: "",
+        isVerified: false,
+        verificationDocuments: {},
+        verificationRequests: [],
+        vatRegistrationStatus: undefined,
+      });
+      setIsLoading(false);
+      return;
+    }
+    void loadKyc();
+  }, [authLoading, loadKyc, user?.shop?.id]);
 
   const handleSave = async () => {
     haptic("medium");
@@ -157,7 +189,17 @@ export default function MobileKycPage() {
     haptic("light");
     try {
       const data = await uploadAuthenticatedFile(file, "kyc");
-      if (!data.success || !data.url) throw new Error(data.error || "Upload failed");
+      if (!data.success || !data.url) {
+        haptic("error");
+        const message = data.error || "Upload failed. Please try again.";
+        toast({
+          variant: "destructive",
+          title: t("Upload failed"),
+          description: t(message),
+          reportToAdmin: !isExpectedUploadValidationError(data),
+        });
+        return;
+      }
       const uploadedUrl = data.url;
 
       setKycData((prev) => ({
@@ -173,12 +215,16 @@ export default function MobileKycPage() {
         title: "File Uploaded",
         description: "Document successfully attached.",
       });
-    } catch {
+    } catch (error) {
       haptic("error");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not upload document. Please try again.";
       toast({
         variant: "destructive",
-        title: "Upload Failed",
-        description: "Could not upload document. Please try again.",
+        title: t("Upload failed"),
+        description: t(message),
       });
     } finally {
       setIsUploading(false);
@@ -238,9 +284,14 @@ export default function MobileKycPage() {
           <div className="p-4 rounded-2xl bg-green-500/10 border border-green-200 dark:border-green-900/40 text-green-800 dark:text-green-300 flex items-start gap-2.5">
             <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-bold text-xs"><T>Shop Fully Verified</T></h4>
+              <h4 className="font-bold text-xs">
+                <T>Shop Fully Verified</T>
+              </h4>
               <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                <T>Congratulations! Your store is fully approved for unrestricted high-value billing and POS checkouts.</T>
+                <T>
+                  Congratulations! Your store is fully approved for unrestricted
+                  high-value billing and POS checkouts.
+                </T>
               </p>
             </div>
           </div>
@@ -248,9 +299,15 @@ export default function MobileKycPage() {
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
             <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-bold text-xs"><T>Verification Pending Review</T></h4>
+              <h4 className="font-bold text-xs">
+                <T>Verification Pending Review</T>
+              </h4>
               <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                <T>Your documents are being evaluated by our team. This typically takes 1-2 business days. Counter bills will remain sandboxed with watermarks in the meantime.</T>
+                <T>
+                  Your documents are being evaluated by our team. This typically
+                  takes 1-2 business days. Counter bills will remain sandboxed
+                  with watermarks in the meantime.
+                </T>
               </p>
             </div>
           </div>
@@ -259,9 +316,13 @@ export default function MobileKycPage() {
             <div className="flex items-start gap-2.5">
               <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-bold text-xs"><T>Action Required</T></h4>
+                <h4 className="font-bold text-xs">
+                  <T>Action Required</T>
+                </h4>
                 <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                  <T>The reviewer requested additions or fixes to your documents:</T>
+                  <T>
+                    The reviewer requested additions or fixes to your documents:
+                  </T>
                 </p>
               </div>
             </div>
@@ -275,7 +336,9 @@ export default function MobileKycPage() {
               disabled={isReminding}
               className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5"
             >
-              {isReminding ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+              {isReminding ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : null}
               <T>Submit and Notify Reviewer</T>
             </button>
           </div>
@@ -283,9 +346,14 @@ export default function MobileKycPage() {
           <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-200 dark:border-blue-900/40 text-blue-800 dark:text-blue-300 flex items-start gap-2.5">
             <Shield className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-bold text-xs"><T>Retail Sandbox Status</T></h4>
+              <h4 className="font-bold text-xs">
+                <T>Retail Sandbox Status</T>
+              </h4>
               <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                <T>To clear diagonal watermarks from printed bills, please upload official business identifiers and government IDs below.</T>
+                <T>
+                  To clear diagonal watermarks from printed bills, please upload
+                  official business identifiers and government IDs below.
+                </T>
               </p>
             </div>
           </div>
@@ -298,7 +366,8 @@ export default function MobileKycPage() {
           </h3>
           {isSriLanka && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
-              <T>Sri Lanka VAT registration status</T>: {kycData.vatRegistrationStatus || "NOT_REGISTERED"}
+              <T>Sri Lanka VAT registration status</T>:{" "}
+              {kycData.vatRegistrationStatus || <T>Not registered</T>}
             </div>
           )}
           <div className="space-y-3">

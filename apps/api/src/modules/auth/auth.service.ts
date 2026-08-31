@@ -2,9 +2,12 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -24,6 +27,7 @@ import {
 } from "../../common/market/country-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { CrashReportsService } from "../crash-reports/crash-reports.service";
 import { MailService } from "../mail/mail.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { SellerSubscriptionsService } from "../core/subscriptions/seller-subscriptions.service";
@@ -82,7 +86,43 @@ export class AuthService {
     private sellerSubscriptionsService: SellerSubscriptionsService,
     private sellerEngagementService: SellerEngagementService,
     private platformConfigService: PlatformConfigService,
+    @Optional() private readonly crashReportsService?: CrashReportsService,
   ) {}
+
+  private reportVerificationDeliveryFailure(
+    page: "/auth/register" | "/auth/login",
+    userId: string,
+    role: UserRole,
+    error: unknown,
+  ) {
+    if (!this.crashReportsService) return;
+    if (
+      error instanceof HttpException &&
+      error.getStatus() === HttpStatus.TOO_MANY_REQUESTS
+    ) {
+      return;
+    }
+    const cause = error instanceof Error ? error.message : String(error);
+    void this.crashReportsService
+      .submit({
+        errorMessage: "Email verification OTP delivery failed",
+        errorStack: cause,
+        page,
+        userAction: "Send email verification OTP",
+        platform: "web",
+        userRole: role,
+        userId,
+        userAgent: "server:auth-service",
+        frustrationType: "api_error",
+      })
+      .catch((reportError) => {
+        this.logger.warn(
+          `Could not record OTP delivery failure: ${
+            reportError instanceof Error ? reportError.message : "unknown error"
+          }`,
+        );
+      });
+  }
 
   private referralErrorName(error: unknown): string {
     if (error && typeof error === "object" && "name" in error) {
@@ -92,10 +132,7 @@ export class AuthService {
     return "UNKNOWN";
   }
 
-  private async rememberPendingReferral(
-    userId: string,
-    referralCode?: string,
-  ) {
+  private async rememberPendingReferral(userId: string, referralCode?: string) {
     const code = normalizeReferralCode(referralCode);
     if (!userId || !code) return;
     await this.redisService.set(
@@ -286,7 +323,7 @@ export class AuthService {
             country: marketCountry!,
             currency: preferredCurrency,
             city: dto.shop.city,
-            address: dto.shop.address,
+            address: dto.shop.address?.trim() || "",
             contactPhone: dto.shop.contactPhone,
             contactEmail: dto.shop.contactEmail,
             isVerified: false, // Requires admin approval
@@ -350,6 +387,12 @@ export class AuthService {
       );
     } catch (error) {
       this.logger.error(`Failed to send verification OTP: ${error.message}`);
+      this.reportVerificationDeliveryFailure(
+        "/auth/register",
+        result.user.id,
+        result.user.role,
+        error,
+      );
       // Don't throw - user is created, they can request resend
     }
 
@@ -409,7 +452,7 @@ export class AuthService {
           country: marketCountry,
           currency: preferredCurrency,
           city: shopDto.city,
-          address: shopDto.address,
+          address: shopDto.address?.trim() || "",
           contactPhone: shopDto.contactPhone,
           contactEmail: shopDto.contactEmail,
           isVerified: false,
@@ -557,6 +600,12 @@ export class AuthService {
         `Verification OTP resend was not completed for user ${user.id}: ${
           error instanceof Error ? error.message : String(error)
         }`,
+      );
+      this.reportVerificationDeliveryFailure(
+        "/auth/login",
+        user.id,
+        user.role,
+        error,
       );
     }
 

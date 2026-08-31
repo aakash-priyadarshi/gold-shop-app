@@ -55,6 +55,12 @@ export type UploadType =
   | "review-proof"
   | "certificate";
 
+export type UploadErrorCode =
+  | "FILE_TOO_LARGE"
+  | "INVALID_FILE_TYPE"
+  | "HTTP_ERROR"
+  | "INVALID_RESPONSE";
+
 export interface UploadResult {
   success: boolean;
   url?: string;
@@ -66,6 +72,8 @@ export interface UploadResult {
   };
   key?: string;
   error?: string;
+  errorCode?: UploadErrorCode;
+  httpStatus?: number;
 }
 
 export interface UploadOptions {
@@ -76,6 +84,68 @@ export interface UploadOptions {
   /** Keep PNG/JPEG for bill logos — pdfkit cannot embed WebP. */
   outputMime?: "image/webp" | "image/jpeg" | "image/png";
   onProgress?: (progress: number) => void;
+}
+
+export async function readUploadResult(
+  response: Response,
+): Promise<UploadResult> {
+  let parsed: unknown;
+  try {
+    parsed = (await response.json()) as unknown;
+  } catch {
+    // The worker or an edge proxy can return HTML/plain text during an outage.
+  }
+
+  const payload =
+    parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Partial<UploadResult>)
+      : {};
+
+  if (response.ok && payload.success === true) {
+    return payload as UploadResult;
+  }
+
+  const workerError =
+    typeof payload.error === "string" && payload.error.trim()
+      ? payload.error.trim()
+      : undefined;
+  const errorCode = classifyUploadError(workerError, response.status);
+
+  return {
+    ...payload,
+    success: false,
+    error: workerError || "Upload failed. Please try again.",
+    errorCode,
+    httpStatus: response.status,
+  };
+}
+
+function classifyUploadError(
+  message: string | undefined,
+  status?: number,
+): UploadErrorCode {
+  if (
+    status === 413 ||
+    /\b(?:file too large|maximum (?:file )?size)\b/i.test(message || "")
+  ) {
+    return "FILE_TOO_LARGE";
+  }
+  if (
+    status === 415 ||
+    /\b(?:invalid|unsupported) file type\b/i.test(message || "")
+  ) {
+    return "INVALID_FILE_TYPE";
+  }
+  return status && status >= 400 ? "HTTP_ERROR" : "INVALID_RESPONSE";
+}
+
+export function isExpectedUploadValidationError(
+  result: Pick<UploadResult, "errorCode">,
+): boolean {
+  return (
+    result.errorCode === "FILE_TOO_LARGE" ||
+    result.errorCode === "INVALID_FILE_TYPE"
+  );
 }
 
 // Default sizing options by upload type
@@ -139,7 +209,8 @@ export async function compressImage(
         ctx.drawImage(img, 0, 0, width, height);
 
         const mimeType = options.mimeType || "image/webp";
-        const quality = mimeType === "image/png" ? undefined : options.quality / 100;
+        const quality =
+          mimeType === "image/png" ? undefined : options.quality / 100;
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -207,6 +278,7 @@ export async function uploadImage(
       return {
         success: false,
         error: `Invalid file type. Allowed: ${allowedTypes.join(", ")}`,
+        errorCode: "INVALID_FILE_TYPE",
       };
     }
 
@@ -216,6 +288,7 @@ export async function uploadImage(
       return {
         success: false,
         error: "File too large. Maximum size is 10MB",
+        errorCode: "FILE_TOO_LARGE",
       };
     }
 
@@ -251,7 +324,7 @@ export async function uploadImage(
 
     onProgress?.(90);
 
-    const result: UploadResult = await response.json();
+    const result = await readUploadResult(response);
 
     onProgress?.(100);
 
@@ -277,8 +350,7 @@ const CERTIFICATE_MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 function isPdfFile(file: File): boolean {
   return (
-    file.type === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
 }
 
@@ -303,7 +375,8 @@ export async function uploadCertificate(
   if (pdf && file.size > CERTIFICATE_MAX_PDF_BYTES) {
     return {
       success: false,
-      error: "PDF must be 5MB or smaller. Photograph the certificate instead to save space.",
+      error:
+        "PDF must be 5MB or smaller. Photograph the certificate instead to save space.",
     };
   }
   if (image && file.size > CERTIFICATE_MAX_IMAGE_BYTES) {
@@ -340,7 +413,7 @@ export async function uploadCertificate(
         },
         body: formData,
       });
-      return (await response.json()) as UploadResult;
+      return await readUploadResult(response);
     };
 
     let result = await upload("certificate");
@@ -386,7 +459,7 @@ export async function uploadBase64Image(
       }),
     });
 
-    return await response.json();
+    return await readUploadResult(response);
   } catch (error) {
     console.error("Upload error:", error);
     return {
@@ -427,7 +500,11 @@ export async function uploadAuthenticatedFile(
   type: "kyc" | "chat",
 ): Promise<UploadResult> {
   if (file.size > 10 * 1024 * 1024) {
-    return { success: false, error: "File too large. Maximum size is 10MB" };
+    return {
+      success: false,
+      error: "File too large. Maximum size is 10MB",
+      errorCode: "FILE_TOO_LARGE",
+    };
   }
   try {
     const token = await getWorkerToken("upload", type);
@@ -441,7 +518,7 @@ export async function uploadAuthenticatedFile(
       },
       body: formData,
     });
-    return (await response.json()) as UploadResult;
+    return await readUploadResult(response);
   } catch (error) {
     return {
       success: false,
