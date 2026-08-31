@@ -43,7 +43,7 @@ import {
     TrendingUp,
 } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Material {
   metal: string;
@@ -278,6 +278,9 @@ export default function ShopInventoryPage() {
   const [finishPrices, setFinishPrices] = useState<Record<string, number>>({});
   const [isSavingComponentPricing, setIsSavingComponentPricing] =
     useState(false);
+  const capabilitiesSaveLock = useRef(false);
+  const gemstoneSaveLock = useRef(false);
+  const componentSaveLock = useRef(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -475,8 +478,9 @@ export default function ShopInventoryPage() {
   };
 
   const saveMaterials = async () => {
-    if (!materialsData) return;
+    if (!materialsData || capabilitiesSaveLock.current) return;
 
+    capabilitiesSaveLock.current = true;
     setIsSaving(true);
     try {
       // Transform data to match backend expected format
@@ -519,13 +523,15 @@ export default function ShopInventoryPage() {
           error.response?.data?.message || t("Could not save materials"),
       });
     } finally {
+      capabilitiesSaveLock.current = false;
       setIsSaving(false);
     }
   };
 
   const saveCapabilities = async () => {
-    if (!capabilitiesData) return;
+    if (!capabilitiesData || capabilitiesSaveLock.current) return;
 
+    capabilitiesSaveLock.current = true;
     setIsSaving(true);
     try {
       await shopsApi.updateCapabilities(capabilitiesData);
@@ -541,11 +547,14 @@ export default function ShopInventoryPage() {
           error.response?.data?.message || t("Could not save capabilities"),
       });
     } finally {
+      capabilitiesSaveLock.current = false;
       setIsSaving(false);
     }
   };
 
   const saveGemstonePricing = async () => {
+    if (gemstoneSaveLock.current) return;
+    gemstoneSaveLock.current = true;
     setIsSavingGemstones(true);
     try {
       // Convert overrides map to rates array
@@ -596,11 +605,14 @@ export default function ShopInventoryPage() {
           error.response?.data?.message || t("Could not save gemstone pricing"),
       });
     } finally {
+      gemstoneSaveLock.current = false;
       setIsSavingGemstones(false);
     }
   };
 
   const saveComponentPricing = async () => {
+    if (componentSaveLock.current) return;
+    componentSaveLock.current = true;
     setIsSavingComponentPricing(true);
     try {
       await shopsApi.updateComponentPricing({
@@ -621,6 +633,7 @@ export default function ShopInventoryPage() {
           error.response?.data?.message || t("Could not save component pricing"),
       });
     } finally {
+      componentSaveLock.current = false;
       setIsSavingComponentPricing(false);
     }
   };

@@ -506,6 +506,12 @@ export function NotificationDropdown() {
 
   const fetchNotifications = async () => {
     if (!user) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return;
+    }
     try {
       const [notifRes, countRes] = await Promise.all([
         notificationsApi.getAll({ unreadOnly: false }),
@@ -527,9 +533,20 @@ export function NotificationDropdown() {
       return;
     }
     fetchNotifications();
-    // Poll for new notifications every 30 seconds
+    // Poll for new notifications every 30 seconds while the tab is visible.
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void fetchNotifications();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", fetchNotifications);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", fetchNotifications);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 

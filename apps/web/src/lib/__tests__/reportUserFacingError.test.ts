@@ -211,6 +211,44 @@ describe("reportApiFailure", () => {
     await Promise.resolve();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("ignores connectivity drops on header chrome polls but keeps 5xx", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    reportApiFailure({
+      message: "Network Error",
+      config: { url: "/notifications/unread-count", method: "get" },
+    });
+    reportApiFailure({
+      message: "Network Error",
+      config: { url: "/notifications", method: "get" },
+    });
+    reportApiFailure({
+      message: "Network Error",
+      config: { url: "/chat/conversations", method: "get" },
+    });
+    await Promise.resolve();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    reportApiFailure({
+      message: "Request failed with status code 500",
+      config: { url: "/notifications", method: "get" },
+      response: { status: 500, statusText: "Internal Server Error" },
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("still captures a real user-initiated network failure", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    reportApiFailure({
+      message: "Network Error",
+      config: { url: "/invoices/abc/pdf", method: "get" },
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  });
 });
 
 describe("dedupeKey", () => {

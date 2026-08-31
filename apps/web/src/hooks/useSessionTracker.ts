@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import api from '@/lib/api';
+import api, { getApiUrl } from '@/lib/api';
 
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;      // 60 seconds
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -80,16 +80,17 @@ export function useSessionTracker() {
     flushCurrentPage();
 
     const payload = JSON.stringify({ sessionToken: token, closedBy });
+    const endUrl = `${getApiUrl()}/sessions/web/end`;
     // sendBeacon is fire-and-forget, perfect for page unload
     const beaconSent = navigator.sendBeacon(
-      `${process.env.NEXT_PUBLIC_API_URL}/sessions/web/end`,
+      endUrl,
       new Blob([payload], { type: 'application/json' }),
     );
     if (!beaconSent) {
       // Fallback to sync XHR on unload
       try {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${process.env.NEXT_PUBLIC_API_URL}/sessions/web/end`, false);
+        xhr.open('POST', endUrl, false);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.send(payload);
       } catch { /* ignore */ }

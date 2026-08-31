@@ -161,6 +161,16 @@ export default function QuoteDetailPage() {
     if (!quote) return;
     const next = NEXT_STATUS[quote.status];
     if (!next) return;
+    if (next === "COMPLETED" && (quote.balanceDueNpr ?? 0) > 0) {
+      toast({
+        variant: "destructive",
+        title: "Balance due",
+        description:
+          "Record the remaining payment or create an invoice before marking delivered.",
+        reportToAdmin: false,
+      });
+      return;
+    }
     if (next === "READY") {
       setReadyWastagePercent(
         quote.wastagePercent != null ? String(quote.wastagePercent) : "0",
@@ -468,10 +478,24 @@ export default function QuoteDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {quote.status === "READY" &&
+                    (quote.balanceDueNpr ?? 0) > 0 && (
+                      <p className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+                        <T>
+                          Balance is still due. Record the payment below or
+                          create an invoice before marking delivered.
+                        </T>
+                      </p>
+                    )}
                   {NEXT_STATUS[quote.status] && quote.status !== "CANCELLED" && (
                     <Button
                       onClick={handleStatusAdvance}
-                      disabled={submitting}
+                      disabled={
+                        submitting ||
+                        (quote.status === "READY" &&
+                          (quote.balanceDueNpr ?? 0) > 0 &&
+                          NEXT_STATUS[quote.status] === "COMPLETED")
+                      }
                       className="w-full sm:w-auto"
                     >
                       {submitting ? (

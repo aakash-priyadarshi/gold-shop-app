@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import { triggerErrorReporter } from '@/components/ui/ErrorReporter';
+import { isLowSignalRageTarget } from '@/hooks/rageClickTargets';
 
-const RAGE_CLICK_THRESHOLD = 3;
+const RAGE_CLICK_THRESHOLD = 4;
 const RAGE_CLICK_WINDOW_MS = 1500;
 const API_ERROR_WINDOW_MS = 30_000;
 
@@ -14,6 +15,8 @@ export function useFrustrationDetector() {
   // ── Rage-click detection ──────────────────────────────────────
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
+      if (isLowSignalRageTarget(e.target)) return;
+
       const now = Date.now();
       clickLog.current.push({ target: e.target, time: now });
 

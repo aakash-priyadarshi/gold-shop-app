@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
@@ -118,46 +119,27 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [loadError, setLoadError] = useState(false);
 
   const loadNotifications = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(false);
     try {
       const response = await api.get("/notifications");
       setNotifications(response.data?.notifications || response.data || []);
     } catch (error) {
       console.error("Failed to load notifications:", error);
-      // Set demo notifications for now
-      setNotifications([
-        {
-          id: "1",
-          type: "ORDER",
-          title: "Order Confirmed",
-          message: "Your order #ORD-001 has been confirmed by the seller.",
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          type: "RFQ",
-          title: "New Quote Received",
-          message:
-            "You have received a new quote for your custom ring request.",
-          isRead: false,
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "3",
-          type: "PROMOTION",
-          title: "Special Offer",
-          message: "Get 10% off on all gold jewelry this weekend!",
-          isRead: true,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-        },
-      ]);
+      setNotifications([]);
+      setLoadError(true);
+      toast({
+        variant: "destructive",
+        title: t("Couldn't load notifications"),
+        description: t("Check your connection and try again."),
+      });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -288,13 +270,28 @@ export default function NotificationsPage() {
                 <CardContent className="py-12 text-center">
                   <BellIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900">
-                    <T>No notifications</T>
+                    {loadError ? (
+                      <T>Couldn't load notifications</T>
+                    ) : (
+                      <T>No notifications</T>
+                    )}
                   </h3>
                   <p className="text-gray-500 mt-1">
-                    {activeTab === "unread"
-                      ? t("You're all caught up!")
-                      : t("No notifications to display")}
+                    {loadError
+                      ? t("Check your connection and try again.")
+                      : activeTab === "unread"
+                        ? t("You're all caught up!")
+                        : t("No notifications to display")}
                   </p>
+                  {loadError && (
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => void loadNotifications()}
+                    >
+                      <T>Try again</T>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : (

@@ -160,6 +160,21 @@ function requestUrlLooksLikeSessionAnalytics(url?: string): boolean {
   return !!url && /\/sessions\/web(?:\?|$|\/)/.test(url);
 }
 
+/** Header chrome GETs that poll every 30s — a laptop sleep or Wi-Fi blip is not a product bug. */
+function requestUrlLooksLikeBackgroundChrome(
+  url?: string,
+  method?: string,
+): boolean {
+  if (!url) return false;
+  if ((method || "GET").toUpperCase() !== "GET") return false;
+  const path = url.replace(/^https?:\/\/[^/]+/i, "").split("?")[0];
+  return (
+    /\/notifications$/.test(path) ||
+    /\/notifications\/unread-count$/.test(path) ||
+    /\/chat\/conversations$/.test(path)
+  );
+}
+
 export function isAutomatedUserAgent(userAgent?: string): boolean {
   return BOT_USER_AGENT_PATTERN.test(userAgent || "");
 }
@@ -241,6 +256,7 @@ export function reportApiFailure(error: {
   response?: { status?: number; statusText?: string; data?: unknown };
 }): void {
   const url = String(error.config?.url || "");
+  const method = error.config?.method;
   if (requestUrlLooksLikeCrashReports(url)) return;
   if (requestUrlLooksLikeSessionAnalytics(url)) return;
   if (error.code === "ERR_CANCELED") return;
@@ -249,14 +265,17 @@ export function reportApiFailure(error: {
   }
 
   const status = error.response?.status;
+  // No HTTP response = client connectivity. Keep 5xx on these paths so a
+  // real notifications/chat outage still lands in the admin inbox.
+  if (!status && requestUrlLooksLikeBackgroundChrome(url, method)) return;
   if (status && status < 500) return;
 
-  const method = (error.config?.method || "GET").toUpperCase();
+  const methodLabel = (method || "GET").toUpperCase();
   const path = url.replace(/^https?:\/\/[^/]+/i, "") || url || "(unknown)";
   const apiMessage = extractApiErrorMessage(error.response?.data);
   const title = status ? `Server error ${status}` : "Network error";
   const description = [
-    `${method} ${path}`,
+    `${methodLabel} ${path}`,
     apiMessage || error.message || error.response?.statusText,
   ]
     .filter(Boolean)
@@ -266,7 +285,7 @@ export function reportApiFailure(error: {
     title,
     description,
     frustrationType: "api_error",
-    userAction: `${method} ${path}`,
+    userAction: `${methodLabel} ${path}`,
   });
 }
 

@@ -192,6 +192,23 @@ export default function ShopQuotesPage() {
   };
 
   const handleStatusUpdate = async (quoteId: string, newStatus: string) => {
+    const quote = quotes.find((q) => q.id === quoteId);
+    if (
+      newStatus === "COMPLETED" &&
+      quote &&
+      (quote.balanceDueNpr ?? 0) > 0
+    ) {
+      toast({
+        variant: "destructive",
+        title: t("Balance due"),
+        description: t(
+          "Record the remaining payment or create an invoice before completing delivery.",
+        ),
+        reportToAdmin: false,
+      });
+      return;
+    }
+
     try {
       const payload: {
         status: string;
@@ -556,6 +573,7 @@ export default function ShopQuotesPage() {
                                     )}
                                     {quote.status === "READY" && (
                                       <DropdownMenuItem
+                                        disabled={(quote.balanceDueNpr ?? 0) > 0}
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,
