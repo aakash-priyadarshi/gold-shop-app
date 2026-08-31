@@ -39,6 +39,7 @@ export class RecoveryOffersController {
       reportIds: dto.reportIds,
       campaignKey: dto.campaignKey,
       expiresInDays: dto.expiresInDays,
+      deliveryTiming: dto.deliveryTiming,
       confirmed: dto.confirmed,
       adminId,
     });

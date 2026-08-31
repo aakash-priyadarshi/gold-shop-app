@@ -167,6 +167,101 @@ describe("RecoveryOffersService", () => {
     expect(mail.send).not.toHaveBeenCalled();
   });
 
+  it("schedules an Indian recipient for their next local 10 AM", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-1" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.create.mockResolvedValue({ id: "offer-1" });
+    queue.add.mockResolvedValue({ id: "job-1" });
+
+    const result = await service.send({
+      reportIds: ["report-1"],
+      confirmed: true,
+      adminId: "admin-1",
+      deliveryTiming: "NEXT_LOCAL_10AM",
+    });
+
+    expect(result.scheduled).toBe(1);
+    expect(prisma.recoveryOffer.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          scheduledFor: new Date("2026-09-01T04:30:00.000Z"),
+          expiresAt: new Date("2026-10-01T04:30:00.000Z"),
+        }),
+      }),
+    );
+    expect(queue.add).toHaveBeenCalledWith(
+      "deliver",
+      expect.anything(),
+      expect.objectContaining({ delay: 4.5 * 60 * 60 * 1000 }),
+    );
+    jest.useRealTimers();
+  });
+
+  it("excludes unsupported local-time markets instead of delivering early", async () => {
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-1" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "US",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "US" }]);
+
+    const result = await service.send({
+      reportIds: ["report-1"],
+      confirmed: true,
+      adminId: "admin-1",
+      deliveryTiming: "NEXT_LOCAL_10AM",
+    });
+
+    expect(result.queued).toBe(0);
+    expect(result.scheduled).toBe(0);
+    expect(result.excluded).toEqual([
+      expect.objectContaining({
+        reason: "A local 10:00 AM delivery time is not configured for US",
+      }),
+    ]);
+    expect(prisma.recoveryOffer.create).not.toHaveBeenCalled();
+  });
+
   it("never reopens an offer that is already prepared", async () => {
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },

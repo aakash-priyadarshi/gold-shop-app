@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,6 +12,14 @@ import {
   Min,
   MinLength,
 } from "class-validator";
+
+export const RECOVERY_OFFER_DELIVERY_TIMINGS = [
+  "IMMEDIATE",
+  "NEXT_LOCAL_10AM",
+] as const;
+
+export type RecoveryOfferDeliveryTiming =
+  (typeof RECOVERY_OFFER_DELIVERY_TIMINGS)[number];
 
 export class PreviewRecoveryOffersDto {
   @IsArray()
@@ -34,6 +43,11 @@ export class SendRecoveryOffersDto extends PreviewRecoveryOffersDto {
   @Min(1)
   @Max(90)
   expiresInDays?: number;
+
+  @IsOptional()
+  @IsIn(RECOVERY_OFFER_DELIVERY_TIMINGS)
+  @IsString()
+  deliveryTiming?: RecoveryOfferDeliveryTiming;
 }
 
 export class RecoveryOfferTokenDto {

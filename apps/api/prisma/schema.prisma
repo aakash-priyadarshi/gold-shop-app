@@ -3475,6 +3475,7 @@ model RecoveryOffer {
   status                RecoveryOfferStatus @default(PREPARED)
   sourceReportIds       String[]
   expiresAt             DateTime
+  scheduledFor          DateTime?
   sentAt                DateTime?
   claimedAt             DateTime?
   grantedSubscriptionId String?
@@ -3489,6 +3490,7 @@ model RecoveryOffer {
 
   @@unique([campaignKey, shopId])
   @@index([status, createdAt])
+  @@index([status, scheduledFor])
   @@index([userId])
   @@index([shopId])
   @@index([expiresAt])
