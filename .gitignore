@@ -59,6 +59,11 @@ credentials/
 !**/*.js
 !**/*.jsx
 !**/token/
+# Migration directory names may legitimately contain "token". Never ignore the
+# SQL file or a production schema change could be omitted from a PR.
+!apps/api/prisma/migrations/
+!apps/api/prisma/migrations/**/
+!apps/api/prisma/migrations/**/migration.sql
 
 # Railway/Vercel deployment secrets
 .railway/

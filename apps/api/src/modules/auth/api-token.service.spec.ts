@@ -16,9 +16,13 @@ const mockPrismaService = {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     count: jest.fn(),
   },
   user: {
+    findUnique: jest.fn(),
+  },
+  shop: {
     findUnique: jest.fn(),
   },
 };
@@ -51,11 +55,16 @@ describe('ApiTokenService', () => {
     id: mockUserId,
     email: 'admin@orivraa.com',
     role: 'ADMIN',
+    status: 'ACTIVE',
+    firstName: 'Admin',
+    lastName: 'User',
+    preferredLanguage: 'en',
   };
 
   const mockApiToken = {
     id: mockTokenId,
     userId: mockUserId,
+    shopId: null,
     name: 'Test Token',
     tokenHash: 'hash123',
     tokenPrefix: 'gshop_abc12',
@@ -312,6 +321,7 @@ describe('ApiTokenService', () => {
         ...mockApiToken,
         revokedAt: new Date(),
         user: mockUser,
+        shop: null,
       });
 
       const result = await service.validateToken('gshop_abc123');
@@ -324,6 +334,7 @@ describe('ApiTokenService', () => {
         expiresAt: new Date(Date.now() - 1000), // Expired
         revokedAt: null,
         user: mockUser,
+        shop: null,
       });
 
       const result = await service.validateToken('gshop_abc123');
@@ -336,17 +347,116 @@ describe('ApiTokenService', () => {
         expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         revokedAt: null,
         user: mockUser,
+        shop: null,
       });
       mockPrismaService.apiToken.update.mockResolvedValue(mockApiToken);
 
       const result = await service.validateToken('gshop_abc123');
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         userId: mockUserId,
         scopes: ['admin:write'],
         role: 'ADMIN',
+        email: mockUser.email,
+        status: 'ACTIVE',
+        shopId: null,
       });
       expect(mockPrismaService.apiToken.update).toHaveBeenCalled();
+    });
+  });
+
+  describe('seller smoke tokens', () => {
+    const smokeShop = {
+      id: 'shop-123',
+      shopName: 'Monitor Shop',
+      isActive: true,
+      user: {
+        id: 'seller-123',
+        email: 'monitor@example.com',
+        role: 'SHOPKEEPER',
+        status: 'ACTIVE',
+      },
+    };
+
+    it('binds a replacement token to one active shop and revokes older tokens', async () => {
+      mockPrismaService.shop.findUnique.mockResolvedValue(smokeShop);
+      mockPrismaService.apiToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.user.findUnique.mockResolvedValue(smokeShop.user);
+      mockPrismaService.apiToken.create.mockResolvedValue({
+        ...mockApiToken,
+        userId: smokeShop.user.id,
+        shopId: smokeShop.id,
+        name: 'Seller smoke monitor — Monitor Shop',
+        scopes: ['seller:smoke'],
+      });
+
+      const result = await service.createSellerSmokeToken({
+        shopId: smokeShop.id,
+        duration: TokenDuration.DAYS_365,
+      });
+
+      expect(result.token).toMatch(/^gshop_/);
+      expect(result.shop).toEqual({
+        id: smokeShop.id,
+        name: smokeShop.shopName,
+        ownerEmail: smokeShop.user.email,
+      });
+      expect(mockPrismaService.apiToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ shopId: smokeShop.id }),
+        }),
+      );
+      expect(mockPrismaService.apiToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: smokeShop.user.id,
+            shopId: smokeShop.id,
+            scopes: ['seller:smoke'],
+          }),
+        }),
+      );
+    });
+
+    it('rejects smoke tokens for a non-active shopkeeper account', async () => {
+      mockPrismaService.shop.findUnique.mockResolvedValue({
+        ...smokeShop,
+        user: { ...smokeShop.user, status: 'SUSPENDED' },
+      });
+
+      await expect(
+        service.createSellerSmokeToken({
+          shopId: smokeShop.id,
+          duration: TokenDuration.DAYS_365,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('only validates a token that is active, shop-bound, and seller-scoped', async () => {
+      mockPrismaService.apiToken.findUnique.mockResolvedValue({
+        ...mockApiToken,
+        userId: 'seller-123',
+        shopId: 'shop-123',
+        scopes: ['seller:smoke'],
+        user: {
+          id: 'seller-123',
+          email: 'monitor@example.com',
+          role: 'SHOPKEEPER',
+          status: 'ACTIVE',
+          firstName: 'Monitor',
+          lastName: 'Seller',
+          preferredLanguage: 'en',
+        },
+        shop: { id: 'shop-123', userId: 'seller-123', isActive: true },
+      });
+      mockPrismaService.apiToken.update.mockResolvedValue(mockApiToken);
+
+      const result = await service.validateSellerSmokeToken('gshop_abc123');
+
+      expect(result).toMatchObject({
+        userId: 'seller-123',
+        shopId: 'shop-123',
+        role: 'SHOPKEEPER',
+      });
     });
   });
 

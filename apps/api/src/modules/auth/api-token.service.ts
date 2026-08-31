@@ -1,7 +1,15 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateApiTokenDto, TokenDuration, ApiTokenResponseDto, CreateApiTokenResponseDto, TokenType } from './dto/api-token.dto';
+import {
+  CreateApiTokenDto,
+  CreateSellerSmokeTokenDto,
+  TokenDuration,
+  ApiTokenResponseDto,
+  CreateApiTokenResponseDto,
+  TokenType,
+} from './dto/api-token.dto';
 import * as crypto from 'crypto';
 
 // Available scopes for API tokens
@@ -11,9 +19,32 @@ export const API_TOKEN_SCOPES = {
   'market-rates:refresh': 'Refresh market rate cache',
   'admin:read': 'Read admin endpoints',
   'admin:write': 'Write to admin endpoints (CI/CD releases)',
+  'seller:smoke': 'Read-only seller dashboard authentication for production monitoring',
 } as const;
 
 export type ApiTokenScope = keyof typeof API_TOKEN_SCOPES;
+export const SELLER_SMOKE_SCOPE: ApiTokenScope = 'seller:smoke';
+
+const SELLER_SMOKE_DURATIONS = new Set<TokenDuration>([
+  TokenDuration.DAYS_30,
+  TokenDuration.DAYS_90,
+  TokenDuration.DAYS_180,
+  TokenDuration.DAYS_365,
+]);
+
+export interface ValidatedApiToken {
+  userId: string;
+  scopes: string[];
+  role: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  preferredLanguage: string;
+  status: UserStatus;
+  shopId: string | null;
+  shopOwnerId: string | null;
+  shopIsActive: boolean | null;
+}
 
 // Encryption key from environment — required, no fallback
 const ENCRYPTION_KEY_RAW = process.env.TOKEN_ENCRYPTION_KEY;
@@ -103,6 +134,7 @@ export class ApiTokenService {
   async createToken(
     userId: string,
     dto: CreateApiTokenDto,
+    options?: { shopId?: string },
   ): Promise<CreateApiTokenResponseDto> {
     // Validate scopes
     const validScopes = dto.scopes?.filter(s => s in API_TOKEN_SCOPES) || ['health:read'];
@@ -151,6 +183,7 @@ export class ApiTokenService {
     const apiToken = await this.prisma.apiToken.create({
       data: {
         userId,
+        shopId: options?.shopId,
         name: dto.name,
         tokenHash,
         tokenPrefix,
@@ -179,6 +212,106 @@ export class ApiTokenService {
       tokenViewableUntil,
       token, // Only returned at creation time!
     };
+  }
+
+  /**
+   * Create one scoped, read-only token for a dedicated production test shop.
+   * Creating a replacement revokes older active smoke tokens for that shop.
+   */
+  async createSellerSmokeToken(
+    dto: CreateSellerSmokeTokenDto,
+  ): Promise<CreateApiTokenResponseDto & { shop: { id: string; name: string; ownerEmail: string } }> {
+    if (!SELLER_SMOKE_DURATIONS.has(dto.duration)) {
+      throw new BadRequestException('Seller smoke tokens must expire within one year');
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: dto.shopId },
+      select: {
+        id: true,
+        shopName: true,
+        isActive: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!shop || !shop.isActive) {
+      throw new NotFoundException('Active shop not found');
+    }
+    if (shop.user.role !== UserRole.SHOPKEEPER || shop.user.status !== UserStatus.ACTIVE) {
+      throw new BadRequestException('Seller smoke tokens require an active shopkeeper account');
+    }
+
+    await this.prisma.apiToken.updateMany({
+      where: {
+        userId: shop.user.id,
+        shopId: shop.id,
+        scopes: { has: SELLER_SMOKE_SCOPE },
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+
+    const token = await this.createToken(
+      shop.user.id,
+      {
+        name: `Seller smoke monitor — ${shop.shopName}`,
+        duration: dto.duration,
+        scopes: [SELLER_SMOKE_SCOPE],
+        tokenType: TokenType.API,
+      },
+      { shopId: shop.id },
+    );
+
+    return {
+      ...token,
+      shop: { id: shop.id, name: shop.shopName, ownerEmail: shop.user.email },
+    };
+  }
+
+  async listSellerSmokeTokens() {
+    const tokens = await this.prisma.apiToken.findMany({
+      where: { scopes: { has: SELLER_SMOKE_SCOPE } },
+      include: {
+        shop: { select: { id: true, shopName: true } },
+        user: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return tokens.map((token) => ({
+      ...this.toResponseDto(token),
+      shop: token.shop ? { id: token.shop.id, name: token.shop.shopName } : null,
+      owner: {
+        id: token.user.id,
+        email: token.user.email,
+        name: `${token.user.firstName} ${token.user.lastName}`.trim(),
+        status: token.user.status,
+      },
+      isRevoked: Boolean(token.revokedAt),
+    }));
+  }
+
+  async revokeSellerSmokeToken(tokenId: string): Promise<void> {
+    const token = await this.prisma.apiToken.findFirst({
+      where: { id: tokenId, scopes: { has: SELLER_SMOKE_SCOPE }, revokedAt: null },
+    });
+    if (!token) {
+      throw new NotFoundException('Active seller smoke token not found');
+    }
+
+    await this.prisma.apiToken.update({
+      where: { id: token.id },
+      data: { revokedAt: new Date() },
+    });
+    this.logger.log(`Revoked seller smoke token ${token.id} for shop ${token.shopId}`);
   }
 
   /**
@@ -255,7 +388,7 @@ export class ApiTokenService {
   /**
    * Validate an API token and return user info
    */
-  async validateToken(token: string): Promise<{ userId: string; scopes: string[]; role: string } | null> {
+  async validateToken(token: string): Promise<ValidatedApiToken | null> {
     if (!token.startsWith(this.TOKEN_PREFIX)) {
       return null;
     }
@@ -264,7 +397,10 @@ export class ApiTokenService {
 
     const apiToken = await this.prisma.apiToken.findUnique({
       where: { tokenHash },
-      include: { user: true },
+      include: {
+        user: true,
+        shop: { select: { id: true, userId: true, isActive: true } },
+      },
     });
 
     if (!apiToken) {
@@ -293,7 +429,32 @@ export class ApiTokenService {
       userId: apiToken.userId,
       scopes: apiToken.scopes,
       role: apiToken.user.role,
+      email: apiToken.user.email,
+      firstName: apiToken.user.firstName,
+      lastName: apiToken.user.lastName,
+      preferredLanguage: apiToken.user.preferredLanguage,
+      status: apiToken.user.status,
+      shopId: apiToken.shopId,
+      shopOwnerId: apiToken.shop?.userId ?? null,
+      shopIsActive: apiToken.shop?.isActive ?? null,
     };
+  }
+
+  /** Validate a token that may only act as its bound shopkeeper on read requests. */
+  async validateSellerSmokeToken(token: string): Promise<ValidatedApiToken | null> {
+    const result = await this.validateToken(token);
+    if (
+      !result ||
+      !result.scopes.includes(SELLER_SMOKE_SCOPE) ||
+      result.role !== UserRole.SHOPKEEPER ||
+      result.status !== UserStatus.ACTIVE ||
+      !result.shopId ||
+      result.shopOwnerId !== result.userId ||
+      result.shopIsActive !== true
+    ) {
+      return null;
+    }
+    return result;
   }
 
   /**
