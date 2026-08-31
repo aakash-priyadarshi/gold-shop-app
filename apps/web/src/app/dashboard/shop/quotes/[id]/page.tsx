@@ -25,6 +25,7 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { shopQuotesApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   Banknote,
@@ -95,11 +96,17 @@ const STATUS_LABELS: Record<string, string> = {
   READY: "Mark Delivered",
 };
 
+/** Unknown/null balance is treated as unpaid so delivery cannot sneak through. */
+function quoteBlocksDelivery(balanceDueNpr?: number | null) {
+  return balanceDueNpr == null || balanceDueNpr > 0;
+}
+
 export default function QuoteDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const quoteId = params?.id;
   const { format: formatCurrency } = useShopCurrency();
+  const t = useT();
 
   const [quote, setQuote] = useState<ShopQuote | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,6 +168,17 @@ export default function QuoteDetailPage() {
     if (!quote) return;
     const next = NEXT_STATUS[quote.status];
     if (!next) return;
+    if (next === "COMPLETED" && quoteBlocksDelivery(quote.balanceDueNpr)) {
+      toast({
+        variant: "destructive",
+        title: t("Balance due"),
+        description: t(
+          "Record the remaining payment or create an invoice before marking delivered.",
+        ),
+        reportToAdmin: false,
+      });
+      return;
+    }
     if (next === "READY") {
       setReadyWastagePercent(
         quote.wastagePercent != null ? String(quote.wastagePercent) : "0",
@@ -468,10 +486,24 @@ export default function QuoteDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {quote.status === "READY" &&
+                    quoteBlocksDelivery(quote.balanceDueNpr) && (
+                      <p className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+                        <T>
+                          Balance is still due. Record the payment below or
+                          create an invoice before marking delivered.
+                        </T>
+                      </p>
+                    )}
                   {NEXT_STATUS[quote.status] && quote.status !== "CANCELLED" && (
                     <Button
                       onClick={handleStatusAdvance}
-                      disabled={submitting}
+                      disabled={
+                        submitting ||
+                        (quote.status === "READY" &&
+                          quoteBlocksDelivery(quote.balanceDueNpr) &&
+                          NEXT_STATUS[quote.status] === "COMPLETED")
+                      }
                       className="w-full sm:w-auto"
                     >
                       {submitting ? (

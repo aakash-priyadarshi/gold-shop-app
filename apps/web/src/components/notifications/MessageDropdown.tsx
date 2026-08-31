@@ -47,6 +47,12 @@ export function MessageDropdown() {
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return;
+    }
     try {
       const res = await chatApi.listConversations(
         isShopkeeper ? shopId : undefined,
@@ -73,7 +79,18 @@ export function MessageDropdown() {
     if (!user) return;
     fetchConversations();
     const interval = setInterval(fetchConversations, 30000);
-    return () => clearInterval(interval);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void fetchConversations();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", fetchConversations);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", fetchConversations);
+    };
   }, [user, fetchConversations]);
 
   // Refresh when dropdown opens

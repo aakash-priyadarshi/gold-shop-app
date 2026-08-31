@@ -498,7 +498,7 @@ function RegisterForm() {
           country: data.country,
           currency: country?.currency || "NPR",
           city: data.city,
-          address: data.address,
+          address: data.address?.trim() || undefined,
           contactPhone: data.shopPhone || data.phone,
           contactEmail: data.email,
         },
@@ -1470,6 +1470,12 @@ function RegisterForm() {
                       <Label htmlFor="shop-address">
                         <T>Address (Optional)</T>
                       </Label>
+                      <p className="text-xs text-muted-foreground">
+                        <T>
+                          You can add your shop address later in settings if you
+                          do not have it now.
+                        </T>
+                      </p>
                       <div className="relative">
                         <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input

@@ -126,6 +126,11 @@ const statusConfig: Record<
   },
 };
 
+/** Unknown/null balance is treated as unpaid so delivery cannot sneak through. */
+function quoteBlocksDelivery(balanceDueNpr?: number | null) {
+  return balanceDueNpr == null || balanceDueNpr > 0;
+}
+
 export default function ShopQuotesPage() {
   const t = useT();
   const { locale } = useTranslation();
@@ -192,6 +197,23 @@ export default function ShopQuotesPage() {
   };
 
   const handleStatusUpdate = async (quoteId: string, newStatus: string) => {
+    const quote = quotes.find((q) => q.id === quoteId);
+    if (
+      newStatus === "COMPLETED" &&
+      quote &&
+      quoteBlocksDelivery(quote.balanceDueNpr)
+    ) {
+      toast({
+        variant: "destructive",
+        title: t("Balance due"),
+        description: t(
+          "Record the remaining payment or create an invoice before completing delivery.",
+        ),
+        reportToAdmin: false,
+      });
+      return;
+    }
+
     try {
       const payload: {
         status: string;
@@ -556,6 +578,9 @@ export default function ShopQuotesPage() {
                                     )}
                                     {quote.status === "READY" && (
                                       <DropdownMenuItem
+                                        disabled={quoteBlocksDelivery(
+                                          quote.balanceDueNpr,
+                                        )}
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,

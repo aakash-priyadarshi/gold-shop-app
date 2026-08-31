@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { T } from "@/components/ui/T";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
   Select,
@@ -223,7 +224,7 @@ export default function CompleteShopSetupPage() {
         country: data.country,
         currency: country?.currency || "NPR",
         city: data.city,
-        address: data.address,
+        address: data.address?.trim() || undefined,
         shopPhone: data.shopPhone,
         contactEmail: user?.email,
         referralCode:
@@ -437,7 +438,15 @@ export default function CompleteShopSetupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Address (Optional)</Label>
+              <Label htmlFor="address">
+                <T>Address (Optional)</T>
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                <T>
+                  You can add your shop address later in settings if you do not
+                  have it now.
+                </T>
+              </p>
               <div className="relative">
                 <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
