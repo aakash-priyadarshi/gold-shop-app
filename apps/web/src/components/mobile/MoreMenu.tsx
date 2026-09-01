@@ -252,14 +252,14 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
             onClick={(e) => {
               e.preventDefault();
               onClose?.();
-              const domain = window.location.hostname.endsWith("orivraa.com")
-                ? "; domain=.orivraa.com"
-                : "";
+              const host = window.location.hostname.toLowerCase();
+              const isOrivraaHost =
+                host === "orivraa.com" || host.endsWith(".orivraa.com");
+              const domain = isOrivraaHost ? "; domain=.orivraa.com" : "";
               const secure =
                 window.location.protocol === "https:" ? "; Secure" : "";
               document.cookie = `orivraa_force_desktop=true; path=/${domain}; SameSite=Lax${secure}; max-age=604800`;
 
-              const host = window.location.hostname;
               let desktopUrl = `https://orivraa.com/dashboard/shop`;
               if (host.startsWith("m.")) {
                 desktopUrl = `https://${host.substring(2)}/dashboard/shop`;

@@ -23,6 +23,12 @@ export const SHOP_API_KEY_SCOPES = [
 
 export type ShopApiKeyScope = (typeof SHOP_API_KEY_SCOPES)[number];
 
+/** SHA-256 lookup hash for high-entropy ovrk_ tokens. Not a password KDF. */
+function hashApiKey(rawKey: string): string {
+  // codeql[js/insufficient-password-hash]
+  return crypto.createHash("sha256").update(rawKey).digest("hex");
+}
+
 @Injectable()
 export class ApiKeyService {
   constructor(private readonly prisma: PrismaService) {}
@@ -52,7 +58,7 @@ export class ApiKeyService {
 
     // Generate key: ovrk_ + 48 random hex chars
     const rawKey = API_KEY_PREFIX + crypto.randomBytes(24).toString("hex");
-    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const keyHash = hashApiKey(rawKey);
     const keyPrefix = rawKey.substring(0, 12); // "ovrk_" + 7 chars
 
     const apiKey = await this.prisma.shopApiKey.create({
@@ -152,7 +158,7 @@ export class ApiKeyService {
     if (!key) throw new NotFoundException("Seller AI key not found");
 
     const rawKey = API_KEY_PREFIX + crypto.randomBytes(24).toString("hex");
-    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const keyHash = hashApiKey(rawKey);
     const keyPrefix = rawKey.substring(0, 12);
 
     const apiKey = await this.prisma.shopApiKey.update({
@@ -179,7 +185,7 @@ export class ApiKeyService {
   async validateApiKey(rawKey: string) {
     if (!rawKey.startsWith(API_KEY_PREFIX)) return null;
 
-    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const keyHash = hashApiKey(rawKey);
 
     const apiKey = await this.prisma.shopApiKey.findFirst({
       where: {
