@@ -152,6 +152,7 @@ interface RuntimeInfo {
   pid: number;
   cwd: string;
   cpuUsage: { user: number; system: number };
+  shopSmokeTokenConfigured?: boolean;
 }
 
 interface HistoryEntry {
@@ -804,6 +805,10 @@ export default function TestingDashboardPage() {
                         Up {formatUptime(runtimeInfo.uptime)}
                       </div>
                       <div className="text-xs text-muted-foreground">
+                        Shop smoke token:{" "}
+                        {runtimeInfo.shopSmokeTokenConfigured ? "loaded" : "missing"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
                         Heap: {formatBytes(runtimeInfo.memoryUsage.heapUsed)} /{" "}
                         {formatBytes(runtimeInfo.memoryUsage.heapTotal)}
                       </div>
@@ -1100,7 +1105,8 @@ export default function TestingDashboardPage() {
                         <code className="rounded bg-muted px-1">
                           SHOP_SMOKE_TOKEN
                         </code>{" "}
-                        is set on the API.
+                        is set on <strong>@gold-shop/api</strong> and that
+                        service is restarted.
                       </p>
                     )}
                   </CardContent>
@@ -2367,7 +2373,14 @@ export default function TestingDashboardPage() {
                             value={`${runtimeInfo.platform} / ${runtimeInfo.arch}`}
                           />
                           <Stat label="Environment" value={runtimeInfo.env} />
-                          <Stat label="PID" value={String(runtimeInfo.pid)} />
+                          <Stat
+                            label="Shop smoke token"
+                            value={
+                              runtimeInfo.shopSmokeTokenConfigured
+                                ? "configured"
+                                : "missing"
+                            }
+                          />
                           <Stat
                             label="Uptime"
                             value={formatUptime(runtimeInfo.uptime)}

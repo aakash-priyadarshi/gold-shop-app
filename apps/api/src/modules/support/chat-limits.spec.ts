@@ -3,6 +3,7 @@ import {
   CHAT_LIMITS,
   clampReply,
   isCrossUserPrivacyProbe,
+  isSuccessfulPublicChatStatus,
   looksLikeDataDump,
   looksLikeJailbreak,
   sanitizeHistory,
@@ -43,6 +44,13 @@ describe("chat-limits", () => {
       looksLikeDataDump("a@x.com b@y.com c@z.com extra text"),
     ).toBe(true);
     expect(looksLikeDataDump("How does GST work on gold?")).toBe(false);
+  });
+
+  it("treats Nest POST 201 as a successful canned chat reply", () => {
+    expect(isSuccessfulPublicChatStatus(200)).toBe(true);
+    expect(isSuccessfulPublicChatStatus(201)).toBe(true);
+    expect(isSuccessfulPublicChatStatus(400)).toBe(false);
+    expect(isSuccessfulPublicChatStatus(429)).toBe(false);
   });
 
   it("blocks public cross-user probes", () => {

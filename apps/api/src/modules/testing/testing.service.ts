@@ -12,7 +12,11 @@ import * as path from "path";
 import { URL } from "url";
 import { PrismaService } from "../../prisma/prisma.service";
 import { invoiceTaxCategoryAliases } from "../invoices/tax-category-aliases";
-import { CHAT_LIMITS, PUBLIC_PRIVACY_REFUSAL } from "../support/chat-limits";
+import {
+  CHAT_LIMITS,
+  isSuccessfulPublicChatStatus,
+  PUBLIC_PRIVACY_REFUSAL,
+} from "../support/chat-limits";
 
 export interface SmokeTestResult {
   name: string;
@@ -583,7 +587,7 @@ export class TestingService {
         status: "skip",
         duration: 0,
         message:
-          "Set SHOP_SMOKE_TOKEN on the API to probe authenticated seller routes",
+          "SHOP_SMOKE_TOKEN missing in this API process — set it on @gold-shop/api and restart",
       });
     } else {
       results.push(
@@ -885,9 +889,9 @@ export class TestingService {
           if (res.status === 429) {
             return "rate-limited (skip-fail): public hourly cap hit";
           }
-          if (res.status !== 200) {
+          if (!isSuccessfulPublicChatStatus(res.status)) {
             throw new Error(
-              `Expected 200 canned refusal, got ${res.status}: ${this.responseText(res.body).slice(0, 160)}`,
+              `Expected 200/201 canned refusal, got ${res.status}: ${this.responseText(res.body).slice(0, 160)}`,
             );
           }
           const reply = this.responseText(res.body);
@@ -958,7 +962,8 @@ export class TestingService {
         category: "shop-api",
         status: "skip",
         duration: 0,
-        message: "Set SHOP_SMOKE_TOKEN to probe authenticated description API",
+        message:
+          "SHOP_SMOKE_TOKEN missing in this API process — set it on @gold-shop/api and restart",
       });
     } else {
       results.push(
@@ -1523,6 +1528,7 @@ export class TestingService {
       pid: process.pid,
       cwd: process.cwd(),
       cpuUsage: process.cpuUsage(),
+      shopSmokeTokenConfigured: Boolean(process.env.SHOP_SMOKE_TOKEN?.trim()),
     };
   }
 
