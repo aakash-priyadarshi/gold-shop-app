@@ -23,7 +23,8 @@ export class RecoveryOffersWebhookController {
     private readonly config: ConfigService,
     private readonly recoveryOffers: RecoveryOffersService,
   ) {
-    this.resend = new Resend(this.config.get<string>("RESEND_API_KEY"));
+    const apiKey = this.config.get<string>("RESEND_API_KEY")?.trim();
+    this.resend = new Resend(apiKey || "re_disabled");
   }
 
   @Post("resend")

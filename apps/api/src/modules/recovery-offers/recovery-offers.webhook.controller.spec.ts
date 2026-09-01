@@ -64,6 +64,16 @@ describe("RecoveryOffersWebhookController", () => {
     );
   });
 
+  it("constructs without RESEND_API_KEY so full-app tests can boot", () => {
+    expect(
+      () =>
+        new RecoveryOffersWebhookController(
+          { get: jest.fn(() => undefined) } as any,
+          recoveryOffers,
+        ),
+    ).not.toThrow();
+  });
+
   it("rejects missing signature headers", async () => {
     await expect(
       controller.handleResend({
