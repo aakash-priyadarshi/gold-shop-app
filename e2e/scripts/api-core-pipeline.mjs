@@ -45,11 +45,14 @@ if (!token && existsSync(resolve(__dirname, '../.auth/session.json'))) {
 
 const results = [];
 
+const SMOKE_USER_AGENT =
+  'Mozilla/5.0 (compatible; Orivraa-SmokeTest/1.0; +https://orivraa.com)';
+
 const BROWSER_HEADERS = {
   Authorization: `Bearer ${token}`,
   'Content-Type': 'application/json',
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+  Accept: 'application/json',
+  'User-Agent': SMOKE_USER_AGENT,
   Origin: WEB,
   Referer: `${WEB}/dashboard`,
 };
@@ -77,7 +80,9 @@ function record(id, name, ok, detail = '') {
 }
 
 // ── Public ──
-const health = await fetch(`${API}/health`);
+const health = await fetch(`${API}/health`, {
+  headers: { Accept: 'application/json', 'User-Agent': SMOKE_USER_AGENT },
+});
 record('health', 'API health', health.ok, `status ${health.status}`);
 
 if (!token) {
