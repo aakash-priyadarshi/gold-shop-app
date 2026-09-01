@@ -610,8 +610,8 @@ const FAQS = [
     a: "Yes. Create a seller AI integration key, choose scopes such as inventory:read, inventory:write, orders:read, or orders:write, and rotate or revoke it any time. Every AI write is audit-logged. MCP tools cannot take a payment or issue a refund without an extra confirmation step. See /ai-integration.",
   },
   {
-    q: "Is Orivraa a brand-new jewellery company?",
-    a: "The cloud product is new. The people behind Orivraa spent more than ten years serving jewellery customers in person. In January 2026 we brought that shop-floor practice online as cloud software you can open on a phone or laptop.",
+    q: "Is Orivraa generic retail software with a jewellery label?",
+    a: "No. It is built around jewellery-counter work: weight and purity, live gold and silver rates, making charges, wastage (jarti), vault locations, karigar metal, and GST/VAT split by component. The people behind it spent more than ten years serving jewellery customers in person. The software runs on phone, laptop, and desktop so the shop is not locked to one Windows PC.",
   },
 ];
 

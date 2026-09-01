@@ -103,8 +103,7 @@ export function AskAiAboutUs({
           </Link>
         </p>
         <p className="mt-3 text-xs text-gray-500">
-          <T>More than 10 years serving jewellery customers. Cloud software since</T>{" "}
-          <time dateTime="2026-01">January 2026</time>.
+          <T>More than 10 years serving jewellery customers — jewellery-native software on phone, laptop, and desktop.</T>
         </p>
       </div>
     );

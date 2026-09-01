@@ -64,7 +64,7 @@ const faqSchema = {
       name: "How long has Orivraa served jewellery customers?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "The team behind Orivraa spent more than ten years serving jewellery customers in person. The software went online as cloud product in January 2026.",
+        text: "The people behind Orivraa spent more than ten years serving jewellery customers in person. That shop-floor practice is in the product: weight, purity, making charges, wastage, and karigar metal, running on phone, laptop, and desktop.",
       },
     },
   ],

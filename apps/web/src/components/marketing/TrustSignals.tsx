@@ -54,8 +54,8 @@ export function TrustSignals({
     },
     {
       icon: CheckCircle2,
-      title: "10+ years at the counter — cloud since Jan 2026",
-      desc: "Jewellery customer service first. The software went online as cloud in January 2026.",
+      title: "10+ years at the jewellery counter",
+      desc: "Built from shop-floor practice — tola, jarti, making charges — not a generic retail template.",
     },
   ];
 
