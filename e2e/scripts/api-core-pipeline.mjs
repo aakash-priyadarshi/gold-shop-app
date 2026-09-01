@@ -80,9 +80,13 @@ function record(id, name, ok, detail = '') {
 }
 
 // ── Public ──
-const health = await fetch(`${API}/health`, {
-  headers: { Accept: 'application/json', 'User-Agent': SMOKE_USER_AGENT },
-});
+const healthHeaders = {
+  Accept: 'application/json',
+  'User-Agent': SMOKE_USER_AGENT,
+  Origin: WEB,
+  Referer: `${WEB}/`,
+};
+const health = await fetch(`${API}/health`, { headers: healthHeaders });
 record('health', 'API health', health.ok, `status ${health.status}`);
 
 if (!token) {
