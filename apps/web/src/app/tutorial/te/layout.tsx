@@ -1,7 +1,8 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Orivraa ట్యుటోరియల్ 2026 | జువెలరీ షాప్ సాఫ్ట్‌వేర్ సంపూర్ణ గైడ్ తెలుగులో",
+  title: absolutePageTitle("Orivraa ట్యుటోరియల్ 2026 | జువెలరీ షాప్ సాఫ్ట్‌వేర్ సంపూర్ణ గైడ్ తెలుగులో"),
   description:
     "Orivraa జువెలరీ షాప్ సాఫ్ట్‌వేర్ యొక్క 24-నిమిషాల సంపూర్ణ గైడ్ తెలుగులో. ఇన్వెంటరీ, GST బిల్లింగ్, POS, డిజిటల్ కాటలాగ్, కళాకారుడి ట్రాకింగ్, పన్ను నివేదికలు మరియు AI — అన్నీ ఒకే యాప్‌లో. 30 రోజుల ఉచిత ట్రయల్.",
   keywords: [

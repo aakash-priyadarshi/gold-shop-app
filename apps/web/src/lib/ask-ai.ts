@@ -3,7 +3,7 @@ import { SITE_URL } from "@/config/site";
 export const ASK_AI_QUESTION =
   "How is Orivraa for jewellery business software?";
 
-export type AskAiProviderId = "chatgpt" | "claude" | "gemini" | "perplexity";
+export type AskAiProviderId = "chatgpt" | "claude" | "google-ai" | "perplexity";
 
 export type AskAiProvider = {
   id: AskAiProviderId;
@@ -16,7 +16,7 @@ export type AskAiProvider = {
 };
 
 /**
- * Prompt handed to ChatGPT, Claude, Gemini, and Perplexity.
+ * Prompt handed to ChatGPT, Claude, Google AI Mode, and Perplexity.
  * Includes canonical URLs so search-enabled assistants fetch Orivraa pages
  * instead of guessing.
  */
@@ -52,14 +52,13 @@ export const ASK_AI_PROVIDERS: readonly AskAiProvider[] = [
       `https://claude.ai/new?q=${encodeURIComponent(prompt)}`,
   },
   {
-    id: "gemini",
-    name: "Gemini",
+    id: "google-ai",
+    name: "Google AI",
     company: "Google",
-    shortLabel: "Ask Gemini",
+    shortLabel: "Ask Google AI",
     className: "bg-sky-600 hover:bg-sky-500 text-white border-sky-500/30",
-    // Gemini's web app does not reliably honour a query-string prompt. The UI
-    // copies the prepared question before opening this URL for the user to paste.
-    buildUrl: () => "https://gemini.google.com/app",
+    buildUrl: (prompt) =>
+      `https://www.google.com/search?udm=50&hl=en&q=${encodeURIComponent(prompt)}`,
   },
   {
     id: "perplexity",

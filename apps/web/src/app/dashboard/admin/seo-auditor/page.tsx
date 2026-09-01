@@ -81,6 +81,9 @@ interface SeoAuditPageReport {
   wordCount: number;
   canonical: string | null;
   robots: string | null;
+  hasOpenGraph?: boolean;
+  hasOgImage?: boolean;
+  hasJsonLd?: boolean;
   recommendations: string[];
   crawlResults: {
     googlebotMobile: CrawlResult;
@@ -170,7 +173,7 @@ export default function SeoAuditorPage() {
   async function triggerCrawl() {
     if (running) return;
     setRunning(true);
-    setScanLogs(["Initializing Orivraa SEO Auditor Bot...", "Resolving marketing and product routes..."]);
+    setScanLogs(["Initializing Orivraa SEO Auditor Bot...", "Resolving all marketing front pages, MCP pages, tutorials, and blog posts..."]);
     setCurrentProgress(5);
 
     // Mock progress visualizer
@@ -179,7 +182,7 @@ export default function SeoAuditorPage() {
       { progress: 28, msg: "Simulating desktop Chrome browser on pricing and billing modules..." },
       { progress: 42, msg: "Fetching verified vendor shops and scanning deep links..." },
       { progress: 55, msg: "Inspecting header Content-Security-Policy & robots meta-tags..." },
-      { progress: 70, msg: "Parsing title/H1 heading structures and canonical tag mismatch alerts..." },
+      { progress: 70, msg: "Parsing title/H1, Open Graph, JSON-LD, and canonical tags..." },
       { progress: 85, msg: "Validating redirect links for authorization session timeouts..." },
       { progress: 95, msg: "Compiling optimization scores and compiling content suggestions..." },
     ];
@@ -263,7 +266,7 @@ export default function SeoAuditorPage() {
 
   const generateMarkdownReport = (currentReport: SeoAuditReport): string => {
     const dateStr = new Date(currentReport.timestamp).toLocaleString();
-    const targetHost = settings.targetUrl || "https://orivraa.com";
+    const targetHost = settings.targetUrl || "https://www.orivraa.com";
     let md = `# Orivraa SEO Auditor Bot - Executive Crawl Report\n\n`;
     md += `**Date of Audit:** ${dateStr}\n`;
     md += `**Target URL:** ${targetHost}\n`;
@@ -300,7 +303,10 @@ export default function SeoAuditorPage() {
       md += `- **Canonical Link:** ${page.canonical || "N/A"}\n`;
       md += `- **H1 Tag Count:** ${page.h1Count}\n`;
       md += `- **Word Count:** ${page.wordCount} words\n`;
-      md += `- **Robots Meta-Tag:** ${page.robots || "N/A"}\n\n`;
+      md += `- **Robots Meta-Tag:** ${page.robots || "N/A"}\n`;
+      md += `- **Open Graph:** ${page.hasOpenGraph ? "yes" : "no"}\n`;
+      md += `- **OG Image:** ${page.hasOgImage ? "yes" : "no"}\n`;
+      md += `- **JSON-LD:** ${page.hasJsonLd ? "yes" : "no"}\n\n`;
 
       md += `#### Simulated Crawl Results:\n`;
       md += `- Googlebot Mobile: HTTP ${page.crawlResults.googlebotMobile.status}${page.crawlResults.googlebotMobile.redirectTarget ? ` -> redirects to ${page.crawlResults.googlebotMobile.redirectTarget}` : ""}\n`;
@@ -395,7 +401,7 @@ export default function SeoAuditorPage() {
   const downloadReportFile = (format: "md" | "txt" | "doc") => {
     if (!report) return;
     const dateStr = new Date(report.timestamp).toISOString().split("T")[0];
-    const targetHost = settings.targetUrl || "https://orivraa.com";
+    const targetHost = settings.targetUrl || "https://www.orivraa.com";
 
     let filename = `SEO_Audit_Report_${dateStr}`;
     let mimeType = "text/markdown";
@@ -550,7 +556,7 @@ export default function SeoAuditorPage() {
                 SEO Auditor & Optimizer Bot
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-1">
-                Platform health scanner simulating Googlebot and guests to intercept SEO-killing redirect loops and indexability faults.
+                Crawls every public marketing front page — product landings, MCP integration, tutorials, regional pages, blog, and compare pages — simulating Googlebot and guest browsers.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -793,7 +799,7 @@ export default function SeoAuditorPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Crawl Host Target:</span>
-                  <span className="font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">{settings.targetUrl || "https://orivraa.com"}</span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">{settings.targetUrl || "https://www.orivraa.com"}</span>
                 </div>
               </div>
 
@@ -870,7 +876,7 @@ export default function SeoAuditorPage() {
                                   <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-gray-100">
                                     {page.path}
                                     <a
-                                      href={(settings.targetUrl || "https://orivraa.com") + page.path}
+                                      href={(settings.targetUrl || "https://www.orivraa.com") + page.path}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
@@ -980,6 +986,26 @@ export default function SeoAuditorPage() {
                                               <span className="text-muted-foreground block font-sans">Robots Tag</span>
                                               <span className="font-semibold text-gray-900 dark:text-gray-100">{page.robots || "index, follow"}</span>
                                             </div>
+                                            <div className="grid grid-cols-3 gap-2 pt-1.5">
+                                              <div>
+                                                <span className="text-muted-foreground block font-sans">Open Graph</span>
+                                                <span className={`font-bold text-sm ${page.hasOpenGraph ? "text-green-600" : "text-amber-600"}`}>
+                                                  {page.hasOpenGraph ? "Yes" : "No"}
+                                                </span>
+                                              </div>
+                                              <div>
+                                                <span className="text-muted-foreground block font-sans">OG image</span>
+                                                <span className={`font-bold text-sm ${page.hasOgImage ? "text-green-600" : "text-amber-600"}`}>
+                                                  {page.hasOgImage ? "Yes" : "No"}
+                                                </span>
+                                              </div>
+                                              <div>
+                                                <span className="text-muted-foreground block font-sans">JSON-LD</span>
+                                                <span className={`font-bold text-sm ${page.hasJsonLd ? "text-green-600" : "text-amber-600"}`}>
+                                                  {page.hasJsonLd ? "Yes" : "No"}
+                                                </span>
+                                              </div>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -1086,13 +1112,13 @@ export default function SeoAuditorPage() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Crawl target Host override</label>
                     <Input
-                      placeholder="e.g. https://orivraa.com"
+                      placeholder="e.g. https://www.orivraa.com"
                       value={formTargetUrl}
                       onChange={(e) => setFormTargetUrl(e.target.value)}
                       className="h-9 rounded-lg border-gray-200 dark:border-gray-700 bg-transparent text-sm touch-target"
                     />
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      Leave blank to auto-detect using backend environment variables (defaults to production <code>https://orivraa.com</code>).
+                      Leave blank to auto-detect using backend environment variables (defaults to production <code>https://www.orivraa.com</code>).
                     </p>
                   </div>
 

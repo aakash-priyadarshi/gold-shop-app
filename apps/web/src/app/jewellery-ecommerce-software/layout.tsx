@@ -1,10 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title:
-    "Jewellery Ecommerce Software — Sell Gold & Diamond Online | Orivraa 2026",
+  title: absolutePageTitle("Jewellery Ecommerce Software"),
   description:
-    "Best ecommerce software for jewellery shops. Built-in marketplace, digital catalogues, multi-currency pricing, live rate-aware product updates, and mobile POS sync for online and walk-in sales. Sell jewellery online without a website. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
+    "Sell jewellery online with digital catalogues, live-rate pricing, and POS sync. No separate website required.",
   keywords: [
     "jewellery ecommerce software",
     "sell jewellery online",

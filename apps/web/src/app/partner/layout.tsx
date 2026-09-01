@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Become a Partner | Join Orivraa's Jewellery Network",
+  title: absolutePageTitle("Become an Orivraa Jewellery Partner"),
   description:
-    "Partner with Orivraa to grow your jewellery business internationally. Join our B2B marketplace network for retailers, wholesalers, manufacturers & designers. Reach buyers across Nepal, India, Dubai, USA & UK.",
+    "Partner with Orivraa to reach jewellery buyers across Nepal, India, Dubai, USA, and UK with B2B marketplace tools.",
   keywords: [
     "jewellery partner programme",
     "jewellery marketplace partner",

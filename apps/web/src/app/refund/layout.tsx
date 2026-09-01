@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Refund Policy",
+  title: absolutePageTitle("Refund Policy for Orivraa Jewellery Software"),
   description:
-    "Understand Orivraa's refund and return policy for jewellery purchases. Know your rights as a buyer on our marketplace.",
+    "Orivraa refund and return policy for jewellery purchases and how buyers request support on the marketplace.",
   robots: { index: true, follow: true },
 };
 

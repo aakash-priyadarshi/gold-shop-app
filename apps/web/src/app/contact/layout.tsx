@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Contact Orivraa | Support for Jewellery Shop Software",
+  title: absolutePageTitle("Contact Orivraa Support and Sales"),
   description:
-    "Get in touch with the Orivraa team for sales, demos and support. Email support@orivraa.com or call +91 62039 65557. We help jewellery shops across India, Nepal, UAE, UK and US go digital with billing, POS, inventory and live gold rates.",
+    "Contact Orivraa for jewellery software demos and support. Email support@orivraa.com or call +91 62039 65557.",
   keywords: [
     "contact Orivraa",
     "Orivraa support",

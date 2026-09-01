@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
+  title: absolutePageTitle("Privacy Policy for Orivraa Jewellery Software"),
   description:
-    "Read Orivraa's privacy policy. Learn how we collect, use, and protect your personal information on our jewellery marketplace.",
+    "How Orivraa collects, uses, and protects personal data for jewellery shops, buyers, and marketplace accounts.",
   robots: { index: true, follow: true },
 };
 

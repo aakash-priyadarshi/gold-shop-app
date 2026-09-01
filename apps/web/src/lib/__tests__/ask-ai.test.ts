@@ -23,7 +23,7 @@ describe("Ask AI marketing links", () => {
     expect(links.map((item) => item.id)).toEqual([
       "chatgpt",
       "claude",
-      "gemini",
+      "google-ai",
       "perplexity",
     ]);
 
@@ -33,12 +33,14 @@ describe("Ask AI marketing links", () => {
     expect(getAskAiHref("claude", SITE)).toMatch(
       /^https:\/\/claude\.ai\/new\?q=/,
     );
-    expect(getAskAiHref("gemini", SITE)).toBe("https://gemini.google.com/app");
+    expect(getAskAiHref("google-ai", SITE)).toMatch(
+      /^https:\/\/www\.google\.com\/search\?udm=50&hl=en&q=/,
+    );
     expect(getAskAiHref("perplexity", SITE)).toMatch(
       /^https:\/\/www\.perplexity\.ai\/search\?q=/,
     );
 
-    for (const link of links.filter((link) => link.id !== "gemini")) {
+    for (const link of links) {
       const url = new URL(link.href);
       expect(url.protocol).toBe("https:");
       expect(url.search).toContain(encodeURIComponent("Orivraa"));

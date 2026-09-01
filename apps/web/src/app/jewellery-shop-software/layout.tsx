@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Best Jewellery Shop Software 2026 | Mobile POS, Billing & Live Gold Rates",
+  title: absolutePageTitle("Jewellery Shop Software with Mobile POS"),
   description:
-    "Cloud-based jewellery shop software with mobile POS, 7-day live gold rate trends, inventory by weight and purity, GST/VAT billing, digital catalogues, customer chat, and analytics. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
+    "Cloud jewellery shop software with mobile POS, live gold rates, weight-based inventory, and GST/VAT billing. Free plan available.",
   keywords: [
     "jewellery shop software",
     "jewellery software",
@@ -53,15 +54,15 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/jewellery-shop-software" },
   openGraph: {
-    title: "Best Jewellery Shop Software 2026 | Mobile POS & Live Gold Rates",
+    title: "Jewellery Shop Software with Mobile POS | Orivraa",
     description:
-      "Free cloud-based jewellery shop software with mobile POS, live gold rate trends, local pricing, inventory by weight and purity, GST/VAT billing, catalogues, chat, and analytics.",
+      "Cloud jewellery shop software with mobile POS, live gold rates, weight-based inventory, and GST/VAT billing. Free plan available.",
     url: "https://www.orivraa.com/jewellery-shop-software",
     type: "article",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Best Jewellery Shop Software 2026 | Mobile POS & Live Gold Rates",
+    title: "Jewellery Shop Software with Mobile POS | Orivraa",
     description:
       "Free jewellery shop software with mobile POS, 7-day live gold rate trends, billing, tax-ready invoices, customer chat, and analytics.",
   },

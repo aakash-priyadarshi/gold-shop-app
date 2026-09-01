@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Jewellery Store Management Software for Modern Shops | Orivraa 2026",
+  title: absolutePageTitle("Jewellery Store Management Software"),
   description:
-    "Complete jewellery store management software with inventory tracking by weight & purity, mobile POS billing, 7-day live gold rate trends, customer management, digital catalogues, and analytics. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
+    "Run inventory, mobile POS, live gold rates, catalogues, and analytics in one jewellery store management platform.",
   keywords: [
     "jewellery store management software",
     "jewellery shop management system",

@@ -1,10 +1,11 @@
 import { CustomerFlowGuard } from "@/components/auth/CustomerFlowGuard";
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "AI Jewellery Designs | Gold, Diamond & Silver Inspirations",
+  title: absolutePageTitle("AI Jewellery Design Ideas"),
   description:
-    "Explore AI-generated jewellery design ideas on Orivraa. Get inspired with unique gold, silver, diamond ring, necklace & earring designs. Custom jewellery design tool for buyers worldwide.",
+    "Explore AI jewellery design ideas for gold, silver, and diamond rings, necklaces, and earrings. Get inspired before you buy or make.",
   keywords: [
     "jewellery design",
     "AI jewellery design",

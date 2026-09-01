@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs Lightspeed for Jewellery Shops | 2026 Comparison",
+  title: absolutePageTitle("Orivraa vs Lightspeed for Jewellery Shops"),
   description:
-    "Comparing Orivraa vs Lightspeed Retail for jewellery and jewelry shops. Lightspeed is a great general cloud POS — but it cannot handle weight-based gold pricing, making charges, or multi-country VAT compliance natively. See the full comparison.",
+    "Lightspeed is a general cloud POS. Orivraa adds weight-based gold pricing, making charges, and multi-country VAT for jewellers.",
   alternates: { canonical: "https://www.orivraa.com/compare/orivraa-vs-lightspeed" },
 };
 

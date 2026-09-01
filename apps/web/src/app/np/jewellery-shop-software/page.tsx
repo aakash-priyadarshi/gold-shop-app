@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -19,16 +20,14 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title:
-    "Jewellery Shop Software Nepal | Tola Billing, NRB Gold Rate & Skill Promotion Fee | Orivraa",
+  title: absolutePageTitle("Jewellery Shop Software for Nepal"),
   description:
-    "Jewellery billing software for Nepal. Nepal Rastra Bank (NRB) daily gold rate integration, tola and gram weight billing, NPR currency, Skill Promotion Fee (0.5% on jewellery) and 13% VAT on gemstones with IRD-compatible invoices, PAN-linked records, and mobile POS that works on any Android phone. Pro from NPR 399/month. Free plan available — better than Tally, Marg ERP, or Vyapar.",
+    "Jewellery billing for Nepal with NRB gold rates, tola/gram weights, NPR invoices, and mobile POS. Pro from NPR 399/month.",
   alternates: {
     canonical: "https://www.orivraa.com/np/jewellery-shop-software",
   },
   openGraph: {
-    title:
-      "Jewellery Software Nepal | NRB Rate, Tola Billing & Skill Promotion Fee | Orivraa",
+    title: "Jewellery Shop Software for Nepal | Orivraa",
     description:
       "Nepal jewellery billing software with NRB gold rates, tola weight, NPR billing, mobile POS, and IRD VAT compliance. Better than Tally. Free to start.",
     url: "https://www.orivraa.com/np/jewellery-shop-software",

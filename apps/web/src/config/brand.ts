@@ -85,7 +85,7 @@ export const BRAND: {
       "Orivraa - Jewellery ERP, POS Software & Bullion Tracker",
     titleTemplate: "%s | Orivraa",
     defaultDescription:
-      "Modern jewellery shop ERP software with touchscreen counter POS, live gold rate cards, Karigar wastage ledgers, bullion inventory tracking, GST/VAT-ready invoicing, and digital catalogues.",
+      "Jewellery ERP and POS with live gold rates, karigar tracking, GST/VAT billing, mobile counter POS, and seller MCP tools for ChatGPT and Claude.",
     keywords: [
       // Core terms (both spellings for US/UK coverage)
       "jewellery",

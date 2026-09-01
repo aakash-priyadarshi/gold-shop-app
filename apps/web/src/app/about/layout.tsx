@@ -1,11 +1,12 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 const BASE_URL = "https://www.orivraa.com";
 
 export const metadata: Metadata = {
-  title: "About Orivraa | Jewellery Software, Mobile POS & Marketplace",
+  title: absolutePageTitle("About Orivraa Jewellery Shop Software"),
   description:
-    "Learn about Orivraa — the jewellery software, Mobile POS, live gold-rate, AI assistant, and marketplace platform helping verified jewellers serve buyers across Nepal, India, UAE, UK, and USA.",
+    "Orivraa jewellery software for mobile POS, live gold rates, GST/VAT billing, and a marketplace that helps jewellers serve buyers worldwide.",
   alternates: {
     canonical: `${BASE_URL}/about`,
     languages: {
@@ -26,9 +27,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "About Orivraa | Jewellery Software, Mobile POS & Marketplace",
+    title: "About Orivraa Jewellery Shop Software",
     description:
-      "The story behind Orivraa: jewellery shop software, Mobile POS, live gold-rate tools, AI assistance, and a trusted marketplace for modern jewellers.",
+      "The story behind Orivraa: jewellery shop software, mobile POS, live gold-rate tools, and a trusted marketplace for modern jewellers.",
     url: `${BASE_URL}/about`,
   },
 };

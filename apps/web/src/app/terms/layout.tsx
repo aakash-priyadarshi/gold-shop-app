@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Terms of Service",
+  title: absolutePageTitle("Terms of Service for Orivraa Jewellery Software"),
   description:
-    "Read Orivraa's terms of service. Understand the rules, obligations, and agreements for using our jewellery marketplace platform.",
+    "Rules and agreements for using Orivraa jewellery shop software, billing tools, and the marketplace platform.",
   robots: { index: true, follow: true },
 };
 

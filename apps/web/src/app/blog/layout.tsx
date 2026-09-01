@@ -1,10 +1,10 @@
 import { Metadata } from "next";
-import { BLOG_POSTS } from "@/data/blog-posts";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Jewellery Business Blog — Tips, Guides & Software Reviews | Orivraa",
+  title: absolutePageTitle("Jewellery Business Blog and Software Guides"),
   description:
-    "Expert guides on jewellery shop software, billing software, tax reports, GST billing, inventory management, selling online, and growing your jewellery business.",
+    "Guides on jewellery shop software, GST billing, inventory, and growing a gold or diamond business with Orivraa.",
   keywords: [
     "jewellery business blog",
     "jewellery shop tips",

@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Orivraa Tutorial 2026 | Complete Jewellery Shop Software Walkthrough",
+  title: absolutePageTitle("Orivraa Tutorial for Jewellery Software"),
   description:
-    "Watch the complete 24-minute Orivraa tutorial. See how jewellery shop owners manage inventory by weight & purity, generate GST/VAT invoices, run a POS, publish digital catalogues, track karigars, and get AI business insights — all in one app. Free 60-day trial.",
+    "Watch the Orivraa walkthrough for jewellery inventory, GST/VAT invoices, POS, catalogues, karigar tracking, and AI insights.",
   keywords: [
     "jewellery shop software tutorial",
     "jewellery software tutorial video",
@@ -69,7 +70,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Orivraa Tutorial 2026 | Complete Jewellery Shop Software Walkthrough",
+    title: "Orivraa Tutorial for Jewellery Software",
     description:
       "Full 24-minute step-by-step tutorial of Orivraa jewellery shop software. Inventory, billing, POS, catalogues, karigars, tax engine, and AI insights — all shown live.",
     url: "https://www.orivraa.com/tutorial",
@@ -84,7 +85,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Orivraa Tutorial 2026 | Complete Jewellery Shop Software Walkthrough",
+    title: "Orivraa Tutorial for Jewellery Software",
     description:
       "Watch the full 24-minute Orivraa tutorial — GST billing, POS, inventory by weight & purity, digital catalogues, karigars, and AI insights.",
   },

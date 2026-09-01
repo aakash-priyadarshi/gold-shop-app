@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs Vyapar | Jewellery Billing Software vs General GST App",
+  title: absolutePageTitle("Orivraa vs Vyapar for Jewellery Billing"),
   description:
-    "Vyapar is a popular Indian GST billing app for general SMBs — but it has no weight-based pricing, no live gold rates, no making charges, and is India-only. Orivraa is built specifically for jewellery shops in India and beyond.",
+    "Vyapar is a general GST app. Orivraa adds weight-based jewellery pricing, live gold rates, making charges, and multi-country billing.",
   alternates: { canonical: "https://www.orivraa.com/compare/orivraa-vs-vyapar" },
 };
 

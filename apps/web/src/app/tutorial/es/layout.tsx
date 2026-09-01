@@ -1,7 +1,8 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Tutorial de Orivraa 2026 | Guía Completa en Español — Software para Joyería",
+  title: absolutePageTitle("Tutorial de Orivraa 2026 | Guía Completa en Español — Software para Joyería"),
   description:
     "Tutorial completo de 24 minutos en español de Orivraa, el software para joyerías. Inventario, facturación GST/IVA, POS, catálogo digital, gestión de artesanos, informes fiscales e IA — todo en un solo lugar.",
   keywords: [

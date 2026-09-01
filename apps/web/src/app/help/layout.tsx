@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Help Centre | FAQs & Buyer/Seller Support",
+  title: absolutePageTitle("Help Centre for Orivraa Jewellery Software"),
   description:
-    "Get help with Orivraa — FAQs, buying guides, shipping info, and seller support. Serving jewellery buyers and sellers in Nepal, India, Dubai, USA & UK.",
+    "FAQs, buying guides, shipping help, and seller support for jewellery buyers and shops using Orivraa.",
   alternates: { canonical: "/help" },
   openGraph: {
     title: "Help Centre | Orivraa",

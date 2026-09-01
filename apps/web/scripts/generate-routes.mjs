@@ -30,7 +30,12 @@ const EXCLUDED_ROOT_SEGMENTS = new Set([
   "rfq",
 ]);
 
-const EXCLUDED_EXACT_ROUTES = new Set(["/blog", "/robots", "/sitemap"]);
+const EXCLUDED_EXACT_ROUTES = new Set([
+  "/robots",
+  "/sitemap",
+  "/sentry-example-page",
+  "/recovery/pro",
+]);
 
 function isIgnoredDirectory(name) {
   // Skip route groups, dynamic segments, and private folders

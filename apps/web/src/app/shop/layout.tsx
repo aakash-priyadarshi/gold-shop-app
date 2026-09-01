@@ -1,10 +1,11 @@
 import { CustomerFlowGuard } from "@/components/auth/CustomerFlowGuard";
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Shop Jewellery Online | Gold, Silver & Diamond from Verified Jewellers",
+  title: absolutePageTitle("Shop Jewellery Online from Jewellers"),
   description:
-    "Browse ready-made gold, silver and diamond jewellery from verified local jewellers across India, Nepal, Dubai, UK & USA. See live-rate pricing, compare designs, and request custom pieces or quotes — all in one secure marketplace.",
+    "Browse gold, silver, and diamond jewellery from verified jewellers with live-rate pricing across India, Nepal, Dubai, UK and USA.",
   keywords: [
     "shop jewellery online",
     "buy gold jewellery online",

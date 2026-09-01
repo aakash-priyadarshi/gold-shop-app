@@ -1,10 +1,11 @@
 import { CustomerFlowGuard } from "@/components/auth/CustomerFlowGuard";
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Browse Verified Jewellery Shops | Gold & Diamond Jewellers",
+  title: absolutePageTitle("Browse Verified Jewellery Shops"),
   description:
-    "Discover verified jewellery shops from Nepal, India, Dubai, USA & UK on Orivraa. Browse gold, silver, diamond & gemstone shops from trusted artisans. Find the best jewellers near you.",
+    "Discover verified jewellery shops from Nepal, India, Dubai, USA and UK. Browse gold, silver, diamond and gemstone jewellers.",
   keywords: [
     "jewellery shops",
     "gold shops",

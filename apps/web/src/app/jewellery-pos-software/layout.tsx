@@ -1,10 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title:
-    "Mobile Jewellery POS Software — Billing for Gold & Diamond Shops | Orivraa 2026",
+  title: absolutePageTitle("Mobile Jewellery POS Software"),
   description:
-    "Mobile POS software for jewellery shops. Bill from any phone with live gold rate history, making charges, old gold exchange, GST/VAT invoicing, barcode scanning, and receipt sharing. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
+    "Mobile jewellery POS for gold shops: live rates, making charges, old-gold exchange, and GST/VAT receipts from any phone.",
   keywords: [
     "jewellery POS software",
     "mobile jewellery POS software",
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/jewellery-pos-software" },
   openGraph: {
-    title: "Mobile Jewellery POS Software for Gold Shops | Orivraa",
+    title: "Mobile Jewellery POS Software | Orivraa",
     description:
-      "Cloud-based mobile POS for jewellery shops. Live rate history, making charges, barcode scanning, old gold exchange, and GST/VAT receipts. Free to start.",
+      "Mobile jewellery POS for gold shops: live rates, making charges, old-gold exchange, and GST/VAT receipts from any phone.",
     url: "https://www.orivraa.com/jewellery-pos-software",
     type: "article",
   },

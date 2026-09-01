@@ -291,7 +291,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "ask_ai_about_orivraa",
     content:
-      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Gemini, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? The prompt points at /jewellery-shop-software, /jewellery-shop-billing-software, and /ai-integration so the model can fetch current product facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
+      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Google AI, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? Google AI opens Google Search AI Mode with the same prompt. The prompt points at /jewellery-shop-software, /jewellery-shop-billing-software, and /ai-integration so the model can fetch current product facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
   },
   {
     topic: "seller_ai_integration_mcp",

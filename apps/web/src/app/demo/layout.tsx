@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Orivraa Demo 2026 | 30-Second Jewellery Shop Software Preview",
+  title: absolutePageTitle("Orivraa Jewellery Shop Software Demo"),
   description:
-    "Watch a 30-second visual demo of Orivraa — the all-in-one jewellery shop software. See live dashboards, smart inventory by weight & purity, lightning POS, GST/VAT invoices, digital catalogues, analytics, and AI insights at a glance.",
+    "Watch a 30-second demo of Orivraa jewellery software: live dashboards, weight-based inventory, POS, GST invoices, and catalogues.",
   keywords: [
     "jewellery shop software demo",
     "jewellery software demo video",
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/demo" },
   openGraph: {
-    title: "Orivraa Demo 2026 | 30-Second Jewellery Shop Software Preview",
+    title: "Orivraa Jewellery Shop Software Demo",
     description:
       "30-second visual demo of Orivraa jewellery shop software — dashboard, inventory, POS, GST invoices, catalogues, analytics, and AI insights.",
     url: "https://www.orivraa.com/demo",
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Orivraa Demo 2026 | 30-Second Jewellery Shop Software Preview",
+    title: "Orivraa Jewellery Shop Software Demo",
     description:
       "Quick 30-second visual tour of Orivraa — inventory by weight & purity, POS, GST invoicing, catalogues, and AI insights.",
   },

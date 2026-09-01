@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title:
-    "Jewellery CRM Software India | Customer & Loyalty Management | Orivraa",
+  title: absolutePageTitle("Jewellery CRM Software for India"),
   description:
-    "Jewellery CRM software built for Indian gold & diamond shops — track customers, purchase history, savings/committee schemes, old-gold exchange, festival reminders and WhatsApp follow-ups in one place. Live gold rates, weight-based billing and GST invoicing included. Free plan available.",
+    "Jewellery CRM for Indian gold shops: customer history, savings schemes, old-gold exchange, and GST billing in one place.",
   keywords: [
     "jewellery CRM software India",
     "jewellery CRM",

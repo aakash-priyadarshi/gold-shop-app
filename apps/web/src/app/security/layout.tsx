@@ -1,15 +1,17 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 const BASE_URL = "https://www.orivraa.com";
 
 export const metadata: Metadata = {
-  title: "Security, Encryption & Regulatory Compliance | Orivraa",
-  description: "Discover Orivraa's bank-grade security systems. Learn how we protect retail gold and jewelry stores with AES-256 at rest, TLS 1.3 in-transit, staff PIN clearance gates, RFID, and automated cloud backups.",
+  title: absolutePageTitle("Orivraa Security and Compliance"),
+  description:
+    "How Orivraa protects jewellery shop data with encryption, staff PIN gates, backups, and regional hosting controls.",
   alternates: {
     canonical: `${BASE_URL}/security`,
   },
   openGraph: {
-    title: "Security, Encryption & Regulatory Compliance | Orivraa",
+    title: "Orivraa Security and Compliance",
     description: "Learn how Orivraa establishes elite safety for modern jewelers through advanced encryption, staff PIN clearance gates, RFID stock tracking, and isolated regional hosting.",
     url: `${BASE_URL}/security`,
     type: "website",

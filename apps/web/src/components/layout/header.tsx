@@ -438,7 +438,7 @@ export function Header() {
       name: "Ask AI about Orivraa",
       href: "/ask-ai",
       icon: SparklesIcon,
-      desc: "ChatGPT, Claude, Gemini, or Perplexity",
+      desc: "ChatGPT, Claude, Google AI, or Perplexity",
     },
     {
       name: "Seller AI keys & MCP",

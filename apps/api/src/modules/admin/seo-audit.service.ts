@@ -4,7 +4,10 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import * as fs from "fs";
 import * as path from "path";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { countH1Tags, decodeHtmlEntities } from "./seo-audit-html";
+import { buildSeoAuditPathList } from "./seo-audit-routes";
 
 export interface CrawlResult {
   status: number;
@@ -21,6 +24,9 @@ export interface SeoAuditPageReport {
   wordCount: number;
   canonical: string | null;
   robots: string | null;
+  hasOpenGraph: boolean;
+  hasOgImage: boolean;
+  hasJsonLd: boolean;
   recommendations: string[];
   crawlResults: {
     googlebotMobile: CrawlResult;
@@ -49,36 +55,7 @@ export interface SeoAuditSettings {
   targetUrl: string | null; // Null means autodetect (use FRONTEND_URL or production)
 }
 
-const FALLBACK_ROUTES = [
-  "/",
-  "/about",
-  "/about/ne",
-  "/about/fr",
-  "/blog",
-  "/pricing",
-  "/contact",
-  "/demo",
-  "/designs",
-  "/download",
-  "/for-sellers",
-  "/jewellery-shop-software",
-  "/jewellery-manufacturing-software",
-  "/jewellery-store-management-software",
-  "/jewellery-pos-software",
-  "/jewellery-inventory-software",
-  "/jewellery-ecommerce-software",
-  "/jewellery-shop-billing-software",
-  "/compare/orivraa-vs-tally",
-  "/compare/orivraa-vs-marg-erp",
-  "/privacy",
-  "/terms",
-  "/refund",
-  "/platform-guidelines",
-  "/seller-guide",
-  "/shop",
-  "/shops",
-  "/support"
-];
+const DEFAULT_FRONTEND_URL = "https://www.orivraa.com";
 
 @Injectable()
 export class SeoAuditService implements OnModuleInit {
@@ -92,6 +69,7 @@ export class SeoAuditService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
+    private readonly platformConfigService: PlatformConfigService,
   ) {}
 
   onModuleInit() {
@@ -189,11 +167,10 @@ export class SeoAuditService implements OnModuleInit {
 
     try {
       const settings = this.getSettings();
-      // Prioritize https://orivraa.com for production crawl per User feedback
       const frontendUrl =
         settings.targetUrl ||
         this.configService.get<string>("FRONTEND_URL") ||
-        "https://orivraa.com";
+        DEFAULT_FRONTEND_URL;
 
       this.logger.log(`SEO Auditor bot starting scan against base: ${frontendUrl}`);
 
@@ -343,44 +320,44 @@ export class SeoAuditService implements OnModuleInit {
   }
 
   private async resolvePathsToScan(): Promise<string[]> {
-    const pathsSet = new Set<string>();
+    let generatedRoutes: string[] = [];
+    let usedFallback = false;
 
-    // 1. Load routes from web generated list
     try {
       const generatedRoutesPath = this.findFrontendFilePath("web/src/data/generated-routes.json");
       if (generatedRoutesPath) {
-        const routes: string[] = JSON.parse(fs.readFileSync(generatedRoutesPath, "utf8"));
-        routes.forEach((r) => {
-          // Exclude dashboard, pos, and internal/auth setup pages
-          if (!r.startsWith("/dashboard") && !r.startsWith("/m/") && r !== "/m") {
-            pathsSet.add(r);
-          }
-        });
+        generatedRoutes = JSON.parse(fs.readFileSync(generatedRoutesPath, "utf8"));
       } else {
         this.logger.warn("Could not find generated-routes.json path, using fallback.");
+        usedFallback = true;
       }
     } catch (err) {
       this.logger.warn("Could not read frontend generated routes list, using fallback.", err);
+      usedFallback = true;
     }
 
-    // Populate fallback if reading generated-routes failed
-    if (pathsSet.size === 0) {
-      FALLBACK_ROUTES.forEach((p) => pathsSet.add(p));
+    const customerFlowEnabled = await this.platformConfigService.isCustomerFlowEnabled();
+    const paths = buildSeoAuditPathList(generatedRoutes, {
+      customerFlowEnabled,
+      useFallback: usedFallback || generatedRoutes.length === 0,
+    });
+    const pathsSet = new Set(paths);
+
+    // Dynamic shop pages (sample verified shops)
+    if (customerFlowEnabled) {
+      try {
+        const shops = await this.prisma.shop.findMany({
+          where: { isVerified: true, isActive: true },
+          select: { id: true },
+          take: 5,
+        });
+        shops.forEach((s) => pathsSet.add(`/shops/${s.id}`));
+      } catch (e) {
+        this.logger.warn("Could not fetch shops database for SEO audit", e);
+      }
     }
 
-    // 2. Add dynamic shop pages (take 5 verified shop URLs)
-    try {
-      const shops = await this.prisma.shop.findMany({
-        where: { isVerified: true, isActive: true },
-        select: { id: true },
-        take: 5,
-      });
-      shops.forEach((s) => pathsSet.add(`/shops/${s.id}`));
-    } catch (e) {
-      this.logger.warn("Could not fetch shops database for SEO audit", e);
-    }
-
-    // 3. Add dynamic blog pages from static blog posts file
+    // Dynamic blog posts
     try {
       const blogPostsPath = this.findFrontendFilePath("web/src/data/blog-posts.ts");
       if (blogPostsPath) {
@@ -399,7 +376,11 @@ export class SeoAuditService implements OnModuleInit {
       this.logger.warn("Could not read static blog posts for SEO audit", err);
     }
 
-    return Array.from(pathsSet);
+    this.logger.log(
+      `SEO Auditor resolved ${pathsSet.size} paths (customerFlow=${customerFlowEnabled}, fallback=${usedFallback || generatedRoutes.length === 0})`,
+    );
+
+    return Array.from(pathsSet).sort();
   }
 
   // Core audit engine for a single route path
@@ -434,6 +415,9 @@ export class SeoAuditService implements OnModuleInit {
     let wordCount = 0;
     let canonical: string | null = null;
     let robots: string | null = null;
+    let hasOpenGraph = false;
+    let hasOgImage = false;
+    let hasJsonLd = false;
 
     // Check for critical auth leak redirect (Googlebot redirected to login)
     const gbotMobileRedirect = gMobileRes.redirectTarget;
@@ -465,16 +449,15 @@ export class SeoAuditService implements OnModuleInit {
 
       // Extract title
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-      title = titleMatch ? titleMatch[1].trim() : null;
+      title = titleMatch ? decodeHtmlEntities(titleMatch[1]).trim() : null;
 
       // Extract description
       const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i) ||
                          html.match(/<meta[^>]*content=["']([^"']*)["'][^>]*name=["']description["']/i);
-      description = descMatch ? descMatch[1].trim() : null;
+      description = descMatch ? decodeHtmlEntities(descMatch[1]).trim() : null;
 
-      // Extract H1 count
-      const h1Matches = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/gi);
-      h1Count = h1Matches ? h1Matches.length : 0;
+      // Ignore the shared <noscript> fallback heading in root layout
+      h1Count = countH1Tags(html);
 
       // Extract canonical
       const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']*)["']/i);
@@ -483,6 +466,12 @@ export class SeoAuditService implements OnModuleInit {
       // Extract robots
       const robotsMatch = html.match(/<meta[^>]*name=["']robots["'][^>]*content=["']([^"']*)["']/i);
       robots = robotsMatch ? robotsMatch[1].trim() : null;
+
+      hasOpenGraph =
+        /<meta[^>]*property=["']og:title["']/i.test(html) ||
+        /<meta[^>]*property=["']og:description["']/i.test(html);
+      hasOgImage = /<meta[^>]*property=["']og:image["']/i.test(html);
+      hasJsonLd = /<script[^>]*type=["']application\/ld\+json["']/i.test(html);
 
       // Calculate approximate word count (strip HTML tag characters and count tokens)
       const textOnly = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -532,10 +521,44 @@ export class SeoAuditService implements OnModuleInit {
         score -= 20;
         recommendations.push("⚠️ **Noindex Robots Tag Active**: This page explicitly blocks indexing. Remove `noindex` if you want search traffic.");
       }
+
+      if (!hasOpenGraph) {
+        score -= 5;
+        recommendations.push(
+          "💡 **Missing Open Graph tags**: Add `og:title` and `og:description` so social shares and AI crawlers get a rich preview.",
+        );
+      }
+
+      if (!hasOgImage) {
+        score -= 5;
+        recommendations.push(
+          "💡 **Missing Open Graph image**: Add `og:image` (1200×630 recommended) for better click-through on social and link previews.",
+        );
+      }
+
+      if (!hasJsonLd) {
+        score -= 4;
+        recommendations.push(
+          "💡 **No JSON-LD structured data**: Add FAQPage, SoftwareApplication, or WebPage schema to help search engines understand the page.",
+        );
+      }
     } else if (bDesktopRes.status !== 200 && !isError) {
-      // It's a non-auth redirect
       const target = bDesktopRes.redirectTarget || "another page";
-      recommendations.push(`🔄 **Redirect Active**: This path redirects desktop visitors to ${target}. Verify that this matches user intent.`);
+      const isB2cMarketplace =
+        cleanPath === "/shop" ||
+        cleanPath === "/shops" ||
+        cleanPath === "/designs" ||
+        cleanPath.startsWith("/shops/");
+      if (isB2cMarketplace) {
+        recommendations.push(
+          `ℹ️ **Marketplace redirect**: ${cleanPath} sends guests home while customer marketplace flow is off. Googlebot still received HTTP ${gMobileRes.status}.`,
+        );
+      } else {
+        score -= 10;
+        recommendations.push(
+          `🔄 **Redirect Active**: This path redirects desktop visitors to ${target}. Verify that this matches user intent.`,
+        );
+      }
     }
 
     // Clamp score
@@ -559,6 +582,9 @@ export class SeoAuditService implements OnModuleInit {
       wordCount,
       canonical,
       robots,
+      hasOpenGraph,
+      hasOgImage,
+      hasJsonLd,
       recommendations,
       crawlResults: {
         googlebotMobile: { status: gMobileRes.status, redirectTarget: gMobileRes.redirectTarget },
@@ -581,6 +607,9 @@ export class SeoAuditService implements OnModuleInit {
       wordCount: 0,
       canonical: null,
       robots: null,
+      hasOpenGraph: false,
+      hasOgImage: false,
+      hasJsonLd: false,
       recommendations: [`❌ **Fetch Failure**: Auditor bot failed to request page content: ${errorMsg}`],
       crawlResults: {
         googlebotMobile: { status: 500, redirectTarget: null },

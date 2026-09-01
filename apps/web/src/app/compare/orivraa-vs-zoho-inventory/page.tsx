@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs Zoho Inventory for Jewellery Shops | 2026 Comparison",
+  title: absolutePageTitle("Orivraa vs Zoho Inventory for Jewellers"),
   description:
-    "Zoho Inventory is a capable general inventory tool — but it treats precious metals and gems as generic products. Orivraa handles weight-based gold pricing, live commodity rates, making charges, and jewellery-specific tax rules natively.",
+    "Zoho Inventory treats metals as generic stock. Orivraa handles gold weight, live rates, making charges, and jewellery tax rules natively.",
   alternates: { canonical: "https://www.orivraa.com/compare/orivraa-vs-zoho-inventory" },
 };
 
