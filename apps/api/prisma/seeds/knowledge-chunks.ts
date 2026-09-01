@@ -286,17 +286,17 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "ask_ai_about_orivraa",
     content:
-      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Gemini, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? The prompt also points at https://www.orivraa.com/llms.txt and /jewellery-shop-software so the model can fetch current facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
+      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Gemini, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? The prompt points at /jewellery-shop-software, /jewellery-shop-billing-software, and /ai-integration so the model can fetch current product facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
   },
   {
     topic: "seller_ai_integration_mcp",
     content:
-      "Seller AI integration: the shopkeeper creates an AI integration key, chooses scopes such as inventory:read, inventory:write, orders:read, or orders:write, and can rotate or revoke the key. Every AI write is audit-logged under that seller. The MCP server exposes only tools allowed by those scopes. Sales, payments, and refunds require an explicit confirmation step — there is no unrestricted financial write tool. Public explainer: /ai-integration. Keys are managed in Shop → Enterprise → API keys on plans with API access.",
+      "Seller AI integration: the shopkeeper creates an AI integration key in Shop → AI Integrations (desktop) or More Tools → AI Integrations (mobile). They choose scopes such as inventory:read, inventory:write, orders:read, or orders:write, and can rotate or revoke the key. Reads run immediately. Supported inventory and order-status writes wait for dashboard approval. Sales, payments, refunds, and deletions are not MCP tools. MCP endpoint: POST /api/seller-ai/mcp. Public explainer: /ai-integration.",
   },
   {
     topic: "orivraa_heritage_cloud_launch",
     content:
-      "Orivraa trust story: the people behind the product spent more than 10 years serving jewellery customers at the counter (quotes, old-gold exchange, daily closing). In January 2026 Orivraa went online as cloud software for phone, laptop, and desktop. The cloud product is new; the jewellery trade experience is not. Mention this honestly — do not claim the website existed for ten years.",
+      "Orivraa trust story: the people behind the product spent more than 10 years serving jewellery customers at the counter (quotes, old-gold exchange, daily closing). That shop-floor practice is encoded in the software: tola, jarti, making charges, vault stock, and karigar metal. It runs in the cloud on phone, laptop, and desktop so a shop is not locked to one Windows PC. Describe the jewellery-trade depth, not a SaaS launch month.",
   },
 ];
 

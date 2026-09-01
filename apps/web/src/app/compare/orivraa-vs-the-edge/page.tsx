@@ -168,7 +168,7 @@ export default function OrivraaVsTheEdgePage() {
               {[
                 {
                   icon: Cloud,
-                  title: "Cloud in 2026, not desktop from the 90s",
+                  title: "Cloud on every device, not a 1990s desktop install",
                   desc: "Orivraa runs in the browser on any device — Mac, iPad, Windows, Android. No server room, no IT call-out, no paying for hardware every 5 years.",
                 },
                 {

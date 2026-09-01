@@ -458,6 +458,7 @@ model Shop {
   branches                     ShopBranch[]
   staffAccounts                StaffAccount[]
   apiKeys                      ShopApiKey[]
+  sellerAiActions              SellerAiAction[]
   apiTokens                    ApiToken[]
   webhookSubscriptions         WebhookSubscription[]
   whiteLabelConfig             WhiteLabelConfig?
@@ -3475,6 +3476,7 @@ model RecoveryOffer {
   status                RecoveryOfferStatus @default(PREPARED)
   sourceReportIds       String[]
   expiresAt             DateTime
+  scheduledFor          DateTime?
   sentAt                DateTime?
   claimedAt             DateTime?
   grantedSubscriptionId String?
@@ -3489,6 +3491,7 @@ model RecoveryOffer {
 
   @@unique([campaignKey, shopId])
   @@index([status, createdAt])
+  @@index([status, scheduledFor])
   @@index([userId])
   @@index([shopId])
   @@index([expiresAt])
@@ -3675,6 +3678,7 @@ model ShopApiKey {
   id              String    @id @default(uuid())
   shopId          String
   keyName         String // e.g. "ERP Sync", "POS Integration"
+  kind            String    @default("INTEGRATION") // INTEGRATION | SELLER_AI
   keyHash         String // sha256 hash of the API key (not the raw key)
   keyPrefix       String // first 8 chars to identify key: "ovrk_xxxx"
   scopes          String[] // e.g. ["inventory:read", "orders:read", "orders:write"]
@@ -3690,6 +3694,43 @@ model ShopApiKey {
 
   @@index([shopId, isActive])
   @@index([keyPrefix])
+}
+
+enum SellerAiActionStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  REJECTED
+  EXPIRED
+  FAILED
+}
+
+// A write proposed by a seller-connected AI. The AI key can request it, but
+// only a logged-in shopkeeper can confirm it from the dashboard.
+model SellerAiAction {
+  id                String               @id @default(uuid())
+  shopId            String
+  apiKeyId          String
+  keyPrefix         String
+  toolName          String
+  actionType        String
+  summary           String
+  payload           Json
+  status            SellerAiActionStatus @default(PENDING)
+  expiresAt         DateTime
+  confirmedByUserId String?
+  confirmedAt       DateTime?
+  rejectedByUserId  String?
+  rejectedAt        DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status, createdAt])
+  @@index([shopId, status, expiresAt])
+  @@index([apiKeyId, createdAt])
+  @@index([expiresAt])
 }
 
 // Webhook subscriptions for enterprise event push

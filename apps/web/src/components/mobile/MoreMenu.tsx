@@ -9,6 +9,7 @@ import { usePreferencesStore } from "@/store/preferences";
 import { ComputerDesktopIcon } from "@heroicons/react/24/outline";
 import {
   BarChart2,
+  Brain,
   Cake,
   ClipboardList,
   FileText,
@@ -56,9 +57,14 @@ const sections = [
     title: "Tools & Calculators",
     items: [
       { href: "/m/rate-card", icon: Image, label: "Rate Card" },
-      { href: "/m/broadcast", icon: MessageCircle, label: "WhatsApp Broadcast" },
+      {
+        href: "/m/broadcast",
+        icon: MessageCircle,
+        label: "WhatsApp Broadcast",
+      },
       { href: "/m/tax", icon: Receipt, label: "Tax Audit" },
       { href: "/m/purity", icon: FlaskConical, label: "Purity Calculator" },
+      { href: "/m/ai-integration", icon: Brain, label: "AI Integrations" },
     ],
   },
   {
@@ -120,13 +126,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
             </h3>
             <div className="grid grid-cols-4 gap-4">
               {sec.items.map((item) => (
-                <div
+                <Link
                   key={item.href}
-                  onClick={() => {
-                    onClose?.();
-                    router.push(item.href);
-                  }}
-                  className="flex flex-col items-center text-center gap-2 cursor-pointer"
+                  href={item.href}
+                  onClick={() => onClose?.()}
+                  className="flex flex-col items-center text-center gap-2"
                 >
                   <div className="h-14 w-14 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center active:scale-95 transition-transform">
                     <item.icon className="h-6 w-6 text-amber-600" />
@@ -134,7 +138,7 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                   <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
                     <T>{item.label}</T>
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -164,7 +168,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                   <T>AI Support Chat</T>
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  <T>{isChatDismissed ? "Touch to bring back" : "Tap to shake & show"}</T>
+                  <T>
+                    {isChatDismissed
+                      ? "Touch to bring back"
+                      : "Tap to shake & show"}
+                  </T>
                 </p>
               </div>
             </button>
@@ -187,7 +195,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                   <T>Tutorials</T>
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  <T>{isTutorialDismissed ? "Touch to bring back" : "Tap to shake & show"}</T>
+                  <T>
+                    {isTutorialDismissed
+                      ? "Touch to bring back"
+                      : "Tap to shake & show"}
+                  </T>
                 </p>
               </div>
             </button>
@@ -213,7 +225,10 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
 
           <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-3">
-              <AnimatedThemeToggle size={24} className="rounded-lg text-gray-600 dark:text-gray-400 -ml-1" />
+              <AnimatedThemeToggle
+                size={24}
+                className="rounded-lg text-gray-600 dark:text-gray-400 -ml-1"
+              />
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                 <T>Theme</T>
               </span>
@@ -235,11 +250,14 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
             onClick={(e) => {
               e.preventDefault();
               onClose?.();
-              const domain = window.location.hostname.endsWith("orivraa.com") ? "; domain=.orivraa.com" : "";
-              const secure = window.location.protocol === "https:" ? "; Secure" : "";
+              const host = window.location.hostname.toLowerCase();
+              const isOrivraaHost =
+                host === "orivraa.com" || host.endsWith(".orivraa.com");
+              const domain = isOrivraaHost ? "; domain=.orivraa.com" : "";
+              const secure =
+                window.location.protocol === "https:" ? "; Secure" : "";
               document.cookie = `orivraa_force_desktop=true; path=/${domain}; SameSite=Lax${secure}; max-age=604800`;
 
-              const host = window.location.hostname;
               let desktopUrl = `https://orivraa.com/dashboard/shop`;
               if (host.startsWith("m.")) {
                 desktopUrl = `https://${host.substring(2)}/dashboard/shop`;

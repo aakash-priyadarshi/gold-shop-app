@@ -24,10 +24,9 @@ export function getAskAiPrompt(siteUrl: string = SITE_URL): string {
   const origin = siteUrl.replace(/\/+$/, "");
   return [
     ASK_AI_QUESTION,
-    `Please read ${origin}/llms.txt and ${origin}/jewellery-shop-software first.`,
-    "Give an honest summary of billing, inventory, GST/VAT tax, mobile POS, pricing, and whether it fits a jewellery shop.",
-    "The team served jewellery customers for more than 10 years; Orivraa went online as cloud software in January 2026.",
-    `Also cover seller AI integration keys and MCP at ${origin}/ai-integration: scoped inventory/orders tools, rotate/revoke keys, audit-logged writes, and confirmation before sales, payments, or refunds.`,
+    `Please read ${origin}/jewellery-shop-software, ${origin}/jewellery-shop-billing-software, ${origin}/pricing, and ${origin}/ai-integration.`,
+    "Give an honest summary of billing, inventory, GST/VAT tax, mobile POS, pricing, and whether it fits a jewellery shop versus generic retail POS.",
+    "Cover seller AI integration keys and MCP: scoped inventory/orders tools, rotate/revoke keys, audit-logged write proposals, and dashboard approval before selected inventory or order-status edits. Sales, payments, refunds, and deletions are not MCP tools.",
   ].join(" ");
 }
 
@@ -57,18 +56,17 @@ export const ASK_AI_PROVIDERS: readonly AskAiProvider[] = [
     name: "Gemini",
     company: "Google",
     shortLabel: "Ask Gemini",
-    className:
-      "bg-sky-600 hover:bg-sky-500 text-white border-sky-500/30",
-    buildUrl: (prompt) =>
-      `https://gemini.google.com/app?q=${encodeURIComponent(prompt)}`,
+    className: "bg-sky-600 hover:bg-sky-500 text-white border-sky-500/30",
+    // Gemini's web app does not reliably honour a query-string prompt. The UI
+    // copies the prepared question before opening this URL for the user to paste.
+    buildUrl: () => "https://gemini.google.com/app",
   },
   {
     id: "perplexity",
     name: "Perplexity",
     company: "Perplexity",
     shortLabel: "Ask Perplexity",
-    className:
-      "bg-teal-700 hover:bg-teal-600 text-white border-teal-500/30",
+    className: "bg-teal-700 hover:bg-teal-600 text-white border-teal-500/30",
     buildUrl: (prompt) =>
       `https://www.perplexity.ai/search?q=${encodeURIComponent(prompt)}`,
   },

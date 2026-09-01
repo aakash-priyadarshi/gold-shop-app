@@ -6,7 +6,7 @@ const CANONICAL = `${SITE_URL}/ai-integration`;
 export const metadata: Metadata = {
   title: "Seller AI Keys & MCP for Jewellery Shops | Orivraa",
   description:
-    "Create a seller AI integration key with inventory:read, inventory:write, orders:read, or orders:write. Rotate or revoke it. Every AI write is audit-logged. MCP tools require confirmation for sales, payments, and refunds.",
+    "Create a seller AI integration key with inventory:read, inventory:write, orders:read, or orders:write. Rotate or revoke it. Supported writes wait for seller approval; sales, payments, refunds, and deletions are not MCP tools.",
   keywords: [
     "jewellery shop MCP",
     "ChatGPT jewellery inventory",
@@ -17,9 +17,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: CANONICAL },
   openGraph: {
-    title: "Connect Claude, ChatGPT or Gemini to your jewellery shop",
+    title: "Connect an MCP client to your jewellery shop",
     description:
-      "Scoped seller AI keys, rotatable secrets, audit-logged writes, and MCP tools that cannot move money without confirmation.",
+      "Scoped seller AI keys, rotatable secrets, audit-logged write proposals, and seller approval before a supported change is applied.",
     url: CANONICAL,
     type: "website",
   },
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Seller AI keys & MCP | Orivraa",
     description:
-      "Inventory and order scopes for shop AI. Sales, payments, and refunds need an explicit confirm step.",
+      "Inventory and order scopes for shop AI. Sales, payments, refunds, and deletions are not MCP tools.",
   },
 };
 
@@ -40,7 +40,7 @@ const faqSchema = {
       name: "What is a seller AI integration key on Orivraa?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "The shop owner creates the key, chooses scopes such as inventory:read, inventory:write, orders:read, or orders:write, and can rotate or revoke it. Every AI write is stored in the shop audit log under that seller.",
+        text: "The shop owner creates the key, chooses inventory and order scopes, and can rotate or revoke it. Tool calls and write proposals are stored in the shop audit history under that seller.",
       },
     },
     {
@@ -48,7 +48,7 @@ const faqSchema = {
       name: "Can ChatGPT or Claude take payment from my jewellery till?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "No unrestricted financial write tool is exposed. Sales, payments, and refunds require an explicit confirmation step in addition to orders:write.",
+        text: "No. Sales, payments, refunds, and deletions are not MCP tools. Supported inventory and order-status edits stay pending until a logged-in seller approves them in Orivraa.",
       },
     },
     {
@@ -56,7 +56,7 @@ const faqSchema = {
       name: "What does the Orivraa MCP server expose?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Only tools allowed by the key scopes. Typical tools include reading vault stock, updating catalogue fields the seller permitted, and reading order status. Money movement is gated behind confirmation.",
+        text: "Only tools allowed by the key scopes. Current tools search inventory, list orders without customer phone or email, and propose selected inventory or order-status edits for seller approval.",
       },
     },
   ],

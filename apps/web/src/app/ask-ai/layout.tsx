@@ -6,7 +6,7 @@ const CANONICAL = `${SITE_URL}/ask-ai`;
 export const metadata: Metadata = {
   title: "Ask ChatGPT, Claude, Gemini or Perplexity about Orivraa",
   description:
-    "Ask your AI how Orivraa is for jewellery business software. One tap opens ChatGPT, Claude, Gemini, or Perplexity with that question — the app on your phone, the website on a computer.",
+    "Ask your AI how Orivraa is for jewellery business software. ChatGPT, Claude, and Perplexity receive a prepared question; Gemini opens with it copied for you to paste.",
   keywords: [
     "ask ChatGPT about Orivraa",
     "Orivraa jewellery software review",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Ask your AI: How is Orivraa for jewellery business software?",
     description:
-      "Open ChatGPT, Claude, Gemini, or Perplexity with a prepared question about Orivraa jewellery shop software.",
+      "Open ChatGPT, Claude, Gemini, or Perplexity with a prepared question about Orivraa jewellery shop software. Gemini copies the question for you to paste.",
     url: CANONICAL,
     type: "website",
   },
@@ -48,7 +48,7 @@ const faqSchema = {
       name: "Does Ask AI open the ChatGPT or Claude app on my phone?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes when the app is installed. The buttons use each company's official https links, which phones open in the app. On a laptop or PC they open the website in a new tab.",
+        text: "They use each company's official https links, which phones can open in the app when it is installed. Gemini copies the prepared question for you to paste after it opens. On a laptop or PC they open the website in a new tab.",
       },
     },
     {
@@ -56,7 +56,7 @@ const faqSchema = {
       name: "Can I connect Claude or ChatGPT to my jewellery shop data?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Create a seller AI integration key with scopes such as inventory:read or orders:write. The MCP server only exposes those tools. Sales, payments, and refunds require an extra confirmation. Details: https://www.orivraa.com/ai-integration",
+        text: "Yes. Create a seller AI integration key with scopes such as inventory:read or orders:write. The MCP server only exposes those tools. Supported writes wait for dashboard approval; sales, payments, refunds, and deletions are not MCP tools. Details: https://www.orivraa.com/ai-integration",
       },
     },
     {
@@ -64,7 +64,7 @@ const faqSchema = {
       name: "How long has Orivraa served jewellery customers?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "The team behind Orivraa spent more than ten years serving jewellery customers in person. The software went online as cloud product in January 2026.",
+        text: "The people behind Orivraa spent more than 10 years serving jewellery customers in person. That shop-floor practice is in the product: weight, purity, making charges, wastage, and karigar metal, running on phone, laptop, and desktop.",
       },
     },
   ],

@@ -27,8 +27,8 @@ export default function AskAiPage() {
                 Google and shoppers can read this page. The buttons below are
                 ordinary links, so search bots see ChatGPT, Claude, Gemini, and
                 Perplexity as ways to evaluate Orivraa jewellery shop software.
-                We pre-fill the question and point the assistant at our public
-                product pages, including llms.txt.
+                ChatGPT, Claude, and Perplexity receive the prepared question.
+                Gemini opens with that question copied, ready for you to paste.
               </T>
             </p>
             <div className="mt-8 flex justify-center">
@@ -41,7 +41,10 @@ export default function AskAiPage() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <Monitor className="h-4 w-4 text-amber-600" />
-                <T>Computer: opens ChatGPT, Claude, Gemini, or Perplexity on the web</T>
+                <T>
+                  Computer: opens ChatGPT, Claude, Gemini, or Perplexity on the
+                  web
+                </T>
               </span>
             </div>
           </div>
@@ -54,29 +57,39 @@ export default function AskAiPage() {
             </h2>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
               <T>
-                Orivraa already has a free in-app assistant. Ask AI is different:
-                you use the model you already trust. The link asks how Orivraa
-                compares as jewellery business software — billing, live gold
-                rates, wastage, GST/VAT, mobile POS, and whether it fits a
-                family shop or a multi-branch showroom.
+                Orivraa already has a free in-app assistant. Ask AI is
+                different: you use the model you already trust. The link asks
+                how Orivraa compares as jewellery business software — billing,
+                live gold rates, wastage, GST/VAT, mobile POS, and whether it
+                fits a family shop or a multi-branch showroom.
               </T>
             </p>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
               <T>
-                The prompt includes https://www.orivraa.com/llms.txt and the
-                jewellery shop software page so search-enabled assistants can
-                fetch current facts instead of relying on old training data.
+                The prompt points at the jewellery shop software, billing, and
+                seller AI integration pages so search-enabled assistants can
+                fetch current product facts instead of relying on old training
+                data.
               </T>
             </p>
             <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
               <li>
-                <T>ChatGPT (OpenAI) — uses web search hint when the account allows it</T>
+                <T>
+                  ChatGPT (OpenAI) — uses web search hint when the account
+                  allows it
+                </T>
               </li>
               <li>
-                <T>Claude (Anthropic) — opens a new chat with the question filled in</T>
+                <T>
+                  Claude (Anthropic) — opens a new chat with the question filled
+                  in
+                </T>
               </li>
               <li>
-                <T>Gemini (Google) — opens Gemini with the same prompt</T>
+                <T>
+                  Gemini (Google) — opens Gemini with the question copied for
+                  you to paste
+                </T>
               </li>
               <li>
                 <T>Perplexity — runs a sourced search on the same question</T>
@@ -102,15 +115,21 @@ export default function AskAiPage() {
               <T>Frequently asked questions</T>
             </h2>
             <div className="space-y-4">
-              <details className="rounded-xl border border-gray-200 dark:border-gray-800 p-4" open>
+              <details
+                className="rounded-xl border border-gray-200 dark:border-gray-800 p-4"
+                open
+              >
                 <summary className="font-medium text-gray-900 dark:text-white cursor-pointer">
-                  <T>Will this work if I am not logged into ChatGPT or Claude?</T>
+                  <T>
+                    Will this work if I am not logged into ChatGPT or Claude?
+                  </T>
                 </summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   <T>
                     You may be asked to sign in first. After login the question
-                    is usually still in the URL. Perplexity often runs without an
-                    account. Gemini uses your Google account.
+                    is usually still in the URL. Perplexity often runs without
+                    an account. Gemini uses your Google account; paste the
+                    copied question after it opens.
                   </T>
                 </p>
               </details>
@@ -132,11 +151,15 @@ export default function AskAiPage() {
                 </summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   <T>
-                    That is seller AI integration, not this public Ask AI button.
-                    Create a scoped key and use MCP tools. Sales and refunds
-                    still need your confirmation.
+                    That is seller AI integration, not this public Ask AI
+                    button. Create a scoped key and use MCP tools. Supported
+                    writes wait for dashboard approval; sales and refunds are
+                    not MCP tools.
                   </T>{" "}
-                  <Link href="/ai-integration" className="text-amber-700 dark:text-amber-400 font-medium hover:underline">
+                  <Link
+                    href="/ai-integration"
+                    className="text-amber-700 dark:text-amber-400 font-medium hover:underline"
+                  >
                     <T>Open seller AI integration</T>
                   </Link>
                 </p>
@@ -147,8 +170,10 @@ export default function AskAiPage() {
                 </summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   <T>
-                    More than ten years at the counter. The cloud software went
-                    live in January 2026 — new website, old trade habits.
+                    More than 10 years at the jewellery counter. The software
+                    is jewellery-native and runs on phone, laptop, and desktop —
+                    we digitised the till, we did not invent the trade last
+                    year.
                   </T>
                 </p>
               </details>

@@ -111,8 +111,7 @@ export function DynamicFooter() {
               </T>
             </p>
             <p className="text-xs text-gray-500 leading-relaxed">
-              <T>More than 10 years serving jewellery customers. Cloud software since</T>{" "}
-              <time dateTime="2026-01">January 2026</time>.
+              <T>More than 10 years serving jewellery customers — jewellery-native software on phone, laptop, and desktop.</T>
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">

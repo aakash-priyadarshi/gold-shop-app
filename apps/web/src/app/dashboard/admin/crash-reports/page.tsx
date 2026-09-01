@@ -78,6 +78,7 @@ type RecentRecoveryOffer = {
   email: string;
   status: string;
   sentAt?: string;
+  scheduledFor?: string;
   claimedAt?: string;
   expiresAt: string;
 };
@@ -412,7 +413,9 @@ export default function CrashReportsPage() {
     }
   };
 
-  const handleSendRecovery = async () => {
+  const handleSendRecovery = async (
+    deliveryTiming: "IMMEDIATE" | "NEXT_LOCAL_10AM",
+  ) => {
     if (!recoveryPreview || recoveryPreview.eligible.length === 0) return;
     setRecoveryLoading(true);
     try {
@@ -420,10 +423,14 @@ export default function CrashReportsPage() {
         reportIds: [...selectedIds],
         campaignKey: recoveryPreview.campaignKey,
         expiresInDays: 30,
+        deliveryTiming,
       });
       toast({
-        title: t("Recovery offers queued"),
-        description: `${response.data.queued} ${t("queued")}, ${response.data.failed} ${t("failed")}`,
+        title:
+          deliveryTiming === "NEXT_LOCAL_10AM"
+            ? t("Recovery offers scheduled")
+            : t("Recovery offers queued"),
+        description: `${response.data.scheduled || 0} ${t("scheduled")}, ${response.data.queued} ${t("queued")}, ${response.data.failed} ${t("failed")}`,
         variant: response.data.failed > 0 ? "destructive" : "default",
       });
       setRecoveryPreview(null);
@@ -889,22 +896,35 @@ export default function CrashReportsPage() {
                     {recoveryPreview.excluded.length} <T>excluded</T>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={
-                    recoveryLoading || recoveryPreview.eligible.length === 0
-                  }
-                  onClick={handleSendRecovery}
-                  className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
-                >
-                  <T>Send account-bound offers</T>
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      recoveryLoading || recoveryPreview.eligible.length === 0
+                    }
+                    onClick={() => handleSendRecovery("NEXT_LOCAL_10AM")}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+                  >
+                    <Clock className="h-4 w-4" />
+                    <T>Schedule for local 10 AM</T>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      recoveryLoading || recoveryPreview.eligible.length === 0
+                    }
+                    onClick={() => handleSendRecovery("IMMEDIATE")}
+                    className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-100"
+                  >
+                    <T>Send now</T>
+                  </button>
+                </div>
               </div>
               {recoveryPreview.eligible.length > 0 && (
                 <ul className="mt-3 space-y-1 text-sm text-amber-950 dark:text-amber-100">
                   {recoveryPreview.eligible.map((recipient) => (
                     <li key={recipient.shopId}>
-                      {recipient.firstName} · {recipient.shopName} · {recipient.email}
+                      {recipient.firstName} · {recipient.shopName} · {recipient.country} · {recipient.email}
                       {" · "}
                       {recipient.reportCount} <T>report(s)</T>
                     </li>
@@ -930,6 +950,13 @@ export default function CrashReportsPage() {
                 <T>
                   Sending does not mark reports fixed. Each recipient must sign
                   in and claim the offer; paid accounts are never modified.
+                </T>
+              </p>
+              <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+                <T>
+                  Local 10 AM scheduling is available for India, Nepal, UAE,
+                  and UK shops. Other markets are excluded rather than sent at
+                  the wrong time.
                 </T>
               </p>
             </div>

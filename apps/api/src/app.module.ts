@@ -55,6 +55,7 @@ import { SavingsModule } from "./modules/savings/savings.module";
 import { ChitModule } from "./modules/chit/chit.module";
 import { SecurityModule } from "./modules/security/security.module";
 import { SellerPerformanceModule } from "./modules/core/seller-performance/seller-performance.module";
+import { SellerAiModule } from "./modules/seller-ai/seller-ai.module";
 import { ShopQuotesModule } from "./modules/core/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
 import { SubscriptionPlansModule } from "./modules/core/subscriptions/subscription-plans.module";
@@ -113,7 +114,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 
     // Database
     PrismaModule,
-    
+
     // Scheduling
     ScheduleModule.forRoot(),
 
@@ -157,6 +158,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     DesignsModule,
     PlatformConfigModule,
     SellerPerformanceModule,
+    SellerAiModule,
     CustomerCrmModule,
     MarketplaceIntelligenceModule,
     ChatModule,

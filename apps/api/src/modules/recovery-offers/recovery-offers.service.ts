@@ -15,14 +15,23 @@ import { createHash, randomBytes } from "crypto";
 import { ConfigService } from "@nestjs/config";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
+import { CronTime } from "cron";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
+import { RecoveryOfferDeliveryTiming } from "./dto/recovery-offer.dto";
 
 const DEFAULT_CAMPAIGN_KEY = "incident-recovery-2026-08";
 const RECOVERY_DAYS = 40;
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const RECOVERY_OFFERS_QUEUE = "recovery-offers";
 export const DELIVER_RECOVERY_OFFER_JOB = "deliver";
+
+const LOCAL_TEN_AM_TIME_ZONES: Partial<Record<MarketRegion, string>> = {
+  IN: "Asia/Kolkata",
+  NP: "Asia/Kathmandu",
+  AE: "Asia/Dubai",
+  UK: "Europe/London",
+};
 
 export type RecoveryOfferDeliveryJob = {
   offerId: string;
@@ -72,6 +81,7 @@ export class RecoveryOffersService {
         email: candidate.email,
         firstName: candidate.firstName,
         shopName: candidate.shopName,
+        country: candidate.country,
         reportCount: candidate.reportIds.length,
       })),
       excluded,
@@ -82,6 +92,7 @@ export class RecoveryOffersService {
     reportIds: string[];
     campaignKey?: string;
     expiresInDays?: number;
+    deliveryTiming?: RecoveryOfferDeliveryTiming;
     confirmed: boolean;
     adminId: string;
   }) {
@@ -100,14 +111,28 @@ export class RecoveryOffersService {
     const results: Array<{
       userId: string;
       email: string;
-      status: "queued" | "failed";
+      status: "queued" | "scheduled" | "failed";
       reason?: string;
+      scheduledFor?: Date;
     }> = [];
 
     for (const candidate of candidates) {
+      const delivery = this.resolveDelivery(
+        candidate.country,
+        input.deliveryTiming,
+      );
+      if (!delivery) {
+        excluded.push({
+          userId: candidate.userId,
+          email: candidate.email,
+          reason: `A local 10:00 AM delivery time is not configured for ${candidate.country}`,
+        });
+        continue;
+      }
       const rawToken = randomBytes(32).toString("base64url");
       const tokenHash = this.hashToken(rawToken);
-      const expiresAt = new Date(Date.now() + expiresInDays * DAY_MS);
+      const startsAt = delivery.scheduledFor || new Date();
+      const expiresAt = new Date(startsAt.getTime() + expiresInDays * DAY_MS);
       let offerId: string | null = null;
       const existing = await this.prisma.recoveryOffer.findUnique({
         where: {
@@ -124,6 +149,7 @@ export class RecoveryOffersService {
             tokenHash,
             sourceReportIds: candidate.reportIds,
             expiresAt,
+            scheduledFor: delivery.scheduledFor,
             status: RecoveryOfferStatus.PREPARED,
             failureReason: null,
             createdBy: input.adminId,
@@ -143,6 +169,7 @@ export class RecoveryOffersService {
               status: RecoveryOfferStatus.PREPARED,
               sourceReportIds: candidate.reportIds,
               expiresAt,
+              scheduledFor: delivery.scheduledFor,
               createdBy: input.adminId,
             },
           });
@@ -174,6 +201,7 @@ export class RecoveryOffersService {
             jobId: `${offerId}-${tokenHash}`,
             attempts: 3,
             backoff: { type: "exponential", delay: 5_000 },
+            ...(delivery.delayMs > 0 ? { delay: delivery.delayMs } : {}),
             removeOnComplete: true,
             removeOnFail: true,
           },
@@ -193,13 +221,18 @@ export class RecoveryOffersService {
       results.push({
         userId: candidate.userId,
         email: candidate.email,
-        status: "queued",
+        status: delivery.delayMs > 0 ? "scheduled" : "queued",
+        ...(delivery.delayMs > 0
+          ? { scheduledFor: delivery.scheduledFor! }
+          : {}),
       });
     }
 
     return {
       campaignKey: key,
       queued: results.filter((result) => result.status === "queued").length,
+      scheduled: results.filter((result) => result.status === "scheduled")
+        .length,
       failed: results.filter((result) => result.status === "failed").length,
       excluded,
       results,
@@ -408,6 +441,7 @@ export class RecoveryOffersService {
         sourceReportIds: true,
         expiresAt: true,
         sentAt: true,
+        scheduledFor: true,
         claimedAt: true,
         createdAt: true,
       },
@@ -699,6 +733,26 @@ export class RecoveryOffersService {
       throw new BadRequestException("Invalid recovery campaign key");
     }
     return key;
+  }
+
+  private resolveDelivery(
+    country: MarketRegion,
+    deliveryTiming: RecoveryOfferDeliveryTiming | undefined,
+  ) {
+    if (deliveryTiming !== "NEXT_LOCAL_10AM") {
+      return { scheduledFor: null, delayMs: 0 };
+    }
+
+    const timeZone = LOCAL_TEN_AM_TIME_ZONES[country];
+    if (!timeZone) return null;
+
+    const scheduledFor = new CronTime("0 0 10 * * *", timeZone)
+      .sendAt()
+      .toJSDate();
+    return {
+      scheduledFor,
+      delayMs: Math.max(0, scheduledFor.getTime() - Date.now()),
+    };
   }
 
   private hashToken(rawToken: string) {

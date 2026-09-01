@@ -3,10 +3,13 @@
 import { T } from "@/components/ui/T";
 import { SITE_URL } from "@/config/site";
 import {
-  ASK_AI_PROVIDERS,
   getAskAiLinks,
-  type AskAiProviderId,
+  getAskAiPrompt,
 } from "@/lib/ask-ai";
+import {
+  SELLER_AI_MCP_CLIENTS,
+  SELLER_AI_SCOPES,
+} from "@/lib/seller-ai-scopes";
 import { ArrowRight, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +44,7 @@ export function AskAiProviderButtons({
 }: AskAiButtonsProps) {
   const preferApp = usePreferAppWindow();
   const links = useMemo(() => getAskAiLinks(SITE_URL), []);
+  const [geminiCopied, setGeminiCopied] = useState(false);
   const padding = size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-2.5 text-sm";
 
   return (
@@ -56,10 +60,27 @@ export function AskAiProviderButtons({
           rel="noopener noreferrer"
           aria-label={`${provider.shortLabel} about Orivraa jewellery business software`}
           className={`inline-flex items-center justify-center rounded-full font-semibold border shadow-sm active:scale-95 transition-all ${padding} ${provider.className}`}
+          onClick={() => {
+            if (provider.id !== "gemini") return;
+            const prompt = getAskAiPrompt(SITE_URL);
+            if (!navigator.clipboard?.writeText) {
+              setGeminiCopied(false);
+              return;
+            }
+            void navigator.clipboard
+              .writeText(prompt)
+              .then(() => setGeminiCopied(true))
+              .catch(() => setGeminiCopied(false));
+          }}
         >
           <T>{provider.shortLabel}</T>
         </a>
       ))}
+      {geminiCopied && (
+        <span className="w-full text-center text-xs text-muted-foreground">
+          <T>Gemini question copied. Paste it into Gemini.</T>
+        </span>
+      )}
     </div>
   );
 }
@@ -82,9 +103,9 @@ export function AskAiAboutUs({
             </h2>
             <p className="mt-1 text-sm text-gray-400">
               <T>
-                Opens ChatGPT, Claude, Gemini, or Perplexity with that question.
-                On a phone this uses the app if it is installed; on a computer
-                it opens the website.
+                Opens ChatGPT, Claude, Gemini, or Perplexity. Gemini copies the
+                question for you to paste; on a phone the app opens when it is
+                installed, and on a computer the website opens.
               </T>
             </p>
           </div>
@@ -95,7 +116,9 @@ export function AskAiAboutUs({
             href="/ai-integration"
             className="text-gold-400 hover:text-gold-300 font-medium"
           >
-            <T>Connect Claude or ChatGPT to your shop with a scoped seller key</T>
+            <T>
+              Connect Claude or ChatGPT to your shop with a scoped seller key
+            </T>
           </Link>
           {" · "}
           <Link href="/ask-ai" className="hover:text-gold-400">
@@ -103,8 +126,10 @@ export function AskAiAboutUs({
           </Link>
         </p>
         <p className="mt-3 text-xs text-gray-500">
-          <T>More than 10 years serving jewellery customers. Cloud software since</T>{" "}
-          <time dateTime="2026-01">January 2026</time>.
+          <T>
+            More than 10 years serving jewellery customers — jewellery-native
+            software on phone, laptop, and desktop.
+          </T>
         </p>
       </div>
     );
@@ -129,10 +154,9 @@ export function AskAiAboutUs({
           </h2>
           <p className="mt-3 text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
             <T>
-              Pick ChatGPT, Claude, Gemini, or Perplexity. We send them that
-              question plus links to our public product pages so you get an
-              independent answer. On a phone the installed AI app opens; on a
-              laptop or PC the website opens.
+              Pick ChatGPT, Claude, Gemini, or Perplexity. Gemini copies the
+              question for you to paste; the other links carry it plus our
+              public product pages where supported.
             </T>
           </p>
         </div>
@@ -152,12 +176,10 @@ export function AskAiAboutUs({
   );
 }
 
-const SCOPES = [
-  { key: "inventory:read", label: "Read stock, vault locations, and piece weights" },
-  { key: "inventory:write", label: "Create or update catalogue items the key is allowed to touch" },
-  { key: "orders:read", label: "Read orders and fulfilment status" },
-  { key: "orders:write", label: "Draft order updates — money movement still needs confirmation" },
-];
+const SCOPES = SELLER_AI_SCOPES.map((scope) => ({
+  key: scope.value,
+  label: scope.description,
+}));
 
 export function SellerAiIntegrationPromo({
   variant = "section",
@@ -177,9 +199,9 @@ export function SellerAiIntegrationPromo({
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               <T>
-                Create a key, choose inventory and order scopes, rotate or revoke
-                it, and audit every AI write. MCP tools cannot take payment or
-                issue a refund without your confirmation.
+                Create a key, choose inventory and order scopes, rotate or
+                revoke it, and audit every AI write proposal. Sales, payments,
+                refunds, and deletions are not MCP tools.
               </T>
             </p>
           </div>
@@ -211,7 +233,10 @@ export function SellerAiIntegrationPromo({
               id="seller-ai-heading"
               className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
             >
-              <T>Let Claude or ChatGPT work in your shop — without handing over the till</T>
+              <T>
+                Let Claude or ChatGPT work in your shop — without handing over
+                the till
+              </T>
             </h2>
             <p className="mt-3 text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
               <T>
@@ -219,8 +244,9 @@ export function SellerAiIntegrationPromo({
                 inventory:read, inventory:write, orders:read, or orders:write.
                 You can rotate or revoke it any time. Every AI write is
                 audit-logged under your shop. The MCP server only exposes tools
-                those scopes allow. Sales, payments, and refunds need an extra
-                confirmation step — not an unrestricted write tool.
+                those scopes allow. Supported writes wait for dashboard
+                approval; sales, payments, refunds, and deletions are not MCP
+                tools.
               </T>
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -232,10 +258,10 @@ export function SellerAiIntegrationPromo({
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/auth/register"
+                href="/dashboard/shop/ai-integration"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-200"
               >
-                <T>Start free and create a key</T>
+                <T>Manage your AI keys</T>
               </Link>
             </div>
           </div>
@@ -272,69 +298,76 @@ export function AiDiscoverySection() {
         className="py-14 lg:py-20 bg-gradient-to-br from-navy-950 via-gray-950 to-gray-900 text-white"
         aria-labelledby="ai-discovery-heading"
       >
-      <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-400 mb-2">
-              <T>Ask your AI about us</T>
-            </p>
-            <h2
-              id="ai-discovery-heading"
-              className="text-2xl lg:text-3xl font-bold"
-            >
-              <T>How is Orivraa for jewellery business software?</T>
-            </h2>
-            <p className="mt-3 text-sm lg:text-base text-gray-300 leading-relaxed">
-              <T>
-                Choose OpenAI ChatGPT, Anthropic Claude, Google Gemini, or
-                Perplexity. The link carries that question plus our public
-                product URLs. Phones open the AI app when it is installed;
-                computers open the web app.
-              </T>
-            </p>
-            <AskAiProviderButtons className="mt-6" />
-            <p className="mt-4 text-sm text-gray-400">
-              <Link href="/ask-ai" className="text-gold-400 hover:text-gold-300 font-medium">
-                <T>Why these links help Google and shoppers</T>
-              </Link>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-400 mb-2">
-              <T>New: seller AI keys &amp; MCP</T>
-            </p>
-            <h3 className="text-2xl lg:text-3xl font-bold">
-              <T>Connect your shop to Claude, ChatGPT, or Gemini — scoped, logged, confirm-to-pay</T>
-            </h3>
-            <p className="mt-3 text-sm lg:text-base text-gray-300 leading-relaxed">
-              <T>
-                Create a seller AI integration key, choose inventory and order
-                scopes, rotate or revoke it, and review an audit log of every AI
-                write. MCP tools never run a sale, payment, or refund until you
-                confirm.
-              </T>
-            </p>
-            <ul className="mt-5 grid sm:grid-cols-2 gap-2 text-sm">
-              {ASK_AI_PROVIDERS.map((provider) => (
-                <li
-                  key={provider.id as AskAiProviderId}
-                  className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-200"
+        <div className="container mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gold-400 mb-2">
+                <T>Ask your AI about us</T>
+              </p>
+              <h2
+                id="ai-discovery-heading"
+                className="text-2xl lg:text-3xl font-bold"
+              >
+                <T>How is Orivraa for jewellery business software?</T>
+              </h2>
+              <p className="mt-3 text-sm lg:text-base text-gray-300 leading-relaxed">
+                <T>
+                  Choose OpenAI ChatGPT, Anthropic Claude, Google Gemini, or
+                  Perplexity. Gemini copies the question for you to paste; the
+                  other links carry it plus our public product URLs where
+                  supported.
+                </T>
+              </p>
+              <AskAiProviderButtons className="mt-6" />
+              <p className="mt-4 text-sm text-gray-400">
+                <Link
+                  href="/ask-ai"
+                  className="text-gold-400 hover:text-gold-300 font-medium"
                 >
-                  {provider.name}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/ai-integration"
-              className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-gold-400 hover:text-gold-300"
-            >
-              <T>Seller AI integration details</T>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+                  <T>Why these links help Google and shoppers</T>
+                </Link>
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gold-400 mb-2">
+                <T>New: seller AI keys &amp; MCP</T>
+              </p>
+              <h3 className="text-2xl lg:text-3xl font-bold">
+                <T>
+                  Connect your shop to Claude or ChatGPT developer tools —
+                  scoped, logged, dashboard-approved
+                </T>
+              </h3>
+              <p className="mt-3 text-sm lg:text-base text-gray-300 leading-relaxed">
+                <T>
+                  Create a seller AI integration key, choose inventory and order
+                  scopes, rotate or revoke it, and review an audit log of every
+                  AI write proposal. Supported changes wait for dashboard
+                  approval; sales, payments, refunds, and deletions are not MCP
+                  tools.
+                </T>
+              </p>
+              <ul className="mt-5 grid sm:grid-cols-2 gap-2 text-sm">
+                {SELLER_AI_MCP_CLIENTS.map((client) => (
+                  <li
+                    key={client.id}
+                    className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-200"
+                  >
+                    {client.name}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/ai-integration"
+                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-gold-400 hover:text-gold-300"
+              >
+                <T>Seller AI integration details</T>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
     </>
   );
 }

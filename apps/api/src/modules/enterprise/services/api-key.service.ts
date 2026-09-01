@@ -7,7 +7,7 @@ import * as crypto from "crypto";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 const API_KEY_PREFIX = "ovrk_";
-const AVAILABLE_SCOPES = [
+export const SHOP_API_KEY_SCOPES = [
   "inventory:read",
   "inventory:write",
   "orders:read",
@@ -20,6 +20,13 @@ const AVAILABLE_SCOPES = [
   "catalogue:read",
   "catalogue:write",
 ] as const;
+
+export type ShopApiKeyScope = (typeof SHOP_API_KEY_SCOPES)[number];
+
+/** SHA-256 lookup hash for high-entropy ovrk_ tokens. Not a password KDF. */
+function hashApiKey(rawKey: string): string {
+  return crypto.createHash("sha256").update(rawKey).digest("hex");
+}
 
 @Injectable()
 export class ApiKeyService {
@@ -35,11 +42,12 @@ export class ApiKeyService {
       keyName: string;
       scopes: string[];
       expiresAt?: Date;
+      kind?: "INTEGRATION" | "SELLER_AI";
     },
   ) {
     // Validate scopes
     const invalidScopes = data.scopes.filter(
-      (s) => !(AVAILABLE_SCOPES as readonly string[]).includes(s),
+      (s) => !(SHOP_API_KEY_SCOPES as readonly string[]).includes(s),
     );
     if (invalidScopes.length) {
       throw new BadRequestException(
@@ -49,13 +57,14 @@ export class ApiKeyService {
 
     // Generate key: ovrk_ + 48 random hex chars
     const rawKey = API_KEY_PREFIX + crypto.randomBytes(24).toString("hex");
-    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const keyHash = hashApiKey(rawKey);
     const keyPrefix = rawKey.substring(0, 12); // "ovrk_" + 7 chars
 
     const apiKey = await this.prisma.shopApiKey.create({
       data: {
         shopId,
         keyName: data.keyName,
+        kind: data.kind ?? "INTEGRATION",
         keyHash,
         keyPrefix,
         scopes: data.scopes,
@@ -68,6 +77,7 @@ export class ApiKeyService {
     return {
       id: apiKey.id,
       keyName: apiKey.keyName,
+      kind: apiKey.kind,
       keyPrefix: apiKey.keyPrefix,
       rawKey, // ⚠️ Only shown once — cannot be retrieved again
       scopes: apiKey.scopes,
@@ -82,11 +92,29 @@ export class ApiKeyService {
       select: {
         id: true,
         keyName: true,
+        kind: true,
         keyPrefix: true,
         scopes: true,
         expiresAt: true,
         lastUsedAt: true,
         lastUsedIp: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async listSellerAiKeys(shopId: string) {
+    return this.prisma.shopApiKey.findMany({
+      where: { shopId, kind: "SELLER_AI", isActive: true },
+      select: {
+        id: true,
+        keyName: true,
+        keyPrefix: true,
+        scopes: true,
+        expiresAt: true,
+        lastUsedAt: true,
         isActive: true,
         createdAt: true,
       },
@@ -106,6 +134,49 @@ export class ApiKeyService {
     });
   }
 
+  async revokeSellerAiKey(shopId: string, keyId: string) {
+    const key = await this.prisma.shopApiKey.findFirst({
+      where: { id: keyId, shopId, kind: "SELLER_AI" },
+    });
+    if (!key) throw new NotFoundException("Seller AI key not found");
+
+    return this.prisma.shopApiKey.update({
+      where: { id: key.id },
+      data: { isActive: false },
+    });
+  }
+
+  /**
+   * Replace the secret on an active seller AI key. The previous secret stops
+   * working immediately; the new raw key is returned once.
+   */
+  async rotateSellerAiKey(shopId: string, keyId: string) {
+    const key = await this.prisma.shopApiKey.findFirst({
+      where: { id: keyId, shopId, kind: "SELLER_AI", isActive: true },
+    });
+    if (!key) throw new NotFoundException("Seller AI key not found");
+
+    const rawKey = API_KEY_PREFIX + crypto.randomBytes(24).toString("hex");
+    const keyHash = hashApiKey(rawKey);
+    const keyPrefix = rawKey.substring(0, 12);
+
+    const apiKey = await this.prisma.shopApiKey.update({
+      where: { id: key.id },
+      data: { keyHash, keyPrefix },
+    });
+
+    return {
+      id: apiKey.id,
+      keyName: apiKey.keyName,
+      kind: apiKey.kind,
+      keyPrefix: apiKey.keyPrefix,
+      rawKey,
+      scopes: apiKey.scopes,
+      expiresAt: apiKey.expiresAt,
+      createdAt: apiKey.createdAt,
+    };
+  }
+
   /**
    * Validate an API key from a request header.
    * Returns the shop + scopes if valid, null otherwise.
@@ -113,7 +184,7 @@ export class ApiKeyService {
   async validateApiKey(rawKey: string) {
     if (!rawKey.startsWith(API_KEY_PREFIX)) return null;
 
-    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const keyHash = hashApiKey(rawKey);
 
     const apiKey = await this.prisma.shopApiKey.findFirst({
       where: {
@@ -121,10 +192,14 @@ export class ApiKeyService {
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
-      include: { shop: { select: { id: true, shopName: true, userId: true } } },
+      include: {
+        shop: {
+          select: { id: true, shopName: true, userId: true, isActive: true },
+        },
+      },
     });
 
-    if (!apiKey) return null;
+    if (!apiKey || !apiKey.shop.isActive) return null;
 
     // Update last used
     await this.prisma.shopApiKey.update({
@@ -133,14 +208,22 @@ export class ApiKeyService {
     });
 
     return {
+      id: apiKey.id,
       shopId: apiKey.shopId,
       shop: apiKey.shop,
       scopes: apiKey.scopes,
       keyName: apiKey.keyName,
+      keyPrefix: apiKey.keyPrefix,
+      kind: apiKey.kind,
     };
   }
 
+  async validateSellerAiKey(rawKey: string) {
+    const key = await this.validateApiKey(rawKey);
+    return key?.kind === "SELLER_AI" ? key : null;
+  }
+
   getAvailableScopes() {
-    return [...AVAILABLE_SCOPES];
+    return [...SHOP_API_KEY_SCOPES];
   }
 }

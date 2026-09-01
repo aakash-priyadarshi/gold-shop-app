@@ -1,0 +1,9 @@
+# Central CodeQL config for gold-shop-app.
+# ovrk_ / gshop_ API tokens are high-entropy secrets stored as SHA-256 lookup
+# hashes — not user passwords. CodeQL's password-hash rule false-positives on
+# that pattern across api-key.service.ts and similar modules.
+name: "Orivraa CodeQL config"
+
+query-filters:
+  - exclude:
+      id: js/insufficient-password-hash

@@ -2323,6 +2323,7 @@ export interface RecoveryOfferPreview {
     email: string;
     firstName: string;
     shopName: string;
+    country: string;
     reportCount: number;
   }>;
   excluded: Array<{ userId?: string; email?: string; reason: string }>;
@@ -2338,9 +2339,11 @@ export const recoveryOffersApi = {
     reportIds: string[];
     campaignKey?: string;
     expiresInDays?: number;
+    deliveryTiming?: "IMMEDIATE" | "NEXT_LOCAL_10AM";
   }) =>
     api.post<{
       queued: number;
+      scheduled: number;
       failed: number;
       excluded: Array<{ userId?: string; email?: string; reason: string }>;
     }>("/recovery-offers/admin/send", { ...data, confirmed: true }),
@@ -2368,6 +2371,7 @@ export const recoveryOffersApi = {
         email: string;
         status: string;
         sentAt?: string;
+        scheduledFor?: string;
         claimedAt?: string;
         expiresAt: string;
       }>
