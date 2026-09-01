@@ -50,6 +50,35 @@ export class SendRecoveryOffersDto extends PreviewRecoveryOffersDto {
   deliveryTiming?: RecoveryOfferDeliveryTiming;
 }
 
+export class PreviewRecoveryAudienceDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  campaignKey?: string;
+}
+
+export class SendRecoveryAudienceDto extends PreviewRecoveryAudienceDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(250)
+  @IsString({ each: true })
+  userIds: string[];
+
+  @IsBoolean()
+  confirmed: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  expiresInDays?: number;
+
+  @IsOptional()
+  @IsIn(RECOVERY_OFFER_DELIVERY_TIMINGS)
+  @IsString()
+  deliveryTiming?: RecoveryOfferDeliveryTiming;
+}
+
 export class RecoveryOfferTokenDto {
   @IsString()
   @MinLength(32)

@@ -25,6 +25,7 @@ import {
 import { formatAiCredits, toCreditNumber } from "@gold-shop/shared";
 import { useT } from "@/providers/translation-provider";
 import {
+    AlertCircle,
     ArrowRight,
     BarChart3,
     CheckCircle,
@@ -702,6 +703,7 @@ function AiCreditsTab() {
     autoRechargePack: 50,
   });
   const [savingRecharge, setSavingRecharge] = useState(false);
+  const [autoRechargeDirty, setAutoRechargeDirty] = useState(false);
 
   // Get current plan info
   const [planInfo, setPlanInfo] = useState<{
@@ -816,6 +818,7 @@ function AiCreditsTab() {
       setSavingRecharge(true);
       const res = await aiCreditsApi.updateAutoRecharge(autoRecharge);
       setAutoRecharge(res.data);
+      setAutoRechargeDirty(false);
       toast({
         title: t("Saved"),
         description: autoRecharge.autoRechargeEnabled
@@ -974,12 +977,16 @@ function AiCreditsTab() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
               <button
-                onClick={() =>
-                  setAutoRecharge({
-                    ...autoRecharge,
-                    autoRechargeEnabled: !autoRecharge.autoRechargeEnabled,
-                  })
-                }
+                type="button"
+                aria-pressed={autoRecharge.autoRechargeEnabled}
+                aria-label={t("Toggle auto-recharge")}
+                onClick={() => {
+                  setAutoRecharge((current) => ({
+                    ...current,
+                    autoRechargeEnabled: !current.autoRechargeEnabled,
+                  }));
+                  setAutoRechargeDirty(true);
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   autoRecharge.autoRechargeEnabled
                     ? "bg-primary"
@@ -1013,12 +1020,13 @@ function AiCreditsTab() {
                     max={100}
                     className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
                     value={autoRecharge.autoRechargeThreshold}
-                    onChange={(e) =>
-                      setAutoRecharge({
-                        ...autoRecharge,
+                    onChange={(e) => {
+                      setAutoRecharge((current) => ({
+                        ...current,
                         autoRechargeThreshold: parseInt(e.target.value) || 5,
-                      })
-                    }
+                      }));
+                      setAutoRechargeDirty(true);
+                    }}
                   />
                 </div>
                 <div>
@@ -1032,12 +1040,13 @@ function AiCreditsTab() {
                     step={10}
                     className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
                     value={autoRecharge.autoRechargePack}
-                    onChange={(e) =>
-                      setAutoRecharge({
-                        ...autoRecharge,
+                    onChange={(e) => {
+                      setAutoRecharge((current) => ({
+                        ...current,
                         autoRechargePack: parseInt(e.target.value) || 50,
-                      })
-                    }
+                      }));
+                      setAutoRechargeDirty(true);
+                    }}
                   />
                 </div>
               </div>
@@ -1057,13 +1066,33 @@ function AiCreditsTab() {
                 </p>
               )}
 
-            <Button
-              variant="outline"
-              onClick={handleSaveAutoRecharge}
-              disabled={savingRecharge}
-            >
-              {savingRecharge ? t("Saving...") : t("Save Settings")}
-            </Button>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p
+                role="status"
+                aria-live="polite"
+                className={`inline-flex items-center gap-1.5 text-xs ${
+                  autoRechargeDirty
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {autoRechargeDirty ? (
+                  <>
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    <T>Unsaved changes — click Save Settings</T>
+                  </>
+                ) : (
+                  <T>Settings are saved when you click Save Settings</T>
+                )}
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleSaveAutoRecharge}
+                disabled={savingRecharge}
+              >
+                {savingRecharge ? t("Saving...") : t("Save Settings")}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

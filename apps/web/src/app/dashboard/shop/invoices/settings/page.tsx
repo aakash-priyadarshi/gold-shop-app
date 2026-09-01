@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { SettingsSaveStatus } from "@/components/settings/SettingsSaveStatus";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -18,6 +19,8 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueuedAutoSave } from "@/hooks/use-auto-save";
+import { useT } from "@/providers/translation-provider";
 import { invoicesApi } from "@/lib/api";
 import type { BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
@@ -47,7 +50,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Position = "TOP" | "BOTTOM";
 
@@ -84,6 +87,16 @@ interface InvoiceSettingsData {
   showTerms: boolean;
   billTemplateId: string;
 }
+
+type InvoiceVisibilityField =
+  | "showLogo"
+  | "showAddress"
+  | "showPhone"
+  | "showEmail"
+  | "showGstin"
+  | "showLicense"
+  | "showFooter"
+  | "showTerms";
 
 const defaultSettings: InvoiceSettingsData = {
   shopNameOnBill: "",
@@ -293,12 +306,14 @@ function isAllowedBillLogo(file: File): boolean {
 export default function InvoiceSettingsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const t = useT();
   const [settings, setSettings] =
     useState<InvoiceSettingsData>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef(settings);
+  const autoSaveVersion = useRef(0);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -316,6 +331,42 @@ export default function InvoiceSettingsPage() {
     const res = await invoicesApi.updateSettings(payload);
     applySettingsRow(unwrapInvoiceSettingsResponse(res.data));
     return payload;
+  };
+
+  const saveInvoiceVisibility = useCallback(
+    async (patch: Partial<Pick<InvoiceSettingsData, InvoiceVisibilityField>>) => {
+      await invoicesApi.updateSettings(patch);
+    },
+    [],
+  );
+
+  const {
+    status: autoSaveStatus,
+    enqueue: enqueueAutoSave,
+    waitForPending: waitForPendingAutoSaves,
+  } = useQueuedAutoSave(saveInvoiceVisibility);
+
+  const updateVisibility = (
+    field: InvoiceVisibilityField,
+    value: boolean,
+  ) => {
+    const previousValue = settingsRef.current[field];
+    if (previousValue === value) return;
+
+    updateField(field, value);
+    const requestVersion = ++autoSaveVersion.current;
+    void enqueueAutoSave({ [field]: value })
+      .catch((error: any) => {
+        if (autoSaveVersion.current !== requestVersion) return;
+
+        updateField(field, previousValue);
+        toast({
+          variant: "destructive",
+          title: t("Could not save visibility"),
+          description:
+            error?.response?.data?.message || t("Please try again."),
+        });
+      });
   };
 
   const {
@@ -368,6 +419,7 @@ export default function InvoiceSettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      await waitForPendingAutoSaves();
       await persistSettings();
       toast({
         title: "Settings saved",
@@ -385,7 +437,11 @@ export default function InvoiceSettingsPage() {
   };
 
   const updateField = (field: keyof InvoiceSettingsData, value: any) => {
-    setSettings((prev) => ({ ...prev, [field]: value }));
+    setSettings((prev) => {
+      const next = { ...prev, [field]: value };
+      settingsRef.current = next;
+      return next;
+    });
   };
 
   const handleLogoFileSelect = async (
@@ -584,18 +640,24 @@ export default function InvoiceSettingsPage() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-amber-500 hover:bg-amber-600"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save Settings
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <SettingsSaveStatus
+                status={autoSaveStatus}
+                idleLabel="Visibility changes save automatically"
+              />
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-amber-500 hover:bg-amber-600"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                <T>Save Settings</T>
+              </Button>
+            </div>
           </div>
 
           {/* Shop Branding */}
@@ -800,7 +862,12 @@ export default function InvoiceSettingsPage() {
                   <T>Layout & Visibility</T>
                 </CardTitle>
                 <CardDescription>
-                  <T>Choose where each field appears (top or bottom of the bill) and toggle visibility. The preview on the right updates as you change these.</T>
+                  <T>
+                    Choose where each field appears (top or bottom of the bill)
+                    and toggle visibility. Visibility changes save
+                    automatically; text and position edits still use Save
+                    Settings.
+                  </T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -873,8 +940,9 @@ export default function InvoiceSettingsPage() {
                       {showKey && (
                         <Switch
                           checked={settings[showKey] as boolean}
+                          aria-label={t(`Show ${label} on invoice`)}
                           onCheckedChange={(checked) =>
-                            updateField(showKey, checked)
+                            updateVisibility(showKey, checked)
                           }
                         />
                       )}
@@ -1075,7 +1143,7 @@ export default function InvoiceSettingsPage() {
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Save Settings
+              <T>Save Settings</T>
             </Button>
           </div>
         </div>

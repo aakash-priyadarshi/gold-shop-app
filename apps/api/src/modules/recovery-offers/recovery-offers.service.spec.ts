@@ -19,10 +19,15 @@ describe("RecoveryOffersService", () => {
     },
     shop: { findFirst: jest.fn() },
     recoveryOffer: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
+      create: jest.fn(),
+    },
+    recoveryOfferEmailEvent: {
+      findUnique: jest.fn(),
       create: jest.fn(),
     },
     emailLog: { create: jest.fn() },
@@ -37,6 +42,7 @@ describe("RecoveryOffersService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    config.get.mockImplementation((_key: string, fallback: string) => fallback);
     prisma.$transaction.mockImplementation((input: any) =>
       typeof input === "function" ? input(prisma) : Promise.all(input),
     );
@@ -78,6 +84,104 @@ describe("RecoveryOffersService", () => {
       }),
     ]);
     expect(result.excluded).toEqual([]);
+  });
+
+  it("previews the broad win-back audience with 50 days and local timing", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        status: "ACTIVE",
+        emailVerified: true,
+        activeShopId: "shop-1",
+        lastLoginAt: new Date("2026-08-01T00:00:00.000Z"),
+        webSessions: [],
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+
+    const result = await service.previewAudience();
+
+    expect(result.days).toBe(50);
+    expect(result.campaignKey).toBe("customer-winback-2026-09");
+    expect(result.eligible).toEqual([
+      expect.objectContaining({
+        userId: "user-1",
+        country: "IN",
+        activitySegment: "dormant",
+        incidentAffected: false,
+        timeZone: "Asia/Kolkata",
+        recommendedSendAt: new Date("2026-09-01T04:30:00.000Z"),
+      }),
+    ]);
+    jest.useRealTimers();
+  });
+
+  it("queues only the selected broad-audience account with a 50-day offer", async () => {
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        status: "ACTIVE",
+        emailVerified: true,
+        activeShopId: "shop-1",
+        lastLoginAt: null,
+        webSessions: [],
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "NP",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "NP" }]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.create.mockResolvedValue({ id: "offer-1" });
+    queue.add.mockResolvedValue({ id: "job-1" });
+
+    const result = await service.sendAudience({
+      userIds: ["user-1"],
+      confirmed: true,
+      adminId: "admin-1",
+    });
+
+    expect(result.queued).toBe(1);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: ["user-1"] } } }),
+    );
+    expect(prisma.recoveryOffer.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          campaignKey: "customer-winback-2026-09",
+          days: 50,
+          sourceReportIds: [],
+        }),
+      }),
+    );
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("does not offer recovery PRO to an active paid subscriber", async () => {
@@ -220,7 +324,8 @@ describe("RecoveryOffersService", () => {
     jest.useRealTimers();
   });
 
-  it("excludes unsupported local-time markets instead of delivering early", async () => {
+  it("schedules a US recipient using the campaign reference timezone", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },
     ]);
@@ -244,6 +349,9 @@ describe("RecoveryOffersService", () => {
       },
     ]);
     prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "US" }]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.create.mockResolvedValue({ id: "offer-1" });
+    queue.add.mockResolvedValue({ id: "job-1" });
 
     const result = await service.send({
       reportIds: ["report-1"],
@@ -253,13 +361,15 @@ describe("RecoveryOffersService", () => {
     });
 
     expect(result.queued).toBe(0);
-    expect(result.scheduled).toBe(0);
-    expect(result.excluded).toEqual([
+    expect(result.scheduled).toBe(1);
+    expect(result.excluded).toEqual([]);
+    expect(prisma.recoveryOffer.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        reason: "A local 10:00 AM delivery time is not configured for US",
+        data: expect.objectContaining({
+          scheduledFor: new Date("2026-09-01T14:00:00.000Z"),
+        }),
       }),
-    ]);
-    expect(prisma.recoveryOffer.create).not.toHaveBeenCalled();
+    );
   });
 
   it("never reopens an offer that is already prepared", async () => {
@@ -343,6 +453,7 @@ describe("RecoveryOffersService", () => {
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
     prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
       id: "offer-1",
+      campaignKey: "customer-winback-2026-09",
       userId: "user-1",
       email: "owner@example.com",
       tokenHash,
@@ -365,7 +476,14 @@ describe("RecoveryOffersService", () => {
     expect(result).toEqual({ skipped: false });
     expect(mail.send).toHaveBeenCalledWith(
       expect.objectContaining({
+        subject:
+          "We’re sorry about the invoice issue — 40 days of Orivraa Pro on us",
         idempotencyKey: `recovery-offer/offer-1/${tokenHash}`,
+        tags: [
+          { name: "category", value: "recovery_offer" },
+          { name: "offer_id", value: "offer-1" },
+          { name: "campaign", value: "customer-winback-2026-09" },
+        ],
       }),
     );
     expect(prisma.recoveryOffer.updateMany).toHaveBeenCalledWith(
@@ -377,6 +495,176 @@ describe("RecoveryOffersService", () => {
       }),
     );
     expect(prisma.emailLog.create).toHaveBeenCalled();
+  });
+
+  it("records Resend clicks once without storing the secure destination", async () => {
+    prisma.recoveryOfferEmailEvent.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.findFirst.mockResolvedValue({
+      id: "offer-1",
+      email: "owner@example.com",
+      deliveryMessageId: "resend-email-1",
+      deliveredAt: null,
+      firstOpenedAt: null,
+      lastOpenedAt: null,
+      firstClickedAt: null,
+      lastClickedAt: null,
+      bouncedAt: null,
+      complainedAt: null,
+      failedAt: null,
+      suppressedAt: null,
+    });
+    prisma.recoveryOfferEmailEvent.create.mockResolvedValue({ id: "event-1" });
+    prisma.recoveryOffer.update.mockResolvedValue({});
+
+    const result = await service.recordResendEvent("svix-event-1", {
+      type: "email.clicked",
+      created_at: "2026-09-02T10:00:00.000Z",
+      data: {
+        created_at: "2026-09-02T09:00:00.000Z",
+        email_id: "resend-email-1",
+        from: "Aakash from Orivraa <support@orivraa.com>",
+        to: ["owner@example.com"],
+        subject: "Recovery",
+        tags: { offer_id: "offer-1" },
+        click: {
+          ipAddress: "203.0.113.10",
+          link: "https://www.orivraa.com/recovery/pro#token=secret-token",
+          timestamp: "2026-09-02T10:00:01.000Z",
+          userAgent: "Browser",
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      processed: true,
+      offerId: "offer-1",
+      type: "email.clicked",
+    });
+    expect(prisma.recoveryOffer.update).toHaveBeenCalledWith({
+      where: { id: "offer-1" },
+      data: expect.objectContaining({
+        clickCount: { increment: 1 },
+        firstClickedAt: new Date("2026-09-02T10:00:01.000Z"),
+      }),
+    });
+    expect(prisma.recoveryOfferEmailEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        webhookId: "svix-event-1",
+        linkKind: "claim",
+      }),
+    });
+    expect(
+      JSON.stringify(prisma.recoveryOfferEmailEvent.create.mock.calls[0][0]),
+    ).not.toContain("secret-token");
+  });
+
+  it("deduplicates retried Resend webhook deliveries", async () => {
+    prisma.recoveryOfferEmailEvent.findUnique.mockResolvedValue({
+      id: "event-1",
+    });
+
+    const result = await service.recordResendEvent("svix-event-1", {
+      type: "email.opened",
+      created_at: "2026-09-02T10:00:00.000Z",
+      data: {
+        created_at: "2026-09-02T09:00:00.000Z",
+        email_id: "resend-email-1",
+        from: "support@orivraa.com",
+        to: ["owner@example.com"],
+        subject: "Recovery",
+      },
+    });
+
+    expect(result).toEqual({ processed: false, duplicate: true });
+    expect(prisma.recoveryOffer.update).not.toHaveBeenCalled();
+  });
+
+  it("reports campaign delivery, engagement, claim, and rejoin metrics", async () => {
+    config.get.mockImplementation((key: string, fallback: string) =>
+      key === "RESEND_WEBHOOK_SECRET"
+        ? "whsec_test"
+        : key === "RESEND_API_KEY"
+          ? "re_test"
+          : fallback,
+    );
+    prisma.recoveryOffer.findMany.mockResolvedValue([
+      {
+        id: "offer-1",
+        status: RecoveryOfferStatus.CLAIMED,
+        scheduledFor: null,
+        sentAt: new Date("2026-09-01T04:30:00.000Z"),
+        deliveredAt: new Date("2026-09-01T04:31:00.000Z"),
+        firstOpenedAt: new Date("2026-09-01T05:00:00.000Z"),
+        openCount: 2,
+        firstClickedAt: new Date("2026-09-01T05:05:00.000Z"),
+        clickCount: 1,
+        claimedAt: new Date("2026-09-01T05:10:00.000Z"),
+        bouncedAt: null,
+        complainedAt: null,
+        failedAt: null,
+        suppressedAt: null,
+        user: {
+          lastLoginAt: new Date("2026-09-01T05:08:00.000Z"),
+          webSessions: [],
+          desktopSessions: [],
+        },
+        shop: { country: "IN" },
+      },
+      {
+        id: "offer-2",
+        status: RecoveryOfferStatus.SENT,
+        scheduledFor: null,
+        sentAt: new Date("2026-09-01T04:30:00.000Z"),
+        deliveredAt: new Date("2026-09-01T04:31:00.000Z"),
+        firstOpenedAt: null,
+        openCount: 0,
+        firstClickedAt: null,
+        clickCount: 0,
+        claimedAt: null,
+        bouncedAt: null,
+        complainedAt: null,
+        failedAt: null,
+        suppressedAt: null,
+        user: {
+          lastLoginAt: new Date("2026-08-01T00:00:00.000Z"),
+          webSessions: [
+            { startedAt: new Date("2026-09-01T04:00:00.000Z") },
+          ],
+          desktopSessions: [],
+        },
+        shop: { country: "NP" },
+      },
+    ]);
+
+    const result = await service.getCampaignMetrics();
+
+    expect(result.totals).toEqual(
+      expect.objectContaining({
+        targeted: 2,
+        sent: 2,
+        delivered: 2,
+        opened: 1,
+        totalOpens: 2,
+        clicked: 1,
+        claimed: 1,
+        rejoined: 1,
+      }),
+    );
+    expect(result.rates).toEqual(
+      expect.objectContaining({
+        delivery: 100,
+        open: 50,
+        click: 50,
+        claim: 50,
+        rejoin: 50,
+      }),
+    );
+    expect(result.byCountry).toEqual([
+      expect.objectContaining({ country: "IN", rejoined: 1 }),
+      expect.objectContaining({ country: "NP", rejoined: 0 }),
+    ]);
+    expect(result.webhookConfigured).toBe(true);
+    expect(result.resendApiConfigured).toBe(true);
   });
 
   it("extends an existing trial by exactly the offered days", async () => {

@@ -77,6 +77,7 @@ import {
   LifeBuoy,
   LogOut,
   Menu,
+  Megaphone,
   MessageSquare,
   Package,
   Receipt,
@@ -311,6 +312,12 @@ const navItems: NavItem[] = [
     label: "Users",
     href: "/dashboard/admin/users",
     icon: Users,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Customer Recovery",
+    href: "/dashboard/admin/customer-recovery",
+    icon: Megaphone,
     roles: ["ADMIN"],
   },
   {

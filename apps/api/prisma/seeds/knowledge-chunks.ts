@@ -229,6 +229,11 @@ const CHUNKS: { topic: string; content: string }[] = [
       "Orivraa automatically records errors shown to users (red error toasts, page crashes, and server 5xx / network failures) so admins can fix issues they do not see themselves. Open Admin → Crash Reports. Default view is today's new reports. Each row has a Copy button plus visible Review, Fixed, and Reopen actions. Select one or every visible report to update several duplicate incidents together. Copy all as AI prompt or Download .md exports every report matching the current filters with fingerprints, stack traces, diagnostics, admin notes, prompt-injection safety guidance, and authenticated status-update endpoints; IP addresses and session credentials are omitted. Configure CRASH_REPORT_SLACK_WEBHOOK_URL only on the Railway API service to post every new, non-duplicate incident to an existing Slack channel, then verify it with Send test alert. CRASH_REPORT_SLACK_MENTION can be here, channel, or a Slack user ID. Auto vs User badges show whether the report was silent capture or a shopkeeper clicking Send Report. Session expiry and form-validation toasts are not logged. Mark reports reviewed while investigating and Fixed only after the change is implemented and validated; add the PR or commit to admin notes when available.",
   },
   {
+    topic: "customer_recovery_campaign",
+    content:
+      "Admin → Customer Recovery manages the account-bound 50-day Pro win-back campaign. Admins can preview eligible shopkeepers, filter by country or activity level, select recipients, and send immediately or at the next country-local 10 AM. Active paid plans, unverified addresses, inactive accounts, missing shops, and repeat campaign sends are excluded. The campaign funnel shows sent, delivered, unique opened, unique clicked, claimed Pro, and rejoined counts plus country breakdowns. Open tracking is approximate because privacy tools and blocked images affect the tracking pixel. Rejoined means the recipient had authenticated Orivraa activity or claimed the offer after the email was sent. Delivery, open, click, bounce, complaint, failure, and suppression events come from signature-verified, deduplicated Resend webhooks at /api/recovery-offers/webhooks/resend; enable Resend domain open/click tracking and configure RESEND_WEBHOOK_SECRET before relying on those metrics.",
+  },
+  {
     topic: "mobile_invoice_full_billing",
     content:
       "Mobile Create Invoice (/m/invoices/create) is a full jewellery workflow — not a flat amount form. Steps: Customer details → add lines from Catalog, Shop Quote, or Manual → enter metal type, weight (tola/gram/laal), metal cost, making charge (% / per-gram / flat), wastage (jarti), optional gemstones → Review with tax breakdown → Create. Catalog items commit stock. Importing a walk-in shop quote prefills customer and line costs and links shopQuoteId. Flat-only amounts without metal/making breakdown are rejected so tax reports and accounting stay accurate. After create you land on the invoice detail page: Print (thermal receipt or A4) and Share PDF / WhatsApp.",
@@ -377,6 +382,7 @@ async function main() {
     "ask_ai_about_orivraa",
     "seller_ai_integration_mcp",
     "orivraa_heritage_cloud_launch",
+    "customer_recovery_campaign",
   ]);
 
   for (const chunk of CHUNKS) {

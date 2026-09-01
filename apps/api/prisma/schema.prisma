@@ -3478,6 +3478,17 @@ model RecoveryOffer {
   expiresAt             DateTime
   scheduledFor          DateTime?
   sentAt                DateTime?
+  deliveredAt           DateTime?
+  firstOpenedAt         DateTime?
+  lastOpenedAt          DateTime?
+  openCount              Int                 @default(0)
+  firstClickedAt        DateTime?
+  lastClickedAt         DateTime?
+  clickCount             Int                 @default(0)
+  bouncedAt             DateTime?
+  complainedAt          DateTime?
+  failedAt              DateTime?
+  suppressedAt          DateTime?
   claimedAt             DateTime?
   grantedSubscriptionId String?
   deliveryMessageId     String?
@@ -3488,13 +3499,33 @@ model RecoveryOffer {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  emailEvents RecoveryOfferEmailEvent[]
 
   @@unique([campaignKey, shopId])
+  @@index([campaignKey, sentAt])
+  @@index([deliveryMessageId])
   @@index([status, createdAt])
   @@index([status, scheduledFor])
   @@index([userId])
   @@index([shopId])
   @@index([expiresAt])
+}
+
+/// Deduplicated Resend delivery and engagement events for recovery campaigns.
+/// Click destinations and recipient device details are intentionally not stored.
+model RecoveryOfferEmailEvent {
+  id        String   @id @default(cuid())
+  webhookId String   @unique
+  offerId   String
+  type      String
+  eventAt   DateTime
+  linkKind  String?
+  createdAt DateTime @default(now())
+
+  offer RecoveryOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId, eventAt])
+  @@index([type, eventAt])
 }
 
 model SubscriptionPayment {
