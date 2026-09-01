@@ -25,7 +25,6 @@ export type ShopApiKeyScope = (typeof SHOP_API_KEY_SCOPES)[number];
 
 /** SHA-256 lookup hash for high-entropy ovrk_ tokens. Not a password KDF. */
 function hashApiKey(rawKey: string): string {
-  // codeql[js/insufficient-password-hash]
   return crypto.createHash("sha256").update(rawKey).digest("hex");
 }
 
