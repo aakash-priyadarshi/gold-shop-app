@@ -19,11 +19,11 @@ const STEPS = [
   },
   {
     title: "Choose scopes",
-    body: "inventory:read, inventory:write, orders:read, and orders:write are the core jewellery scopes. Catalogue, customer, and analytics read scopes can be added without opening the till.",
+    body: "Choose from inventory:read, inventory:write, orders:read, and orders:write. Start with the minimum access your assistant needs.",
   },
   {
     title: "Connect MCP",
-    body: "Point Claude, ChatGPT, Gemini, Cursor, or another MCP client at Orivraa with that key. The server lists only tools those scopes allow.",
+    body: "Connect Claude Code, ChatGPT developer tools, or another compatible MCP client with that key. The server lists only tools those scopes allow.",
   },
   {
     title: "Rotate or revoke",
@@ -39,13 +39,13 @@ const GUARDS = [
   },
   {
     icon: ShieldAlert,
-    title: "Money needs confirmation",
-    body: "Sales, payments, and refunds are not an unrestricted write tool. The assistant proposes the action; a person in the shop confirms before cash, UPI, card, or refund posts.",
+    title: "No money-moving tools",
+    body: "Sales, payments, refunds, and deletions are not MCP tools. The seller reviews every supported write proposal from the dashboard before it changes shop data.",
   },
   {
     icon: ScrollText,
     title: "Every AI write is logged",
-    body: "Creates, updates, and confirmed financial steps are audit-logged under the seller and the key prefix so you can see which assistant changed stock.",
+    body: "Every tool call and write proposal is audit-logged with the shop and key prefix, so you can see which assistant requested a stock or order change.",
   },
 ];
 
@@ -60,30 +60,33 @@ export default function AiIntegrationPage() {
               <T>Seller AI integration</T>
             </p>
             <h1 className="text-3xl lg:text-5xl font-bold leading-tight">
-              <T>Jewellery shop MCP: scoped keys, audit logs, confirm-to-pay</T>
+              <T>
+                Jewellery shop MCP: scoped keys, audit logs, seller-approved
+                writes
+              </T>
             </h1>
             <p className="mt-5 text-base lg:text-lg text-gray-300 leading-relaxed">
               <T>
-                Let Claude, ChatGPT, Gemini, or Perplexity help with stock
-                questions and catalogue drafts without giving them the till.
-                You create the seller AI integration key, pick scopes, rotate or
-                revoke it, and review every AI write. Financial actions require
-                an extra confirmation step.
+                Let a compatible MCP client help with stock questions and
+                selected inventory or order-status changes without giving it the
+                till. You create the seller AI integration key, pick scopes,
+                rotate or revoke it, and review every supported AI write
+                proposal before it changes your shop data.
               </T>
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/auth/register"
+                href="/dashboard/shop/ai-integration"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gold-500 text-navy-950 font-semibold hover:bg-gold-400"
               >
-                <T>Start free and add a key</T>
+                <T>Open seller AI integrations</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/pricing"
+                href="/security"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/20 font-semibold hover:bg-white/5"
               >
-                <T>API access is on paid plans</T>
+                <T>Security &amp; trust</T>
               </Link>
             </div>
           </div>
@@ -122,9 +125,9 @@ export default function AiIntegrationPage() {
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-2xl">
               <T>
-                Start read-only. Add write scopes only for catalogue cleanup or
-                order notes. Keep payments off the key until you are ready to
-                confirm each ticket.
+                Start read-only. Add a write scope only when you need a selected
+                inventory edit or non-financial order-status proposal. Sales,
+                payments, refunds, and deletions are not MCP tools.
               </T>
             </p>
             <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
@@ -143,25 +146,34 @@ export default function AiIntegrationPage() {
                   <tr>
                     <td className="px-4 py-3 font-mono">inventory:read</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      <T>Look up SKUs, weights, purity, vault location, and set components</T>
+                      <T>Look up SKUs, weights, prices, and availability</T>
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-mono">inventory:write</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      <T>Create or edit pieces the key is allowed to touch — logged</T>
+                      <T>
+                        Propose selected item text, price, label, or stock edits
+                        for seller approval
+                      </T>
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-mono">orders:read</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      <T>Read order status and line items without changing them</T>
+                      <T>
+                        Read recent orders and their fulfilment status without
+                        customer phone or email
+                      </T>
                     </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-mono">orders:write</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      <T>Draft order updates. Capturing a sale, taking payment, or issuing a refund still requires confirmation</T>
+                      <T>
+                        Propose an allowed non-financial order-status update for
+                        seller approval
+                      </T>
                     </td>
                   </tr>
                 </tbody>
@@ -169,9 +181,8 @@ export default function AiIntegrationPage() {
             </div>
             <p className="mt-4 text-sm text-gray-500">
               <T>
-                Enterprise shops already manage keys under Shop → Enterprise →
-                API keys. Treat a seller AI key the same way you treat a staff
-                login: least privilege, named, revocable.
+                Seller AI keys are managed in the seller dashboard. Treat a key
+                like a staff login: least privilege, named, revocable.
               </T>
             </p>
           </div>
@@ -218,7 +229,10 @@ export default function AiIntegrationPage() {
               <AskAiProviderButtons />
             </div>
             <p className="mt-4 text-sm">
-              <Link href="/ask-ai" className="text-amber-800 dark:text-amber-400 font-medium hover:underline">
+              <Link
+                href="/ask-ai"
+                className="text-amber-800 dark:text-amber-400 font-medium hover:underline"
+              >
                 <T>How Ask AI links work on phone vs computer</T>
               </Link>
             </p>

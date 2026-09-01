@@ -105,7 +105,13 @@ import { useDesktopShortcuts } from "@/hooks/useDesktopShortcuts";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 // Lazy-load tutorial button (driver.js CSS is ~20KB)
 const TutorialButton = dynamic(
@@ -587,6 +593,12 @@ const navItems: NavItem[] = [
     label: "Tools",
     href: "/dashboard/shop/tools",
     icon: Wrench,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "AI Integrations",
+    href: "/dashboard/shop/ai-integration",
+    icon: Brain,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -1137,6 +1149,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             "/dashboard/shop/accounting",
             "/dashboard/shop/customers",
             "/dashboard/shop/messages",
+            "/dashboard/shop/ai-integration",
             "/dashboard/shop/settings",
             "/dashboard/shop/support",
             "/dashboard/shop/help",

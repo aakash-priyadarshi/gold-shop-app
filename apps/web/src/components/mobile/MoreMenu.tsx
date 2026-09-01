@@ -9,6 +9,7 @@ import { usePreferencesStore } from "@/store/preferences";
 import { ComputerDesktopIcon } from "@heroicons/react/24/outline";
 import {
   BarChart2,
+  Brain,
   Cake,
   ClipboardList,
   FileText,
@@ -56,9 +57,14 @@ const sections = [
     title: "Tools & Calculators",
     items: [
       { href: "/m/rate-card", icon: Image, label: "Rate Card" },
-      { href: "/m/broadcast", icon: MessageCircle, label: "WhatsApp Broadcast" },
+      {
+        href: "/m/broadcast",
+        icon: MessageCircle,
+        label: "WhatsApp Broadcast",
+      },
       { href: "/m/tax", icon: Receipt, label: "Tax Audit" },
       { href: "/m/purity", icon: FlaskConical, label: "Purity Calculator" },
+      { href: "/m/ai-integration", icon: Brain, label: "AI Integrations" },
     ],
   },
   {
@@ -164,7 +170,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                   <T>AI Support Chat</T>
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  <T>{isChatDismissed ? "Touch to bring back" : "Tap to shake & show"}</T>
+                  <T>
+                    {isChatDismissed
+                      ? "Touch to bring back"
+                      : "Tap to shake & show"}
+                  </T>
                 </p>
               </div>
             </button>
@@ -187,7 +197,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                   <T>Tutorials</T>
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  <T>{isTutorialDismissed ? "Touch to bring back" : "Tap to shake & show"}</T>
+                  <T>
+                    {isTutorialDismissed
+                      ? "Touch to bring back"
+                      : "Tap to shake & show"}
+                  </T>
                 </p>
               </div>
             </button>
@@ -213,7 +227,10 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
 
           <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-3">
-              <AnimatedThemeToggle size={24} className="rounded-lg text-gray-600 dark:text-gray-400 -ml-1" />
+              <AnimatedThemeToggle
+                size={24}
+                className="rounded-lg text-gray-600 dark:text-gray-400 -ml-1"
+              />
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                 <T>Theme</T>
               </span>
@@ -235,8 +252,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
             onClick={(e) => {
               e.preventDefault();
               onClose?.();
-              const domain = window.location.hostname.endsWith("orivraa.com") ? "; domain=.orivraa.com" : "";
-              const secure = window.location.protocol === "https:" ? "; Secure" : "";
+              const domain = window.location.hostname.endsWith("orivraa.com")
+                ? "; domain=.orivraa.com"
+                : "";
+              const secure =
+                window.location.protocol === "https:" ? "; Secure" : "";
               document.cookie = `orivraa_force_desktop=true; path=/${domain}; SameSite=Lax${secure}; max-age=604800`;
 
               const host = window.location.hostname;

@@ -7,7 +7,7 @@ import * as crypto from "crypto";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 const API_KEY_PREFIX = "ovrk_";
-const AVAILABLE_SCOPES = [
+export const SHOP_API_KEY_SCOPES = [
   "inventory:read",
   "inventory:write",
   "orders:read",
@@ -20,6 +20,8 @@ const AVAILABLE_SCOPES = [
   "catalogue:read",
   "catalogue:write",
 ] as const;
+
+export type ShopApiKeyScope = (typeof SHOP_API_KEY_SCOPES)[number];
 
 @Injectable()
 export class ApiKeyService {
@@ -35,11 +37,12 @@ export class ApiKeyService {
       keyName: string;
       scopes: string[];
       expiresAt?: Date;
+      kind?: "INTEGRATION" | "SELLER_AI";
     },
   ) {
     // Validate scopes
     const invalidScopes = data.scopes.filter(
-      (s) => !(AVAILABLE_SCOPES as readonly string[]).includes(s),
+      (s) => !(SHOP_API_KEY_SCOPES as readonly string[]).includes(s),
     );
     if (invalidScopes.length) {
       throw new BadRequestException(
@@ -56,6 +59,7 @@ export class ApiKeyService {
       data: {
         shopId,
         keyName: data.keyName,
+        kind: data.kind ?? "INTEGRATION",
         keyHash,
         keyPrefix,
         scopes: data.scopes,
@@ -68,6 +72,7 @@ export class ApiKeyService {
     return {
       id: apiKey.id,
       keyName: apiKey.keyName,
+      kind: apiKey.kind,
       keyPrefix: apiKey.keyPrefix,
       rawKey, // ⚠️ Only shown once — cannot be retrieved again
       scopes: apiKey.scopes,
@@ -82,11 +87,29 @@ export class ApiKeyService {
       select: {
         id: true,
         keyName: true,
+        kind: true,
         keyPrefix: true,
         scopes: true,
         expiresAt: true,
         lastUsedAt: true,
         lastUsedIp: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async listSellerAiKeys(shopId: string) {
+    return this.prisma.shopApiKey.findMany({
+      where: { shopId, kind: "SELLER_AI" },
+      select: {
+        id: true,
+        keyName: true,
+        keyPrefix: true,
+        scopes: true,
+        expiresAt: true,
+        lastUsedAt: true,
         isActive: true,
         createdAt: true,
       },
@@ -121,10 +144,14 @@ export class ApiKeyService {
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
-      include: { shop: { select: { id: true, shopName: true, userId: true } } },
+      include: {
+        shop: {
+          select: { id: true, shopName: true, userId: true, isActive: true },
+        },
+      },
     });
 
-    if (!apiKey) return null;
+    if (!apiKey || !apiKey.shop.isActive) return null;
 
     // Update last used
     await this.prisma.shopApiKey.update({
@@ -133,14 +160,22 @@ export class ApiKeyService {
     });
 
     return {
+      id: apiKey.id,
       shopId: apiKey.shopId,
       shop: apiKey.shop,
       scopes: apiKey.scopes,
       keyName: apiKey.keyName,
+      keyPrefix: apiKey.keyPrefix,
+      kind: apiKey.kind,
     };
   }
 
+  async validateSellerAiKey(rawKey: string) {
+    const key = await this.validateApiKey(rawKey);
+    return key?.kind === "SELLER_AI" ? key : null;
+  }
+
   getAvailableScopes() {
-    return [...AVAILABLE_SCOPES];
+    return [...SHOP_API_KEY_SCOPES];
   }
 }

@@ -1,4 +1,9 @@
-import { ASK_AI_QUESTION, getAskAiHref, getAskAiLinks, getAskAiPrompt } from "../ask-ai";
+import {
+  ASK_AI_QUESTION,
+  getAskAiHref,
+  getAskAiLinks,
+  getAskAiPrompt,
+} from "../ask-ai";
 import { getLlmsTxt } from "../llms-txt";
 
 const SITE = "https://www.orivraa.com";
@@ -12,7 +17,7 @@ describe("Ask AI marketing links", () => {
     expect(prompt).not.toContain("January 2026");
   });
 
-  it("builds encoded https URLs for ChatGPT, Claude, Gemini, and Perplexity", () => {
+  it("uses supported handoffs for each AI provider", () => {
     const links = getAskAiLinks(SITE);
     expect(links.map((item) => item.id)).toEqual([
       "chatgpt",
@@ -27,14 +32,12 @@ describe("Ask AI marketing links", () => {
     expect(getAskAiHref("claude", SITE)).toMatch(
       /^https:\/\/claude\.ai\/new\?q=/,
     );
-    expect(getAskAiHref("gemini", SITE)).toMatch(
-      /^https:\/\/gemini\.google\.com\/app\?q=/,
-    );
+    expect(getAskAiHref("gemini", SITE)).toBe("https://gemini.google.com/app");
     expect(getAskAiHref("perplexity", SITE)).toMatch(
       /^https:\/\/www\.perplexity\.ai\/search\?q=/,
     );
 
-    for (const link of links) {
+    for (const link of links.filter((link) => link.id !== "gemini")) {
       const url = new URL(link.href);
       expect(url.protocol).toBe("https:");
       expect(url.search).toContain(encodeURIComponent("Orivraa"));

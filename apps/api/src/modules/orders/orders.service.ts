@@ -1593,14 +1593,19 @@ export class OrdersService {
     orderId: string,
     shopkeeperId: string,
     dto: any,
+    activeShopId?: string,
   ) {
     // First verify the shopkeeper owns this order
-    const user = await this.prisma.user.findUnique({
-      where: { id: shopkeeperId },
-      include: { shops: true },
-    });
-
-    const activeShop = user?.shops?.[0];
+    const activeShop = activeShopId
+      ? await this.prisma.shop.findFirst({
+          where: { id: activeShopId, userId: shopkeeperId },
+        })
+      : (
+          await this.prisma.user.findUnique({
+            where: { id: shopkeeperId },
+            include: { shops: true },
+          })
+        )?.shops?.[0];
     if (!activeShop) {
       throw new ForbiddenException("You do not have a shop");
     }

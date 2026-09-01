@@ -25,9 +25,9 @@ The people behind Orivraa spent more than 10 years serving jewellery customers a
 
 ## Seller AI integration
 
-Sellers create an AI integration key, choose scopes (inventory:read, inventory:write, orders:read, orders:write, and related catalogue/customer/analytics scopes), and can rotate or revoke the key. Every AI write is audit-logged under that seller.
+Sellers create an AI integration key, choose inventory and order scopes (inventory:read, inventory:write, orders:read, orders:write), and can rotate or revoke the key. Tool calls and AI write proposals are audit-logged under that seller.
 
-An MCP server exposes only the tools allowed by those scopes. Financial actions (sales, payments, refunds) require an explicit confirmation step — there is no unrestricted money-moving write tool.
+An MCP server exposes only the tools allowed by those scopes. Supported inventory and order-status writes wait for dashboard approval. Sales, payments, refunds, and deletions are not MCP tools.
 
 ## Pages
 

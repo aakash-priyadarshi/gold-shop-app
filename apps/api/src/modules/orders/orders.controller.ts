@@ -216,12 +216,14 @@ export class OrdersController {
   async shopkeeperUpdateOrderStatus(
     @Param("id") id: string,
     @CurrentUser("id") shopkeeperId: string,
+    @CurrentUser("activeShopId") activeShopId: string | undefined,
     @Body() dto: AdminUpdateOrderStatusDto,
   ) {
     return this.ordersService.shopkeeperUpdateOrderStatus(
       id,
       shopkeeperId,
       dto,
+      activeShopId,
     );
   }
 
