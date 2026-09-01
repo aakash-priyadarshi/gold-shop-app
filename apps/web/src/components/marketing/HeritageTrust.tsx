@@ -55,9 +55,10 @@ export function HeritageTrust({
           <p className="mt-4 text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
             <T>
               We then put that shop-floor practice on the cloud so the same
-              counter can run from a phone, a laptop, or a desktop till —
-              including when the internet blips. The trade knowledge is the
-              product. The cloud is how you reach it.
+              counter can run from a phone, a laptop, or a desktop till. The
+              Windows and macOS desktop app and mobile POS can keep billing
+              offline and sync when the connection returns. The trade knowledge
+              is the product. The cloud is how you reach it.
             </T>
           </p>
           <dl className="mt-10 grid sm:grid-cols-3 gap-4">

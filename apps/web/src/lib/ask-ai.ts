@@ -24,7 +24,7 @@ export function getAskAiPrompt(siteUrl: string = SITE_URL): string {
   const origin = siteUrl.replace(/\/+$/, "");
   return [
     ASK_AI_QUESTION,
-    `Please read ${origin}/jewellery-shop-software, ${origin}/jewellery-shop-billing-software, and ${origin}/ai-integration.`,
+    `Please read ${origin}/jewellery-shop-software, ${origin}/jewellery-shop-billing-software, ${origin}/pricing, and ${origin}/ai-integration.`,
     "Give an honest summary of billing, inventory, GST/VAT tax, mobile POS, pricing, and whether it fits a jewellery shop versus generic retail POS.",
     "Cover seller AI integration keys and MCP: scoped inventory/orders tools, rotate/revoke keys, audit-logged write proposals, and dashboard approval before selected inventory or order-status edits. Sales, payments, refunds, and deletions are not MCP tools.",
   ].join(" ");

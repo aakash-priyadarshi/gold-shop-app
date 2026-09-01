@@ -127,6 +127,7 @@ export function SellerAiIntegrationPanel() {
   const [isCreating, setIsCreating] = useState(false);
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [rotatingId, setRotatingId] = useState<string | null>(null);
 
   const mcpUrl = useMemo(() => `${apiBaseUrl()}/seller-ai/mcp`, []);
 
@@ -213,6 +214,37 @@ export function SellerAiIntegrationPanel() {
         title: t("Could not copy"),
         description: t("Copy the value manually and keep it private."),
       });
+    }
+  };
+
+  const rotate = async (key: SellerAiKey) => {
+    if (
+      !window.confirm(
+        t(
+          "Rotate this AI key? The current secret will stop working immediately.",
+        ),
+      )
+    )
+      return;
+    setRotatingId(key.id);
+    try {
+      const { data } = await api.post(`/seller-ai/keys/${key.id}/rotate`);
+      setCreatedKey(data.rawKey);
+      toast({
+        title: t("Seller AI key rotated"),
+        description: t(
+          "Copy the new secret now. Connected assistants must use the new key.",
+        ),
+      });
+      await load();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("Could not rotate seller AI key"),
+        description: error?.response?.data?.message ?? t("Please try again."),
+      });
+    } finally {
+      setRotatingId(null);
     }
   };
 
@@ -492,19 +524,34 @@ export function SellerAiIntegrationPanel() {
                   ))}
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void revoke(key)}
-                disabled={revokingId === key.id}
-              >
-                {revokingId === key.id ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                <T>Revoke</T>
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void rotate(key)}
+                  disabled={rotatingId === key.id || revokingId === key.id}
+                >
+                  {rotatingId === key.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  <T>Rotate</T>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void revoke(key)}
+                  disabled={revokingId === key.id || rotatingId === key.id}
+                >
+                  {revokingId === key.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  <T>Revoke</T>
+                </Button>
+              </div>
             </div>
           ))}
         </CardContent>

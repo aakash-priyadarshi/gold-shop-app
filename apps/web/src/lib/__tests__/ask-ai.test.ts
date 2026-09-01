@@ -13,6 +13,7 @@ describe("Ask AI marketing links", () => {
     const prompt = getAskAiPrompt(SITE);
     expect(prompt.startsWith(ASK_AI_QUESTION)).toBe(true);
     expect(prompt).toContain(`${SITE}/jewellery-shop-software`);
+    expect(prompt).toContain(`${SITE}/pricing`);
     expect(prompt).toContain(`${SITE}/ai-integration`);
     expect(prompt).not.toContain("January 2026");
   });

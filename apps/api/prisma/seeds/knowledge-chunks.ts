@@ -291,7 +291,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "seller_ai_integration_mcp",
     content:
-      "Seller AI integration: the shopkeeper creates an AI integration key, chooses scopes such as inventory:read, inventory:write, orders:read, or orders:write, and can rotate or revoke the key. Every AI write is audit-logged under that seller. The MCP server exposes only tools allowed by those scopes. Sales, payments, and refunds require an explicit confirmation step — there is no unrestricted financial write tool. Public explainer: /ai-integration. Keys are managed in Shop → Enterprise → API keys on plans with API access.",
+      "Seller AI integration: the shopkeeper creates an AI integration key in Shop → AI Integrations (desktop) or More Tools → AI Integrations (mobile). They choose scopes such as inventory:read, inventory:write, orders:read, or orders:write, and can rotate or revoke the key. Reads run immediately. Supported inventory and order-status writes wait for dashboard approval. Sales, payments, refunds, and deletions are not MCP tools. MCP endpoint: POST /api/seller-ai/mcp. Public explainer: /ai-integration.",
   },
   {
     topic: "orivraa_heritage_cloud_launch",

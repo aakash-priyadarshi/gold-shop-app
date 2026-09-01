@@ -611,7 +611,7 @@ const FAQS = [
   },
   {
     q: "Is Orivraa generic retail software with a jewellery label?",
-    a: "No. It is built around jewellery-counter work: weight and purity, live gold and silver rates, making charges, wastage (jarti), vault locations, karigar metal, and GST/VAT split by component. The people behind it spent more than ten years serving jewellery customers in person. The software runs on phone, laptop, and desktop so the shop is not locked to one Windows PC.",
+    a: "No. It is built around jewellery-counter work: weight and purity, live gold and silver rates, making charges, wastage (jarti), vault locations, karigar metal, and GST/VAT split by component. The people behind it spent more than 10 years serving jewellery customers in person. The software runs on phone, laptop, and desktop so the shop is not locked to one Windows PC.",
   },
 ];
 

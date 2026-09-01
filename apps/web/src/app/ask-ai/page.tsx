@@ -170,7 +170,7 @@ export default function AskAiPage() {
                 </summary>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   <T>
-                    More than ten years at the jewellery counter. The software
+                    More than 10 years at the jewellery counter. The software
                     is jewellery-native and runs on phone, laptop, and desktop —
                     we digitised the till, we did not invent the trade last
                     year.

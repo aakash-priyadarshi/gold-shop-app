@@ -88,7 +88,7 @@ export default async function HomePage() {
     name: BRAND.name,
     url: SITE_URL,
     description:
-      "Jewellery shop software built from more than ten years serving customers at the counter. Cloud POS, billing, inventory, tax, and seller AI integrations for jewellers.",
+      "Jewellery shop software built from more than 10 years serving customers at the counter. Cloud POS, billing, inventory, tax, and seller AI integrations for jewellers.",
     knowsAbout: [
       "Jewellery billing",
       "Gold shop POS",

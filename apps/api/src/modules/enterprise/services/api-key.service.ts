@@ -102,7 +102,7 @@ export class ApiKeyService {
 
   async listSellerAiKeys(shopId: string) {
     return this.prisma.shopApiKey.findMany({
-      where: { shopId, kind: "SELLER_AI" },
+      where: { shopId, kind: "SELLER_AI", isActive: true },
       select: {
         id: true,
         keyName: true,
@@ -127,6 +127,49 @@ export class ApiKeyService {
       where: { id: key.id },
       data: { isActive: false },
     });
+  }
+
+  async revokeSellerAiKey(shopId: string, keyId: string) {
+    const key = await this.prisma.shopApiKey.findFirst({
+      where: { id: keyId, shopId, kind: "SELLER_AI" },
+    });
+    if (!key) throw new NotFoundException("Seller AI key not found");
+
+    return this.prisma.shopApiKey.update({
+      where: { id: key.id },
+      data: { isActive: false },
+    });
+  }
+
+  /**
+   * Replace the secret on an active seller AI key. The previous secret stops
+   * working immediately; the new raw key is returned once.
+   */
+  async rotateSellerAiKey(shopId: string, keyId: string) {
+    const key = await this.prisma.shopApiKey.findFirst({
+      where: { id: keyId, shopId, kind: "SELLER_AI", isActive: true },
+    });
+    if (!key) throw new NotFoundException("Seller AI key not found");
+
+    const rawKey = API_KEY_PREFIX + crypto.randomBytes(24).toString("hex");
+    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const keyPrefix = rawKey.substring(0, 12);
+
+    const apiKey = await this.prisma.shopApiKey.update({
+      where: { id: key.id },
+      data: { keyHash, keyPrefix },
+    });
+
+    return {
+      id: apiKey.id,
+      keyName: apiKey.keyName,
+      kind: apiKey.kind,
+      keyPrefix: apiKey.keyPrefix,
+      rawKey,
+      scopes: apiKey.scopes,
+      expiresAt: apiKey.expiresAt,
+      createdAt: apiKey.createdAt,
+    };
   }
 
   /**

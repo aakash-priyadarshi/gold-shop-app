@@ -102,6 +102,31 @@ export class SellerAiController {
     return key;
   }
 
+  @Post("keys/:id/rotate")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Rotate a seller AI key (new secret is shown once)",
+  })
+  async rotateKey(
+    @CurrentUser("activeShopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Param("id") keyId: string,
+  ) {
+    this.requireShop(shopId);
+    const key = await this.apiKeys.rotateSellerAiKey(shopId, keyId);
+    await this.audit.log({
+      userId,
+      actorType: "SHOPKEEPER",
+      action: "ROTATE_SELLER_AI_KEY",
+      resourceType: "ShopApiKey",
+      resourceId: key.id,
+      metadata: { shopId, keyPrefix: key.keyPrefix },
+    });
+    return key;
+  }
+
   @Delete("keys/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -114,7 +139,7 @@ export class SellerAiController {
     @Param("id") keyId: string,
   ) {
     this.requireShop(shopId);
-    await this.apiKeys.revokeApiKey(shopId, keyId);
+    await this.apiKeys.revokeSellerAiKey(shopId, keyId);
     await this.audit.log({
       userId,
       actorType: "SHOPKEEPER",
