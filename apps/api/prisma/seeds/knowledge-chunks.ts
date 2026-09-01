@@ -286,7 +286,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "ask_ai_about_orivraa",
     content:
-      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Gemini, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? The prompt also points at https://www.orivraa.com/llms.txt and /jewellery-shop-software so the model can fetch current facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
+      "Ask your AI about us: Public pages include Ask ChatGPT, Ask Claude, Ask Gemini, and Ask Perplexity buttons. They open that assistant (the phone app when installed, otherwise the website) with the question: How is Orivraa for jewellery business software? The prompt points at /jewellery-shop-software, /jewellery-shop-billing-software, and /ai-integration so the model can fetch current product facts. Dedicated page: /ask-ai. This is independent of the free in-app Orivraa AI assistant.",
   },
   {
     topic: "seller_ai_integration_mcp",
@@ -296,7 +296,7 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "orivraa_heritage_cloud_launch",
     content:
-      "Orivraa trust story: the people behind the product spent more than 10 years serving jewellery customers at the counter (quotes, old-gold exchange, daily closing). In January 2026 Orivraa went online as cloud software for phone, laptop, and desktop. The cloud product is new; the jewellery trade experience is not. Mention this honestly — do not claim the website existed for ten years.",
+      "Orivraa trust story: the people behind the product spent more than 10 years serving jewellery customers at the counter (quotes, old-gold exchange, daily closing). That shop-floor practice is encoded in the software: tola, jarti, making charges, vault stock, and karigar metal. It runs in the cloud on phone, laptop, and desktop so a shop is not locked to one Windows PC. Describe the jewellery-trade depth, not a SaaS launch month.",
   },
 ];
 

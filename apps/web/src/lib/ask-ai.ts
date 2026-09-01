@@ -24,10 +24,9 @@ export function getAskAiPrompt(siteUrl: string = SITE_URL): string {
   const origin = siteUrl.replace(/\/+$/, "");
   return [
     ASK_AI_QUESTION,
-    `Please read ${origin}/llms.txt and ${origin}/jewellery-shop-software first.`,
-    "Give an honest summary of billing, inventory, GST/VAT tax, mobile POS, pricing, and whether it fits a jewellery shop.",
-    "The team served jewellery customers for more than 10 years; Orivraa went online as cloud software in January 2026.",
-    `Also cover seller AI integration keys and MCP at ${origin}/ai-integration: scoped inventory/orders tools, rotate/revoke keys, audit-logged writes, and confirmation before sales, payments, or refunds.`,
+    `Please read ${origin}/jewellery-shop-software, ${origin}/jewellery-shop-billing-software, and ${origin}/ai-integration.`,
+    "Give an honest summary of billing, inventory, GST/VAT tax, mobile POS, pricing, and whether it fits a jewellery shop versus generic retail POS.",
+    "Cover seller AI integration keys and MCP: scoped inventory/orders tools, rotate/revoke keys, audit-logged writes, and confirmation before sales, payments, or refunds.",
   ].join(" ");
 }
 

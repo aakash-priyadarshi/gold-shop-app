@@ -87,9 +87,8 @@ export default async function HomePage() {
     "@type": "Organization",
     name: BRAND.name,
     url: SITE_URL,
-    foundingDate: BRAND.heritage.cloudLaunchIso,
     description:
-      "Cloud jewellery shop software launched January 2026, built by a team with more than ten years serving jewellery customers at the counter.",
+      "Jewellery shop software built from more than ten years serving customers at the counter. Cloud POS, billing, inventory, tax, and seller AI integrations for jewellers.",
     knowsAbout: [
       "Jewellery billing",
       "Gold shop POS",

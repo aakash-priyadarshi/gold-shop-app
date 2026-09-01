@@ -283,10 +283,10 @@ export default function AboutPage() {
               <p>
                 <T>
                   That observation sat on more than ten years of serving
-                  jewellery customers in person. In January 2026 we made the
-                  software cloud-based and opened it on the public internet —
-                  so the same counter discipline could run from a phone or a
-                  laptop, not only a shop PC.
+                  jewellery customers in person. We put that counter discipline
+                  on the cloud so the same shop can run from a phone or a
+                  laptop — not only a shop PC — without turning jewellery into
+                  generic retail SKUs.
                 </T>
               </p>
               <p>
@@ -310,7 +310,7 @@ export default function AboutPage() {
               <div className="grid sm:grid-cols-2 gap-3 pt-3">
                 {[
                   "Founded in Patna, Bihar, India (Problem discovered in Butwal, Nepal)",
-                  "10+ years serving jewellery customers; cloud software since January 2026",
+                  "10+ years serving jewellery customers — jewellery-native software on every device",
                   "Serving jewellery teams across key global markets",
                   "Built around verified sellers and transparent pricing",
                   "Designed for both walk-in and online jewellery sales",

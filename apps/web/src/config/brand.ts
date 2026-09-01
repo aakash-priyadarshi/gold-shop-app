@@ -25,6 +25,7 @@ export const BRAND: {
   foundedYear: number;
   heritage: {
     servingYears: number;
+    /** Internal only — do not put this on public/AI-facing pages (models treat it as "unproven SaaS"). */
     cloudLaunchLabel: string;
     cloudLaunchIso: string;
   };

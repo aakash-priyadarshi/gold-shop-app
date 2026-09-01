@@ -7,9 +7,9 @@ describe("Ask AI marketing links", () => {
   it("keeps the public question and points assistants at crawlable pages", () => {
     const prompt = getAskAiPrompt(SITE);
     expect(prompt.startsWith(ASK_AI_QUESTION)).toBe(true);
-    expect(prompt).toContain(`${SITE}/llms.txt`);
     expect(prompt).toContain(`${SITE}/jewellery-shop-software`);
     expect(prompt).toContain(`${SITE}/ai-integration`);
+    expect(prompt).not.toContain("January 2026");
   });
 
   it("builds encoded https URLs for ChatGPT, Claude, Gemini, and Perplexity", () => {
@@ -44,11 +44,13 @@ describe("Ask AI marketing links", () => {
   it("publishes an llms.txt brief Googlebot and AI fetchers can read", () => {
     const body = getLlmsTxt(SITE);
     expect(body).toContain("# Orivraa");
-    expect(body).toContain(`${SITE}/ask-ai`);
+    expect(body).toContain(`${SITE}/jewellery-shop-software`);
     expect(body).toContain(`${SITE}/ai-integration`);
     expect(body).toContain("inventory:read");
     expect(body).toContain("MCP");
-    expect(body).toContain("January 2026");
     expect(body).toContain("10 years");
+    expect(body).not.toContain("January 2026");
+    expect(body).not.toContain("Ask Claude");
+    expect(body).not.toContain(ASK_AI_QUESTION);
   });
 });
