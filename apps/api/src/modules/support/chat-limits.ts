@@ -99,5 +99,10 @@ export function sanitizeHistory(
 export const PUBLIC_PRIVACY_REFUSAL =
   "I don't have access to other people's accounts or personal data. I only answer Orivraa product questions for you in this chat.";
 
+/** Nest POST defaults to 201; both are a successful canned reply. */
+export function isSuccessfulPublicChatStatus(status: number): boolean {
+  return status === 200 || status === 201;
+}
+
 export const DASHBOARD_PRIVACY_REFUSAL =
   "I can only talk about your own signed-in account and shop. I can't look up or share another user's name, email, or records.";

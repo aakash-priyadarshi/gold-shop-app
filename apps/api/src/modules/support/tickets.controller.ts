@@ -4,6 +4,8 @@ import {
     Controller,
     DefaultValuePipe,
     Get,
+    HttpCode,
+    HttpStatus,
     Param,
     ParseIntPipe,
     Patch,
@@ -48,6 +50,7 @@ export class TicketsController {
 
   // ─── Public: AI Chatbot (no auth required) ───
   @Post("ai-chat")
+  @HttpCode(HttpStatus.OK)
   @SkipSecurity()
   @ApiOperation({ summary: "AI chatbot for basic support queries (public)" })
   async aiChat(
