@@ -3,11 +3,13 @@
 import { T } from "@/components/ui/T";
 import { SITE_URL } from "@/config/site";
 import {
-  ASK_AI_PROVIDERS,
   getAskAiLinks,
   getAskAiPrompt,
-  type AskAiProviderId,
 } from "@/lib/ask-ai";
+import {
+  SELLER_AI_MCP_CLIENTS,
+  SELLER_AI_SCOPES,
+} from "@/lib/seller-ai-scopes";
 import { ArrowRight, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -60,8 +62,13 @@ export function AskAiProviderButtons({
           className={`inline-flex items-center justify-center rounded-full font-semibold border shadow-sm active:scale-95 transition-all ${padding} ${provider.className}`}
           onClick={() => {
             if (provider.id !== "gemini") return;
+            const prompt = getAskAiPrompt(SITE_URL);
+            if (!navigator.clipboard?.writeText) {
+              setGeminiCopied(false);
+              return;
+            }
             void navigator.clipboard
-              .writeText(getAskAiPrompt(SITE_URL))
+              .writeText(prompt)
               .then(() => setGeminiCopied(true))
               .catch(() => setGeminiCopied(false));
           }}
@@ -169,21 +176,10 @@ export function AskAiAboutUs({
   );
 }
 
-const SCOPES = [
-  {
-    key: "inventory:read",
-    label: "Read stock, vault locations, and piece weights",
-  },
-  {
-    key: "inventory:write",
-    label: "Propose selected inventory edits for dashboard approval",
-  },
-  { key: "orders:read", label: "Read orders and fulfilment status" },
-  {
-    key: "orders:write",
-    label: "Propose allowed order-status edits for dashboard approval",
-  },
-];
+const SCOPES = SELLER_AI_SCOPES.map((scope) => ({
+  key: scope.value,
+  label: scope.description,
+}));
 
 export function SellerAiIntegrationPromo({
   variant = "section",
@@ -352,12 +348,12 @@ export function AiDiscoverySection() {
                 </T>
               </p>
               <ul className="mt-5 grid sm:grid-cols-2 gap-2 text-sm">
-                {ASK_AI_PROVIDERS.map((provider) => (
+                {SELLER_AI_MCP_CLIENTS.map((client) => (
                   <li
-                    key={provider.id as AskAiProviderId}
+                    key={client.id}
                     className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-200"
                   >
-                    {provider.name}
+                    {client.name}
                   </li>
                 ))}
               </ul>

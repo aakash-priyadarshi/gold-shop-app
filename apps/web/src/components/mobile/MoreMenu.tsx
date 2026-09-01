@@ -126,13 +126,11 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
             </h3>
             <div className="grid grid-cols-4 gap-4">
               {sec.items.map((item) => (
-                <div
+                <Link
                   key={item.href}
-                  onClick={() => {
-                    onClose?.();
-                    router.push(item.href);
-                  }}
-                  className="flex flex-col items-center text-center gap-2 cursor-pointer"
+                  href={item.href}
+                  onClick={() => onClose?.()}
+                  className="flex flex-col items-center text-center gap-2"
                 >
                   <div className="h-14 w-14 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-center active:scale-95 transition-transform">
                     <item.icon className="h-6 w-6 text-amber-600" />
@@ -140,7 +138,7 @@ export function MoreMenu({ onClose }: MoreMenuProps) {
                   <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
                     <T>{item.label}</T>
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

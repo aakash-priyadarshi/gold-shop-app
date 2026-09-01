@@ -3728,6 +3728,7 @@ model SellerAiAction {
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, status, createdAt])
+  @@index([shopId, status, expiresAt])
   @@index([apiKeyId, createdAt])
   @@index([expiresAt])
 }

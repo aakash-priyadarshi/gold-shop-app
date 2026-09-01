@@ -151,4 +151,85 @@ describe("SellerAiService", () => {
       expect.objectContaining({ action: "AI_WRITE_CONFIRMED" }),
     );
   });
+
+  it("marks a request failed only when the mutation did not run", async () => {
+    const action = {
+      id: "action-1",
+      shopId: "shop-1",
+      keyPrefix: "ovrk_test",
+      toolName: "propose_inventory_update",
+      status: SellerAiActionStatus.PENDING,
+      payload: {
+        type: "inventory_update",
+        itemId: "item-1",
+        changes: { makingChargeNpr: 500 },
+      },
+    };
+    prisma.sellerAiAction.findFirst.mockResolvedValue(action);
+    prisma.sellerAiAction.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    inventory.update.mockRejectedValue(new Error("inventory down"));
+
+    await expect(
+      service.confirmAction("shop-1", "action-1", "owner-1"),
+    ).rejects.toThrow("inventory down");
+
+    expect(prisma.sellerAiAction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: SellerAiActionStatus.FAILED },
+      }),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "AI_WRITE_FAILED" }),
+    );
+  });
+
+  it("reconciles confirmed state when the mutation ran but post-confirm steps fail", async () => {
+    const action = {
+      id: "action-1",
+      shopId: "shop-1",
+      keyPrefix: "ovrk_test",
+      toolName: "propose_inventory_update",
+      status: SellerAiActionStatus.PENDING,
+      payload: {
+        type: "inventory_update",
+        itemId: "item-1",
+        changes: { makingChargeNpr: 500 },
+      },
+    };
+    prisma.sellerAiAction.findFirst.mockResolvedValue(action);
+    prisma.sellerAiAction.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
+    inventory.update.mockResolvedValue({ id: "item-1", makingChargeNpr: 500 });
+    prisma.sellerAiAction.update.mockRejectedValue(new Error("db write failed"));
+
+    await expect(
+      service.confirmAction("shop-1", "action-1", "owner-1"),
+    ).rejects.toThrow("db write failed");
+
+    expect(prisma.sellerAiAction.update).toHaveBeenCalledTimes(1);
+    expect(prisma.sellerAiAction.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "action-1",
+          status: SellerAiActionStatus.PROCESSING,
+        }),
+        data: expect.objectContaining({
+          status: SellerAiActionStatus.CONFIRMED,
+        }),
+      }),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "AI_WRITE_CONFIRMED",
+        metadata: expect.objectContaining({ reconciliation: true }),
+      }),
+    );
+    expect(audit.log).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: "AI_WRITE_FAILED" }),
+    );
+  });
 });

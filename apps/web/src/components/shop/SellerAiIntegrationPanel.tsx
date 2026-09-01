@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { SELLER_AI_SCOPES } from "@/lib/seller-ai-scopes";
 import { useT } from "@/providers/translation-provider";
 import {
   Bot,
@@ -65,29 +66,7 @@ type SellerAiAction = {
   createdAt: string;
 };
 
-const SCOPES = [
-  {
-    value: "inventory:read",
-    label: "Read inventory",
-    description: "Search stock, SKU, weight, price, and availability.",
-  },
-  {
-    value: "inventory:write",
-    label: "Propose inventory edits",
-    description:
-      "Draft price, description, label, or stock changes for your approval.",
-  },
-  {
-    value: "orders:read",
-    label: "Read orders",
-    description: "List orders without exposing customer email or phone.",
-  },
-  {
-    value: "orders:write",
-    label: "Propose order status edits",
-    description: "Draft a non-financial status update for your approval.",
-  },
-] as const;
+const SCOPES = SELLER_AI_SCOPES;
 
 const DURATIONS = [
   { value: "30", label: "30 days" },

@@ -157,6 +157,7 @@ export class SellerAiService {
       );
     }
 
+    let mutationApplied = false;
     try {
       const payload = this.parseActionPayload(action.payload);
       let result: unknown;
@@ -166,6 +167,7 @@ export class SellerAiService {
           userId,
           payload.changes,
         );
+        mutationApplied = true;
       } else if (payload.type === "order_status_update") {
         result = await this.orders.shopkeeperUpdateOrderStatus(
           payload.orderId,
@@ -173,6 +175,7 @@ export class SellerAiService {
           { detailedStatus: payload.detailedStatus },
           shopId,
         );
+        mutationApplied = true;
       } else {
         throw new BadRequestException("Unsupported AI action");
       }
@@ -199,22 +202,50 @@ export class SellerAiService {
       });
       return { action: await this.getAction(shopId, actionId), result };
     } catch (error) {
-      await this.prisma.sellerAiAction.update({
-        where: { id: actionId },
-        data: { status: SellerAiActionStatus.FAILED },
-      });
-      await this.audit.log({
-        userId,
-        actorType: "SHOPKEEPER",
-        action: "AI_WRITE_FAILED",
-        resourceType: "SellerAiAction",
-        resourceId: actionId,
-        metadata: {
-          shopId,
-          toolName: action.toolName,
-          keyPrefix: action.keyPrefix,
-        },
-      });
+      if (!mutationApplied) {
+        await this.prisma.sellerAiAction.update({
+          where: { id: actionId },
+          data: { status: SellerAiActionStatus.FAILED },
+        });
+        await this.audit.log({
+          userId,
+          actorType: "SHOPKEEPER",
+          action: "AI_WRITE_FAILED",
+          resourceType: "SellerAiAction",
+          resourceId: actionId,
+          metadata: {
+            shopId,
+            toolName: action.toolName,
+            keyPrefix: action.keyPrefix,
+          },
+        });
+      } else {
+        await this.prisma.sellerAiAction.updateMany({
+          where: {
+            id: actionId,
+            shopId,
+            status: SellerAiActionStatus.PROCESSING,
+          },
+          data: {
+            status: SellerAiActionStatus.CONFIRMED,
+            confirmedByUserId: userId,
+            confirmedAt: new Date(),
+          },
+        });
+        await this.audit.log({
+          userId,
+          actorType: "SHOPKEEPER",
+          action: "AI_WRITE_CONFIRMED",
+          resourceType: "SellerAiAction",
+          resourceId: actionId,
+          metadata: {
+            shopId,
+            toolName: action.toolName,
+            keyPrefix: action.keyPrefix,
+            reconciliation: true,
+          },
+        });
+      }
       throw error;
     }
   }

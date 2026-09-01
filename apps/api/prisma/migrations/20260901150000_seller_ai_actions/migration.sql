@@ -33,6 +33,8 @@ ALTER TABLE "SellerAiAction"
 
 CREATE INDEX "SellerAiAction_shopId_status_createdAt_idx"
   ON "SellerAiAction"("shopId", "status", "createdAt");
+CREATE INDEX "SellerAiAction_shopId_status_expiresAt_idx"
+  ON "SellerAiAction"("shopId", "status", "expiresAt");
 CREATE INDEX "SellerAiAction_apiKeyId_createdAt_idx"
   ON "SellerAiAction"("apiKeyId", "createdAt");
 CREATE INDEX "SellerAiAction_expiresAt_idx" ON "SellerAiAction"("expiresAt");
