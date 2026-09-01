@@ -8,6 +8,10 @@ describe("seo-audit-html", () => {
     expect(decodeHtmlEntities("d&#x27;Orivraa")).toBe("d'Orivraa");
   });
 
+  it("does not double-unescape encoded ampersands", () => {
+    expect(decodeHtmlEntities("&amp;lt;script&amp;gt;")).toBe("&lt;script&gt;");
+  });
+
   it("ignores the global noscript fallback h1", () => {
     const html = `
       <noscript><h1>Orivraa — Premium Jewellery Marketplace</h1></noscript>
