@@ -11,8 +11,8 @@ import {
 } from "@/data/about-summary-i18n";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
-import { absolutePageTitle } from "@/lib/seo/metadata";
-import { Metadata } from "next";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+import type { Metadata } from "next";
 
 const BASE_URL = SITE_URL;
 
@@ -46,25 +46,13 @@ export async function generateMetadata({
     languages[l] = `${BASE_URL}/about/${l}`;
   }
 
-  return {
-    title: absolutePageTitle(c.metaTitle),
+  return buildMarketingMetadata({
+    title: c.metaTitle,
     description: c.metaDescription,
-    alternates: {
-      canonical: `${BASE_URL}/about/${lang}`,
-      languages,
-    },
-    openGraph: {
-      title: c.metaTitle,
-      description: c.metaDescription,
-      url: `${BASE_URL}/about/${lang}`,
-      locale: lang,
-      type: "website",
-      siteName: "Orivraa",
-    },
-    other: {
-      "content-language": lang,
-    },
-  };
+    path: `/about/${lang}`,
+    languages,
+    locale: lang,
+  });
 }
 
 function generateJsonLd(lang: Language) {

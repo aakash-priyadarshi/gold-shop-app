@@ -1,10 +1,26 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Orivraa Tutorial for Jewellery Software"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Orivraa Tutorial for Jewellery Software",
   description:
     "Watch the Orivraa walkthrough for jewellery inventory, GST/VAT invoices, POS, catalogues, karigar tracking, and AI insights.",
+  path: "/tutorial",
+  languages: {
+    en: "/tutorial",
+    hi: "/tutorial/hi",
+    ne: "/tutorial/ne",
+    gu: "/tutorial/gu",
+    mr: "/tutorial/mr",
+    ta: "/tutorial/ta",
+    te: "/tutorial/te",
+    kn: "/tutorial/kn",
+    fr: "/tutorial/fr",
+    de: "/tutorial/de",
+    es: "/tutorial/es",
+    ar: "/tutorial/ar",
+    "x-default": "/tutorial",
+  },
   keywords: [
     "jewellery shop software tutorial",
     "jewellery software tutorial video",
@@ -51,45 +67,7 @@ export const metadata: Metadata = {
     "jewellery ecommerce software tutorial",
     "jewellery customer management software",
   ],
-  alternates: {
-    canonical: "/tutorial",
-    languages: {
-      "en": "/tutorial",
-      "hi": "/tutorial/hi",
-      "ne": "/tutorial/ne",
-      "gu": "/tutorial/gu",
-      "mr": "/tutorial/mr",
-      "ta": "/tutorial/ta",
-      "te": "/tutorial/te",
-      "kn": "/tutorial/kn",
-      "fr": "/tutorial/fr",
-      "de": "/tutorial/de",
-      "es": "/tutorial/es",
-      "ar": "/tutorial/ar",
-      "x-default": "/tutorial",
-    },
-  },
-  openGraph: {
-    title: "Orivraa Tutorial for Jewellery Software",
-    description:
-      "Full 24-minute step-by-step tutorial of Orivraa jewellery shop software. Inventory, billing, POS, catalogues, karigars, tax engine, and AI insights — all shown live.",
-    url: "https://www.orivraa.com/tutorial",
-    type: "video.other",
-    videos: [
-      {
-        url: "https://images.orivraa.com/tutorial/en",
-        secureUrl: "https://images.orivraa.com/tutorial/en",
-        type: "video/mp4",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Orivraa Tutorial for Jewellery Software",
-    description:
-      "Watch the full 24-minute Orivraa tutorial — GST billing, POS, inventory by weight & purity, digital catalogues, karigars, and AI insights.",
-  },
-};
+});
 
 export default function TutorialLayout({ children }: { children: React.ReactNode }) {
   return children;

@@ -20,21 +20,21 @@ import {
   Smartphone,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title:
-    "Jewellery Shop Software for UAE & Dubai | Cloud POS, FTA VAT & Arabic Invoicing | Orivraa",
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Shop Software for UAE & Dubai | Cloud POS & VAT",
   description:
-    "Cloud jewellery management software purpose-built for UAE and Dubai gold shops. Handles FTA VAT 5% on worked jewellery, investment gold zero-rating, bilingual Arabic + English invoices, GCC wholesale, making charges, and AED billing. Pro from AED 39.99/month. Free plan available.",
-  alternates: {
-    canonical: "https://www.orivraa.com/uae/jewellery-shop-software",
-  },
-  openGraph: {
-    title: "Jewellery Shop Software UAE & Dubai | Orivraa",
-    description:
-      "Cloud jewellery software for UAE gold shops. FTA VAT, Arabic invoices, investment gold zero-rating, GCC wholesale. Pro from AED 39.99/mo.",
-    url: "https://www.orivraa.com/uae/jewellery-shop-software",
-  },
-};
+    "Cloud jewellery POS for UAE & Dubai gold shops. FTA 5% VAT, bilingual Arabic invoices, investment gold zero-rating, and live AED billing. Free plan.",
+  path: "/uae/jewellery-shop-software",
+  keywords: [
+    "jewellery software UAE",
+    "gold shop software Dubai",
+    "Dubai gold souk POS",
+    "Arabic jewellery invoice",
+    "FTA VAT jewellery",
+  ],
+});
 
 const jsonLd = {
   "@context": "https://schema.org",

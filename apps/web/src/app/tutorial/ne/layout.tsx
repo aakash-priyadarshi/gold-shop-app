@@ -1,10 +1,17 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("ओरिव्रा ट्यूटोरियल 2026 | गहना पसलको सम्पूर्ण नेपाली भिडियो गाइड"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "ओरिव्रा ट्यूटोरियल | गहना पसल सफ्टवेयर गाइड",
   description:
-    "ओरिव्रा गहना पसल सफ्टवेयरको २४ मिनेटको नेपाली ट्यूटोरियल। Inventory, GST बिलिङ, POS, Digital Catalogue, कारीगर Tracking, Tax Report र AI Insights — सबै एकै ठाउँमा।",
+    "ओरिव्रा गहना पसल सफ्टवेयरको २४ मिनेटको नेपाली गाइड: इन्भेन्टरी, बिलिङ, POS, डिजिटल क्याटलग र कारीगर। नि:शुल्क सुरु गर्नुहोस्।",
+  path: "/tutorial/ne",
+  locale: "ne_NP",
+  languages: {
+    ne: "/tutorial/ne",
+    en: "/tutorial",
+    "x-default": "/tutorial",
+  },
   keywords: [
     "गहना पसल सफ्टवेयर नेपाली",
     "सुनचाँदी पसल सफ्टवेयर",
@@ -14,49 +21,9 @@ export const metadata: Metadata = {
     "GST billing software Nepal Nepali",
     "ज्वेलरी POS सफ्टवेयर नेपाल",
     "गहना इन्भेन्टरी सफ्टवेयर नेपाल",
-    "karigar management software Nepal",
-    "gold shop software Nepal",
-    "jewellery shop software Nepal 2026",
-    "ओरिव्रा ट्यूटोरियल नेपाली",
     "Orivraa tutorial Nepali",
-    "Orivraa jewellery software Nepali",
-    "best jewellery software Nepal 2026",
-    "jewellery management software Nepal",
-    "सुन चाँदी पसल app Nepal",
-    "jewellery ERP Nepal Nepali",
-    "digital catalogue jewellery Nepal",
-    "jewellery billing GST Nepal",
-    "सर्राफ पसल सफ्टवेयर",
   ],
-  alternates: {
-    canonical: "/tutorial/ne",
-    languages: {
-      ne: "/tutorial/ne",
-      en: "/tutorial",
-      "x-default": "/tutorial",
-    },
-  },
-  openGraph: {
-    title: "ओरिव्रा ट्यूटोरियल 2026 | गहना पसल सफ्टवेयर नेपाली भिडियो",
-    description:
-      "२४ मिनेटको नेपाली ट्यूटोरियल — GST बिलिङ, POS, Inventory, Digital Catalogue, कारीगर Tracking र AI Insights।",
-    url: "https://www.orivraa.com/tutorial/ne",
-    type: "video.other",
-    videos: [
-      {
-        url: "https://images.orivraa.com/tutorial/ne",
-        secureUrl: "https://images.orivraa.com/tutorial/ne",
-        type: "video/mp4",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "ओरिव्रा ट्यूटोरियल 2026 | गहना पसल सफ्टवेयर नेपाली भिडियो",
-    description:
-      "२४ मिनेटको नेपाली ट्यूटोरियल — GST बिलिङ, POS, Inventory, कारीगर र AI Insights।",
-  },
-};
+});
 
 export default function TutorialNeLayout({ children }: { children: React.ReactNode }) {
   return children;

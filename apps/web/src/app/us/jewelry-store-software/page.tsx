@@ -19,21 +19,21 @@ import {
   Zap,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title:
-    "Jewelry Store Software for the USA | Cloud POS, Sales Tax & Billing | Orivraa",
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewelry Store Software for USA | Cloud POS & Sales Tax",
   description:
-    "Cloud jewelry store management software built for US shops. Handles state sales tax, USD billing, weight in grams and troy ounces, live gold and silver spot prices, and custom order management. Pro plan from $12.99/month. Free plan available — no credit card.",
-  alternates: {
-    canonical: "https://www.orivraa.com/us/jewelry-store-software",
-  },
-  openGraph: {
-    title: "Jewelry Store Software USA | Orivraa",
-    description:
-      "Cloud jewelry software for US shops. State sales tax, USD pricing, troy ounce billing, live gold rates. Pro from $12.99/mo. Free plan available.",
-    url: "https://www.orivraa.com/us/jewelry-store-software",
-  },
-};
+    "Cloud jewelry POS & inventory software for US shops. State sales tax itemization, live gold/silver spot rates, and USD billing on any phone or desktop.",
+  path: "/us/jewelry-store-software",
+  keywords: [
+    "jewelry store software USA",
+    "jewelry POS software",
+    "jewelry inventory software US",
+    "cloud jewelry management",
+    "The Edge alternative jewelry",
+  ],
+});
 
 const jsonLd = {
   "@context": "https://schema.org",
