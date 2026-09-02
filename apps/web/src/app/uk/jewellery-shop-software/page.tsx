@@ -25,6 +25,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     "Cloud jewellery POS for UK shops with HMRC MTD VAT, UK Assay Office hallmarking, live bullion pricing, and GBP counter billing. Free plan available.",
   path: "/uk/jewellery-shop-software",
+  locale: "en_GB",
   keywords: [
     "jewellery software UK",
     "gold shop software London",

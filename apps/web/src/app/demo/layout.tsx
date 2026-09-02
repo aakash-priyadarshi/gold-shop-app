@@ -6,6 +6,14 @@ export const metadata: Metadata = buildMarketingMetadata({
   description:
     "Watch a 30-second demo of Orivraa jewellery software: live dashboards, weight-based inventory, POS, GST invoices, and catalogues.",
   path: "/demo",
+  type: "video.other",
+  videos: [
+    {
+      url: "https://images.orivraa.com/demo/en",
+      secureUrl: "https://images.orivraa.com/demo/en",
+      type: "video/mp4",
+    },
+  ],
   keywords: [
     "jewellery shop software demo",
     "jewellery software demo video",

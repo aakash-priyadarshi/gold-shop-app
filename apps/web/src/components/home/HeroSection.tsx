@@ -468,7 +468,7 @@ function SellerHero({
                       <motion.div
                         key={item.label}
                         whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
-                        className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center transition-shadow duration-300 ${
+                        className={`group rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center transition-shadow duration-300 ${
                           videoSrc
                             ? "bg-white/10 backdrop-blur-sm"
                             : "bg-gradient-to-br from-white/70 to-gold-50/20 dark:from-[#0b1420]/90 dark:to-navy-950/40 border border-gray-150/40 dark:border-navy-850/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-gold-400/40"

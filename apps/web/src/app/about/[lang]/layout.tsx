@@ -11,7 +11,10 @@ import {
 } from "@/data/about-summary-i18n";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
-import { buildMarketingMetadata } from "@/lib/seo/metadata";
+import {
+  buildMarketingMetadata,
+  openGraphLocaleForLang,
+} from "@/lib/seo/metadata";
 import type { Metadata } from "next";
 
 const BASE_URL = SITE_URL;
@@ -51,7 +54,7 @@ export async function generateMetadata({
     description: c.metaDescription,
     path: `/about/${lang}`,
     languages,
-    locale: lang,
+    locale: openGraphLocaleForLang(lang),
   });
 }
 
