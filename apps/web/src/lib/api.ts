@@ -2325,6 +2325,8 @@ export interface RecoveryOfferPreview {
     shopName: string;
     country: string;
     reportCount: number;
+    emailVerified: boolean;
+    hasPaidPlan: boolean;
   }>;
   excluded: Array<{ userId?: string; email?: string; reason: string }>;
 }
@@ -2345,6 +2347,8 @@ export interface RecoveryAudiencePreview {
     incidentAffected: boolean;
     timeZone: string;
     recommendedSendAt: string;
+    emailVerified: boolean;
+    hasPaidPlan: boolean;
   }>;
   excluded: Array<{ userId?: string; email?: string; reason: string }>;
 }
@@ -2439,6 +2443,7 @@ export const recoveryOffersApi = {
       expiresAt: string;
       claimedAt?: string;
       claimable: boolean;
+      requiresEmailVerification: boolean;
     }>("/recovery-offers/lookup", { token }),
   claim: (token: string) =>
     api.post<{
@@ -2447,6 +2452,7 @@ export const recoveryOffersApi = {
       days: number;
       currentPeriodEnd?: string;
       planName?: string;
+      outcome?: "activated" | "extended" | "already_covered";
     }>("/recovery-offers/claim", { token }),
   recent: () =>
     api.get<

@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 
 const TOKEN_STORAGE_KEY = "orivraaRecoveryOfferToken";
 
+type ClaimOutcome = "activated" | "extended" | "already_covered";
+
 type Offer = {
   recipient: string;
   days: number;
@@ -19,6 +21,8 @@ type Offer = {
   expiresAt: string;
   claimedAt?: string;
   claimable: boolean;
+  requiresEmailVerification?: boolean;
+  outcome?: ClaimOutcome;
 };
 
 export default function RecoveryProPage() {
@@ -80,6 +84,7 @@ export default function RecoveryProPage() {
               claimable: false,
               claimedAt: new Date().toISOString(),
               days: response.data.days,
+              outcome: response.data.outcome,
             }
           : current,
       );
@@ -101,6 +106,14 @@ export default function RecoveryProPage() {
     }
   };
 
+  const days = offer?.days ?? 50;
+  const claimedMessage =
+    offer?.outcome === "extended"
+      ? `Your Pro access now runs ${days} days from today.`
+      : offer?.outcome === "already_covered"
+        ? `You already have more than ${days} days of Pro, so nothing changed.`
+        : "Your complimentary Pro access is active.";
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white px-4 py-12 dark:from-gray-950 dark:to-gray-900">
       <Card className="mx-auto max-w-lg border-amber-200 shadow-xl dark:border-amber-900">
@@ -109,7 +122,7 @@ export default function RecoveryProPage() {
             <Gift className="h-7 w-7" />
           </div>
           <CardTitle className="text-2xl">
-            <T>40 days of Orivraa Pro on us</T>
+            {days} <T>days of Orivraa Pro on us</T>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 text-center">
@@ -123,7 +136,7 @@ export default function RecoveryProPage() {
             <>
               <ShieldCheck className="mx-auto h-12 w-12 text-green-600" />
               <p className="font-semibold text-green-700 dark:text-green-300">
-                <T>Your complimentary Pro access is active.</T>
+                {t(claimedMessage)}
               </p>
               <Button asChild className="w-full">
                 <Link href="/dashboard/shop">
@@ -133,12 +146,32 @@ export default function RecoveryProPage() {
             </>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                <T>
-                  This account-bound offer requires no card and will not renew
-                  automatically.
-                </T>
-              </p>
+              <div className="space-y-3 text-left text-sm text-muted-foreground">
+                <p>
+                  <T>
+                    If this shop is not on Pro yet, activating this link starts
+                    complimentary Pro from today. It does not require a card and
+                    will not renew automatically.
+                  </T>
+                </p>
+                <p>
+                  <T>
+                    If this shop already has Pro, activating this link extends
+                    Pro to
+                  </T>{" "}
+                  {days}{" "}
+                  <T>
+                    days from today. If more than that already remains, your
+                    current plan is left unchanged.
+                  </T>
+                </p>
+                <p>
+                  <T>
+                    If your email is not verified yet, sign in first. We will
+                    send a verification code, then you can activate this gift.
+                  </T>
+                </p>
+              </div>
               {offer && (
                 <div className="rounded-lg border bg-muted/40 p-4 text-sm">
                   <p>
@@ -155,10 +188,18 @@ export default function RecoveryProPage() {
                   {t(error)}
                 </p>
               )}
+              {offer?.requiresEmailVerification && (
+                <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  <T>
+                    This email still needs verification. Sign in, enter the
+                    code, then return here to activate the offer.
+                  </T>
+                </p>
+              )}
               {!isAuthenticated ? (
                 <Button asChild className="w-full">
                   <Link href="/auth/login?returnTo=%2Frecovery%2Fpro">
-                    <T>Sign in to claim my 40 days</T>
+                    <T>Sign in to claim this offer</T>
                   </Link>
                 </Button>
               ) : (
@@ -170,7 +211,7 @@ export default function RecoveryProPage() {
                   {claiming && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  <T>Activate 40 days of Pro</T>
+                  <T>Activate this Pro offer</T>
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">

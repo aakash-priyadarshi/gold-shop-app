@@ -9,7 +9,7 @@ import { RecoveryOffersService } from "./recovery-offers.service";
 describe("RecoveryOffersService", () => {
   const prisma: any = {
     crashReport: { findMany: jest.fn() },
-    user: { findMany: jest.fn() },
+    user: { findMany: jest.fn(), findUnique: jest.fn() },
     subscriptionPlan: { findMany: jest.fn(), findFirst: jest.fn() },
     sellerSubscription: {
       findMany: jest.fn(),
@@ -125,6 +125,8 @@ describe("RecoveryOffersService", () => {
         incidentAffected: false,
         timeZone: "Asia/Kolkata",
         recommendedSendAt: new Date("2026-09-01T04:30:00.000Z"),
+        emailVerified: true,
+        hasPaidPlan: false,
       }),
     ]);
     jest.useRealTimers();
@@ -184,7 +186,7 @@ describe("RecoveryOffersService", () => {
     jest.useRealTimers();
   });
 
-  it("does not offer recovery PRO to an active paid subscriber", async () => {
+  it("offers recovery PRO to an active paid subscriber", async () => {
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },
     ]);
@@ -220,12 +222,53 @@ describe("RecoveryOffersService", () => {
 
     const result = await service.preview(["report-1"]);
 
-    expect(result.eligible).toEqual([]);
-    expect(result.excluded).toEqual([
+    expect(result.eligible).toEqual([
       expect.objectContaining({
-        reason: "Account already has an active paid plan",
+        userId: "user-1",
+        email: "paid@example.com",
+        hasPaidPlan: true,
+        emailVerified: true,
       }),
     ]);
+    expect(result.excluded).toEqual([]);
+  });
+
+  it("offers recovery PRO to an unverified shopkeeper", async () => {
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-1" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "pending@example.com",
+        firstName: "Pending",
+        role: UserRole.SHOPKEEPER,
+        emailVerified: false,
+        activeShopId: "shop-1",
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Pending Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+
+    const result = await service.preview(["report-1"]);
+
+    expect(result.eligible).toEqual([
+      expect.objectContaining({
+        userId: "user-1",
+        email: "pending@example.com",
+        emailVerified: false,
+        hasPaidPlan: false,
+      }),
+    ]);
+    expect(result.excluded).toEqual([]);
   });
 
   it("queues delivery without sending email in the admin request", async () => {
@@ -667,20 +710,25 @@ describe("RecoveryOffersService", () => {
     expect(result.resendApiConfigured).toBe(true);
   });
 
-  it("extends an existing trial by exactly the offered days", async () => {
+  it("extends an existing trial to the offered window from claim time", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
     const now = Date.now();
     const currentPeriodEnd = new Date(now + 5 * 24 * 60 * 60 * 1000);
     const offer = {
       id: "offer-1",
       userId: "user-1",
       shopId: "shop-1",
-      days: 40,
+      days: 50,
       status: RecoveryOfferStatus.SENT,
       expiresAt: new Date(now + 10 * 24 * 60 * 60 * 1000),
       claimedAt: null,
       grantedSubscriptionId: null,
     };
     prisma.recoveryOffer.findUnique.mockResolvedValue(offer);
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: true,
+      status: "ACTIVE",
+    });
     prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
     prisma.shop.findFirst.mockResolvedValue({
       id: "shop-1",
@@ -707,22 +755,29 @@ describe("RecoveryOffersService", () => {
     const result = await service.claim("a".repeat(32), "user-1");
 
     expect(result.claimed).toBe(true);
+    expect(result.outcome).toBe("extended");
     const update = prisma.sellerSubscription.update.mock.calls[0][0];
     expect(update.data.currentPeriodEnd.getTime()).toBe(
-      currentPeriodEnd.getTime() + 40 * 24 * 60 * 60 * 1000,
+      now + 50 * 24 * 60 * 60 * 1000,
     );
     expect(prisma.sellerSubscription.create).not.toHaveBeenCalled();
   });
 
-  it("refuses to replace a paid plan that became active after the offer was sent", async () => {
+  it("extends a paid Pro plan to 50 days from claim when fewer than 50 days remain", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const now = Date.now();
     prisma.recoveryOffer.findUnique.mockResolvedValue({
       id: "offer-1",
       userId: "user-1",
       shopId: "shop-1",
-      days: 40,
+      days: 50,
       status: RecoveryOfferStatus.SENT,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(now + 24 * 60 * 60 * 1000),
       claimedAt: null,
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: true,
+      status: "ACTIVE",
     });
     prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
     prisma.shop.findFirst.mockResolvedValue({
@@ -734,14 +789,99 @@ describe("RecoveryOffersService", () => {
       {
         id: "paid-subscription",
         status: SubscriptionStatus.ACTIVE,
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd: new Date(now + 30 * 24 * 60 * 60 * 1000),
         plan: { name: "PRO" },
       },
     ]);
-
-    await expect(service.claim("c".repeat(32), "user-1")).rejects.toThrow(
-      "Your account already has a paid plan",
+    prisma.sellerSubscription.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({
+        id: "paid-subscription",
+        currentPeriodEnd: data.currentPeriodEnd,
+        plan: { name: "PRO" },
+      }),
     );
+    prisma.recoveryOffer.update.mockResolvedValue({});
+
+    const result = await service.claim("c".repeat(32), "user-1");
+
+    expect(result.claimed).toBe(true);
+    expect(result.outcome).toBe("extended");
+    const update = prisma.sellerSubscription.update.mock.calls[0][0];
+    expect(update.data.currentPeriodEnd.getTime()).toBe(
+      now + 50 * 24 * 60 * 60 * 1000,
+    );
+    expect(prisma.sellerSubscription.create).not.toHaveBeenCalled();
+  });
+
+  it("leaves a paid Pro plan unchanged when more than 50 days already remain", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    const now = Date.now();
+    const currentPeriodEnd = new Date(now + 80 * 24 * 60 * 60 * 1000);
+    prisma.recoveryOffer.findUnique.mockResolvedValue({
+      id: "offer-1",
+      userId: "user-1",
+      shopId: "shop-1",
+      days: 50,
+      status: RecoveryOfferStatus.SENT,
+      expiresAt: new Date(now + 24 * 60 * 60 * 1000),
+      claimedAt: null,
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: true,
+      status: "ACTIVE",
+    });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.shop.findFirst.mockResolvedValue({
+      id: "shop-1",
+      userId: "user-1",
+      country: "IN",
+    });
+    prisma.sellerSubscription.findMany.mockResolvedValue([
+      {
+        id: "paid-subscription",
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodEnd,
+        plan: { name: "PRO" },
+      },
+    ]);
+    prisma.recoveryOffer.update.mockResolvedValue({});
+
+    const result = await service.claim("d".repeat(32), "user-1");
+
+    expect(result.claimed).toBe(true);
+    expect(result.outcome).toBe("already_covered");
+    expect(result.subscriptionId).toBe("paid-subscription");
+    expect(prisma.sellerSubscription.update).not.toHaveBeenCalled();
+    expect(prisma.sellerSubscription.create).not.toHaveBeenCalled();
+    expect(prisma.recoveryOffer.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: RecoveryOfferStatus.CLAIMED,
+          grantedSubscriptionId: "paid-subscription",
+        }),
+      }),
+    );
+  });
+
+  it("refuses to grant the offer before the recipient verifies email", async () => {
+    prisma.recoveryOffer.findUnique.mockResolvedValue({
+      id: "offer-1",
+      userId: "user-1",
+      shopId: "shop-1",
+      days: 50,
+      status: RecoveryOfferStatus.SENT,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      claimedAt: null,
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: false,
+      status: "ACTIVE",
+    });
+
+    await expect(service.claim("e".repeat(32), "user-1")).rejects.toThrow(
+      "Verify your email before activating this offer",
+    );
+    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
     expect(prisma.sellerSubscription.update).not.toHaveBeenCalled();
     expect(prisma.sellerSubscription.create).not.toHaveBeenCalled();
   });
@@ -754,6 +894,7 @@ describe("RecoveryOffersService", () => {
       status: RecoveryOfferStatus.SENT,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       claimedAt: null,
+      user: { emailVerified: true },
     });
 
     const result = await service.lookup("b".repeat(32));
@@ -761,5 +902,6 @@ describe("RecoveryOffersService", () => {
     expect(result.recipient).toBe("ow***@example.com");
     expect(result.recipient).not.toContain("owner@");
     expect(result.claimable).toBe(true);
+    expect(result.requiresEmailVerification).toBe(false);
   });
 });

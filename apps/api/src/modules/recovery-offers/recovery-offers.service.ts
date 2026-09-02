@@ -55,7 +55,11 @@ type Candidate = {
   lastActiveAt: Date | null;
   activitySegment: "recent" | "dormant" | "lapsed";
   incidentAffected: boolean;
+  emailVerified: boolean;
+  hasPaidPlan: boolean;
 };
+
+type RecoveryGrantOutcome = "activated" | "extended" | "already_covered";
 
 type Exclusion = {
   userId?: string;
@@ -95,6 +99,8 @@ export class RecoveryOffersService {
         shopName: candidate.shopName,
         country: candidate.country,
         reportCount: candidate.reportIds.length,
+        emailVerified: candidate.emailVerified,
+        hasPaidPlan: candidate.hasPaidPlan,
       })),
       excluded,
     };
@@ -129,6 +135,8 @@ export class RecoveryOffersService {
           incidentAffected: candidate.incidentAffected,
           timeZone: LOCAL_TEN_AM_TIME_ZONES[candidate.country],
           recommendedSendAt: delivery?.scheduledFor || null,
+          emailVerified: candidate.emailVerified,
+          hasPaidPlan: candidate.hasPaidPlan,
         };
       }),
       excluded,
@@ -599,6 +607,7 @@ export class RecoveryOffersService {
         status: true,
         expiresAt: true,
         claimedAt: true,
+        user: { select: { emailVerified: true } },
       },
     });
     if (!offer) throw new NotFoundException("Recovery offer not found");
@@ -620,6 +629,7 @@ export class RecoveryOffersService {
       expiresAt: offer.expiresAt,
       claimedAt: offer.claimedAt,
       claimable: !expired && offer.status === RecoveryOfferStatus.SENT,
+      requiresEmailVerification: offer.user?.emailVerified === false,
     };
   }
 
@@ -655,6 +665,24 @@ export class RecoveryOffersService {
           );
         }
 
+        const claimant = await tx.user.findUnique({
+          where: { id: userId },
+          select: { emailVerified: true, status: true },
+        });
+        if (
+          claimant?.status &&
+          claimant.status !== UserStatus.ACTIVE
+        ) {
+          throw new ForbiddenException(
+            "This account cannot claim the recovery offer",
+          );
+        }
+        if (!claimant?.emailVerified) {
+          throw new ForbiddenException(
+            "Verify your email before activating this offer. Sign in to receive a verification code, then return to this page.",
+          );
+        }
+
         const locked = await tx.recoveryOffer.updateMany({
           where: {
             id: offer.id,
@@ -669,7 +697,10 @@ export class RecoveryOffersService {
           );
         }
 
-        const subscription = await this.grantEntitlement(tx, offer);
+        const { subscription, outcome } = await this.grantEntitlement(
+          tx,
+          offer,
+        );
         const claimedAt = new Date();
         await tx.recoveryOffer.update({
           where: { id: offer.id },
@@ -688,6 +719,7 @@ export class RecoveryOffersService {
           subscriptionId: subscription.id,
           currentPeriodEnd: subscription.currentPeriodEnd,
           planName: subscription.plan.name,
+          outcome,
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -1005,14 +1037,6 @@ export class RecoveryOffersService {
         });
         continue;
       }
-      if (!user.emailVerified) {
-        excluded.push({
-          userId: user.id,
-          email: user.email,
-          reason: "Email address is not verified",
-        });
-        continue;
-      }
 
       const shop =
         user.shops.find((candidate) => candidate.id === user.activeShopId) ||
@@ -1048,19 +1072,9 @@ export class RecoveryOffersService {
         continue;
       }
 
-      const blockingPaidSubscription = shop.subscriptions.find(
-        (subscription) =>
-          subscription.plan.name !== "FREE" &&
-          subscription.status !== SubscriptionStatus.TRIALING,
+      const hasPaidPlan = shop.subscriptions.some(
+        (subscription) => subscription.plan.name !== "FREE",
       );
-      if (blockingPaidSubscription) {
-        excluded.push({
-          userId: user.id,
-          email: user.email,
-          reason: "Account already has an active paid plan",
-        });
-        continue;
-      }
 
       const country = shop.country as MarketRegion;
       if (!proCountries.has(country)) {
@@ -1098,6 +1112,8 @@ export class RecoveryOffersService {
         lastActiveAt,
         activitySegment,
         incidentAffected: linkedReportIds.length > 0,
+        emailVerified: Boolean(user.emailVerified),
+        hasPaidPlan,
       });
     }
 
@@ -1111,8 +1127,16 @@ export class RecoveryOffersService {
       shopId: string;
       days: number;
     },
-  ) {
+  ): Promise<{
+    subscription: {
+      id: string;
+      currentPeriodEnd: Date;
+      plan: { name: string };
+    };
+    outcome: RecoveryGrantOutcome;
+  }> {
     const now = new Date();
+    const targetEnd = new Date(now.getTime() + offer.days * DAY_MS);
     const shop = await tx.shop.findFirst({
       where: { id: offer.shopId, userId: offer.userId, isActive: true },
     });
@@ -1141,33 +1165,20 @@ export class RecoveryOffersService {
       orderBy: { currentPeriodEnd: "desc" },
     });
 
-    const blockingPaidSubscription = currentSubscriptions.find(
-      (subscription) =>
-        subscription.plan.name !== "FREE" &&
-        subscription.status !== SubscriptionStatus.TRIALING,
+    const existingPro = currentSubscriptions.find(
+      (subscription) => subscription.plan.name !== "FREE",
     );
-    if (blockingPaidSubscription) {
-      throw new BadRequestException(
-        "Your account already has a paid plan. Reply to the recovery email so we can apply the credit manually.",
-      );
-    }
+    if (existingPro) {
+      if (existingPro.currentPeriodEnd.getTime() > targetEnd.getTime()) {
+        return { subscription: existingPro, outcome: "already_covered" };
+      }
 
-    const currentTrial = currentSubscriptions.find(
-      (subscription) =>
-        subscription.status === SubscriptionStatus.TRIALING &&
-        subscription.plan.name !== "FREE",
-    );
-    if (currentTrial) {
-      const base =
-        currentTrial.currentPeriodEnd.getTime() > now.getTime()
-          ? currentTrial.currentPeriodEnd
-          : now;
-      const currentPeriodEnd = new Date(base.getTime() + offer.days * DAY_MS);
-      return tx.sellerSubscription.update({
-        where: { id: currentTrial.id },
-        data: { currentPeriodEnd, expiresAt: currentPeriodEnd },
+      const subscription = await tx.sellerSubscription.update({
+        where: { id: existingPro.id },
+        data: { currentPeriodEnd: targetEnd, expiresAt: targetEnd },
         include: { plan: true },
       });
+      return { subscription, outcome: "extended" };
     }
 
     await tx.sellerSubscription.updateMany({
@@ -1198,8 +1209,7 @@ export class RecoveryOffersService {
       );
     }
 
-    const currentPeriodEnd = new Date(now.getTime() + offer.days * DAY_MS);
-    return tx.sellerSubscription.create({
+    const subscription = await tx.sellerSubscription.create({
       data: {
         shopId: shop.id,
         planId: proPlan.id,
@@ -1207,12 +1217,13 @@ export class RecoveryOffersService {
         country: proPlan.country,
         startedAt: now,
         currentPeriodStart: now,
-        currentPeriodEnd,
-        expiresAt: currentPeriodEnd,
+        currentPeriodEnd: targetEnd,
+        expiresAt: targetEnd,
         autoRenew: false,
       },
       include: { plan: true },
     });
+    return { subscription, outcome: "activated" };
   }
 
   private normalizeCampaignKey(value: string | undefined, fallback: string) {
