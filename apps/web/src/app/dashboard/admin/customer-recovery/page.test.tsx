@@ -45,7 +45,7 @@ vi.mock("@/lib/api", () => ({
 const preview = {
   campaignKey: "customer-winback-2026-09",
   days: 50,
-  totalAccounts: 2,
+  totalAccounts: 3,
   eligible: [
     {
       userId: "user-1",
@@ -59,13 +59,45 @@ const preview = {
       incidentAffected: true,
       timeZone: "Asia/Kolkata",
       recommendedSendAt: "2026-09-01T04:30:00.000Z",
+      emailVerified: true,
+      hasPaidPlan: false,
+    },
+    {
+      userId: "user-2",
+      shopId: "shop-2",
+      email: "paid@example.com",
+      firstName: "Paid",
+      shopName: "Paid Gold",
+      country: "IN",
+      lastActiveAt: "2026-08-01T00:00:00.000Z",
+      activitySegment: "dormant",
+      incidentAffected: false,
+      timeZone: "Asia/Kolkata",
+      recommendedSendAt: "2026-09-01T04:30:00.000Z",
+      emailVerified: true,
+      hasPaidPlan: true,
+    },
+    {
+      userId: "user-3",
+      shopId: "shop-3",
+      email: "pending@example.com",
+      firstName: "Pending",
+      shopName: "Pending Gold",
+      country: "IN",
+      lastActiveAt: null,
+      activitySegment: "lapsed",
+      incidentAffected: false,
+      timeZone: "Asia/Kolkata",
+      recommendedSendAt: "2026-09-01T04:30:00.000Z",
+      emailVerified: false,
+      hasPaidPlan: false,
     },
   ],
   excluded: [
     {
-      userId: "user-2",
-      email: "paid@example.com",
-      reason: "Account already has an active paid plan",
+      userId: "user-4",
+      email: "repeat@example.com",
+      reason: "Recovery offer was already sent",
     },
   ],
 };
@@ -132,7 +164,11 @@ describe("CustomerRecoveryPage", () => {
     expect(screen.getByText("50 days free")).toBeInTheDocument();
     expect(screen.getByText("Founder & CEO, Orivraa")).toBeInTheDocument();
     expect(screen.getByText("Invoice report linked")).toBeInTheDocument();
-    expect(screen.getByText("1 account(s) selected")).toBeInTheDocument();
+    expect(screen.getByText("Paid Gold")).toBeInTheDocument();
+    expect(screen.getByText("Pending Gold")).toBeInTheDocument();
+    expect(screen.getAllByText("Already on Pro").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Email not verified").length).toBeGreaterThan(0);
+    expect(screen.getByText("3 account(s) selected")).toBeInTheDocument();
     expect(screen.getByText("Recovery campaign funnel")).toBeInTheDocument();
     expect(screen.getAllByText("Rejoined")).toHaveLength(2);
     expect(screen.getByText("37.5% of sent")).toBeInTheDocument();
@@ -148,7 +184,7 @@ describe("CustomerRecoveryPage", () => {
 
     await waitFor(() => {
       expect(mocks.sendAudience).toHaveBeenCalledWith({
-        userIds: ["user-1"],
+        userIds: ["user-1", "user-2", "user-3"],
         campaignKey: "customer-winback-2026-09",
         expiresInDays: 30,
         deliveryTiming: "NEXT_LOCAL_10AM",

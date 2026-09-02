@@ -84,6 +84,7 @@ export default function CustomerRecoveryPage() {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
   const [segment, setSegment] = useState("all");
+  const [accountKind, setAccountKind] = useState("all");
   const [incidentOnly, setIncidentOnly] = useState(false);
 
   const loadAudience = useCallback(async () => {
@@ -135,10 +136,28 @@ export default function CustomerRecoveryPage() {
       if (segment !== "all" && recipient.activitySegment !== segment) {
         return false;
       }
+      if (accountKind === "unverified" && recipient.emailVerified) {
+        return false;
+      }
+      if (accountKind === "paid" && !recipient.hasPaidPlan) return false;
+      if (
+        accountKind === "complimentary" &&
+        (!recipient.emailVerified || recipient.hasPaidPlan)
+      ) {
+        return false;
+      }
       if (incidentOnly && !recipient.incidentAffected) return false;
       return true;
     });
-  }, [country, incidentOnly, preview?.eligible, search, segment]);
+  }, [accountKind, country, incidentOnly, preview?.eligible, search, segment]);
+
+  const audienceBreakdown = useMemo(() => {
+    const eligible = preview?.eligible || [];
+    return {
+      paid: eligible.filter((item) => item.hasPaidPlan).length,
+      unverified: eligible.filter((item) => !item.emailVerified).length,
+    };
+  }, [preview?.eligible]);
 
   const countries = useMemo(
     () =>
@@ -200,7 +219,7 @@ export default function CustomerRecoveryPage() {
         : "send these emails now";
     if (
       !window.confirm(
-        `You are about to ${action} for ${selectedIds.size} selected account(s). Active paid plans remain excluded. Continue?`,
+        `You are about to ${action} for ${selectedIds.size} selected account(s), including current Pro shops and unverified emails. Continue?`,
       )
     ) {
       return;
@@ -247,7 +266,7 @@ export default function CustomerRecoveryPage() {
         "",
         "I’m genuinely sorry if this interrupted your work. We would be grateful for the opportunity to earn back your trust.",
         "",
-        `Return to Orivraa using your secure link and receive ${days} days of Pro at no cost. No card is required and it will not renew automatically.`,
+        `Return to Orivraa using your secure link. If this shop is not on Pro, you receive ${days} days of Pro from the day you claim. If it already has Pro, we extend it to ${days} days from that day unless more than ${days} days already remain. No card is required and complimentary access will not renew automatically. If this email is not verified yet, sign in, confirm the code, then activate the offer.`,
         "",
         "— Aakash",
         "Founder & CEO, Orivraa",
@@ -329,6 +348,13 @@ export default function CustomerRecoveryPage() {
                       <T>{item.label}</T>
                     </p>
                     <p className="mt-1 text-2xl font-bold">{item.value}</p>
+                    {item.label === "Eligible" && preview && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {audienceBreakdown.paid} <T>already on Pro</T>
+                        {" · "}
+                        {audienceBreakdown.unverified} <T>unverified</T>
+                      </p>
+                    )}
                   </div>
                   <span className={`rounded-lg p-2 ${item.color}`}>
                     <item.icon className="h-5 w-5" />
@@ -348,10 +374,10 @@ export default function CustomerRecoveryPage() {
                   </p>
                   <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
                     <T>
-                      The email apologizes for the fixed invoice issue, uses an
-                      account-bound claim link, and is signed by Aakash, Founder
-                      & CEO. Paying accounts and repeat campaign sends are
-                      automatically suppressed.
+                      Current Pro shops and unverified emails can be selected.
+                      Claiming starts or extends Pro to 50 days from that day,
+                      unless more than 50 days already remain. Repeat campaign
+                      sends stay excluded.
                     </T>
                   </p>
                 </div>
@@ -604,6 +630,18 @@ export default function CustomerRecoveryPage() {
                       <option value="dormant">{t("Dormant 14–59 days")}</option>
                       <option value="recent">{t("Recently active")}</option>
                     </select>
+                    <select
+                      value={accountKind}
+                      onChange={(event) => setAccountKind(event.target.value)}
+                      className="min-h-11 rounded-lg border bg-white px-3 text-sm dark:bg-gray-950"
+                    >
+                      <option value="all">{t("All account types")}</option>
+                      <option value="complimentary">
+                        {t("Complimentary Pro")}
+                      </option>
+                      <option value="paid">{t("Already on Pro")}</option>
+                      <option value="unverified">{t("Email not verified")}</option>
+                    </select>
                     <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm">
                       <input
                         type="checkbox"
@@ -686,11 +724,23 @@ export default function CustomerRecoveryPage() {
                               <p className="text-xs text-muted-foreground">
                                 {recipient.firstName} · {recipient.email}
                               </p>
-                              {recipient.incidentAffected && (
-                                <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
-                                  <T>Invoice report linked</T>
-                                </span>
-                              )}
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {recipient.incidentAffected && (
+                                  <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                                    <T>Invoice report linked</T>
+                                  </span>
+                                )}
+                                {recipient.hasPaidPlan && (
+                                  <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                                    <T>Already on Pro</T>
+                                  </span>
+                                )}
+                                {!recipient.emailVerified && (
+                                  <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                                    <T>Email not verified</T>
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-3 py-3">
                               <p className="font-medium">
