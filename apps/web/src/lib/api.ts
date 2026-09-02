@@ -2032,6 +2032,7 @@ export const sellerSubscriptionsApi = {
     planId: string;
     country: string;
     billingCycle?: string;
+    offerCampaignKey?: string;
   }) => api.post("/seller-subscriptions/subscribe", data),
   cancel: (id: string, data?: { reason?: string; immediate?: boolean }) =>
     api.post(`/seller-subscriptions/${id}/cancel`, data || {}),
@@ -2334,6 +2335,8 @@ export interface RecoveryOfferPreview {
 export interface RecoveryAudiencePreview {
   campaignKey: string;
   days: number;
+  campaign: OfferCampaign;
+  nearbyScheduled: number;
   totalAccounts: number;
   eligible: Array<{
     userId: string;
@@ -2352,8 +2355,32 @@ export interface RecoveryAudiencePreview {
     hasShop: boolean;
     accountStatus: string;
     offerStatus: string | null;
+    sentAt?: string | null;
+    deliveredAt?: string | null;
+    firstOpenedAt?: string | null;
+    claimedAt?: string | null;
+    openCount?: number;
+    clickCount?: number;
+    unsubscribed: boolean;
+    canSend: boolean;
+    cannotSendReason?: string | null;
   }>;
   excluded: Array<{ userId?: string; email?: string; reason: string }>;
+}
+
+export interface OfferCampaign {
+  id?: string;
+  key: string;
+  name: string;
+  kind: "RECOVERY" | "FESTIVAL";
+  complimentaryDays: number;
+  discountPercent: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  emailSubject: string;
+  emailHeading: string;
+  emailBody: string;
+  isActive?: boolean;
 }
 
 export interface RecoveryCampaignMetrics {
@@ -2371,6 +2398,7 @@ export interface RecoveryCampaignMetrics {
     rejoined: number;
     bounced: number;
     complained: number;
+    unsubscribed: number;
     failed: number;
   };
   rates: {
@@ -2396,6 +2424,19 @@ export interface RecoveryCampaignMetrics {
 }
 
 export const recoveryOffersApi = {
+  listCampaigns: () =>
+    api.get<OfferCampaign[]>("/recovery-offers/admin/campaigns"),
+  createCampaign: (data: Omit<OfferCampaign, "id">) =>
+    api.post<OfferCampaign>("/recovery-offers/admin/campaigns", data),
+  updateCampaign: (key: string, data: Omit<OfferCampaign, "id" | "key">) =>
+    api.patch<OfferCampaign>(
+      `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}`,
+      data,
+    ),
+  getCampaign: (key: string) =>
+    api.get<OfferCampaign>(
+      `/recovery-offers/campaigns/${encodeURIComponent(key)}`,
+    ),
   preview: (reportIds: string[], campaignKey?: string) =>
     api.post<RecoveryOfferPreview>("/recovery-offers/admin/preview", {
       reportIds,
@@ -2449,6 +2490,7 @@ export const recoveryOffersApi = {
       claimedAt?: string;
       claimable: boolean;
       requiresEmailVerification: boolean;
+      campaign: OfferCampaign;
     }>("/recovery-offers/lookup", { token }),
   claim: (token: string) =>
     api.post<{
@@ -2459,6 +2501,11 @@ export const recoveryOffersApi = {
       planName?: string;
       outcome?: "activated" | "extended" | "already_covered";
     }>("/recovery-offers/claim", { token }),
+  unsubscribe: (token: string) =>
+    api.post<{ unsubscribed: boolean; alreadyUnsubscribed: boolean }>(
+      "/recovery-offers/unsubscribe",
+      { token },
+    ),
   recent: () =>
     api.get<
       Array<{

@@ -4,6 +4,7 @@ import { AuthBackground } from "@/components/auth/AuthBackground";
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardRoute, UserRole } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
@@ -372,7 +373,15 @@ function OAuthCallbackHandler() {
             : shouldUseMobileRoute
               ? "/m/pos"
             : getDashboardRoute(user.role as UserRole);
-        window.location.href = dashboardRoute;
+        const storedReturnTo = sanitizeRedirectUrl(
+          sessionStorage.getItem("orivraa_oauth_return_to"),
+          "",
+        );
+        sessionStorage.removeItem("orivraa_oauth_return_to");
+        window.location.href =
+          !shouldUseMobileRoute && storedReturnTo
+            ? storedReturnTo
+            : dashboardRoute;
       } catch (error: any) {
         console.error("OAuth callback error:", error);
         localStorage.removeItem(TOKEN_KEY);

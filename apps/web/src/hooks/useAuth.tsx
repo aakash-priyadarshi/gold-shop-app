@@ -4,6 +4,7 @@ import OrivraaLoader, {
     useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
+import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { syncShopCountryToPreferences } from "@/lib/shop-settings";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
@@ -591,6 +592,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "orivraa_oauth_remember_me",
           rememberMe ? "1" : "0",
         );
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = sanitizeRedirectUrl(
+          params.get("returnTo") || params.get("redirect"),
+          "",
+        );
+        if (returnTo) {
+          sessionStorage.setItem("orivraa_oauth_return_to", returnTo);
+        } else {
+          sessionStorage.removeItem("orivraa_oauth_return_to");
+        }
       }
       // Use getApiUrl to get the correct base URL with /api
       const apiBaseUrl =

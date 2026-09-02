@@ -1152,6 +1152,8 @@ function AiCreditsTab() {
 
 function AvailablePlansTab() {
   const t = useT();
+  const searchParams = useSearchParams();
+  const offerCampaignKey = searchParams.get("offer") || undefined;
   const { user } = useAuth();
   const shopCountry = user?.shop?.country || "";
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -1216,6 +1218,7 @@ function AvailablePlansTab() {
         planId: plan.id,
         country: plan.country,
         billingCycle: "MONTHLY",
+        offerCampaignKey,
       });
       // Stripe Checkout redirect (paid plans)
       if (res.data.checkoutUrl) {
@@ -1252,6 +1255,17 @@ function AvailablePlansTab() {
 
   return (
     <div className="space-y-4">
+      {offerCampaignKey && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="flex items-center gap-2 py-4 text-sm font-semibold text-amber-950 dark:text-amber-100">
+            <Sparkles className="h-4 w-4" />
+            <T>
+              Your active festival discount will be applied securely at
+              checkout.
+            </T>
+          </CardContent>
+        </Card>
+      )}
       <p className="text-sm text-muted-foreground">
         <T>Pick a plan that suits your business. Upgrade anytime.</T>
       </p>

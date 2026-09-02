@@ -17,6 +17,8 @@ const PRIVATE_PATHS = [
   "/shop",
   "/shops",
   "/designs",
+  "/offers/",
+  "/recovery/",
 ];
 
 export default function robots(): MetadataRoute.Robots {

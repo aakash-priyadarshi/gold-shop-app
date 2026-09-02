@@ -35,6 +35,7 @@ const EXCLUDED_EXACT_ROUTES = new Set([
   "/sitemap",
   "/sentry-example-page",
   "/recovery/pro",
+  "/offers",
   "/help",
 ]);
 
@@ -45,6 +46,8 @@ function isIgnoredDirectory(name) {
 
 function shouldIndex(route) {
   if (EXCLUDED_EXACT_ROUTES.has(route)) return false;
+  if (route === "/offers" || route.startsWith("/offers/")) return false;
+  if (route === "/recovery" || route.startsWith("/recovery/")) return false;
   const rootSegment = route.split("/").filter(Boolean)[0];
   return !rootSegment || !EXCLUDED_ROOT_SEGMENTS.has(rootSegment);
 }

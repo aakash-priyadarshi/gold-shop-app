@@ -1,4 +1,5 @@
 import {
+  OfferCampaignKind,
   RecoveryOfferStatus,
   SubscriptionStatus,
   UserRole,
@@ -31,6 +32,12 @@ describe("RecoveryOffersService", () => {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    offerCampaign: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
     emailLog: { create: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -43,9 +50,85 @@ describe("RecoveryOffersService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    config.get.mockImplementation((_key: string, fallback: string) => fallback);
+    config.get.mockImplementation((key: string, fallback?: string) => {
+      if (key === "JWT_SECRET") return "test-jwt-secret-for-jest";
+      if (key === "API_URL") return "https://api.orivraa.com";
+      if (key === "FRONTEND_URL") return "https://www.orivraa.com";
+      return fallback;
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue(null);
+    prisma.offerCampaign.findMany.mockResolvedValue([]);
+    prisma.recoveryOffer.count = jest.fn().mockResolvedValue(0);
     prisma.$transaction.mockImplementation((input: any) =>
       typeof input === "function" ? input(prisma) : Promise.all(input),
+    );
+  });
+
+  it("creates a festival campaign with a validated sale window", async () => {
+    prisma.offerCampaign.create.mockResolvedValue({
+      id: "campaign-1",
+      key: "festival-dashain-2026",
+    });
+
+    await service.createCampaign(
+      {
+        key: "festival-dashain-2026",
+        name: "Dashain 2026",
+        kind: "FESTIVAL",
+        complimentaryDays: 14,
+        discountPercent: 10,
+        startsAt: "2026-09-20T00:00:00.000Z",
+        endsAt: "2026-10-05T00:00:00.000Z",
+        emailSubject: "Celebrate with Orivraa",
+        emailHeading: "A festival offer for your shop",
+        emailBody: "Claim complimentary Pro and save on a paid plan.",
+      },
+      "admin-1",
+    );
+
+    expect(prisma.offerCampaign.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        key: "festival-dashain-2026",
+        kind: OfferCampaignKind.FESTIVAL,
+        complimentaryDays: 14,
+        discountPercent: 10,
+        createdBy: "admin-1",
+      }),
+    });
+  });
+
+  it("adds festival days after an existing Pro end date", async () => {
+    const existingEnd = new Date("2026-10-01T00:00:00.000Z");
+    prisma.shop.findFirst.mockResolvedValue({
+      id: "shop-1",
+      userId: "user-1",
+      country: "IN",
+      isActive: true,
+    });
+    prisma.sellerSubscription.findMany.mockResolvedValue([
+      {
+        id: "sub-1",
+        currentPeriodEnd: existingEnd,
+        plan: { name: "PRO" },
+      },
+    ]);
+    prisma.sellerSubscription.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({
+        id: "sub-1",
+        currentPeriodEnd: data.currentPeriodEnd,
+        plan: { name: "PRO" },
+      }),
+    );
+
+    const result = await (service as any).grantEntitlement(
+      prisma,
+      { userId: "user-1", shopId: "shop-1", days: 14 },
+      OfferCampaignKind.FESTIVAL,
+    );
+
+    expect(result.outcome).toBe("extended");
+    expect(result.subscription.currentPeriodEnd).toEqual(
+      new Date("2026-10-15T00:00:00.000Z"),
     );
   });
 
@@ -383,7 +466,7 @@ describe("RecoveryOffersService", () => {
     );
   });
 
-  it("reissues an unclaimed prepared offer instead of excluding it", async () => {
+  it("does not requeue an already prepared or sent offer", async () => {
     prisma.user.findMany.mockResolvedValue([
       {
         id: "user-1",
@@ -423,16 +506,17 @@ describe("RecoveryOffersService", () => {
       adminId: "admin-1",
     });
 
-    expect(result.queued).toBe(1);
-    expect(prisma.recoveryOffer.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "offer-existing" },
-        data: expect.objectContaining({
-          status: RecoveryOfferStatus.PREPARED,
+    expect(result.queued).toBe(0);
+    expect(result.excluded).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: "owner@example.com",
+          reason: "Offer email is already queued or scheduled",
         }),
-      }),
+      ]),
     );
-    expect(prisma.recoveryOffer.create).not.toHaveBeenCalled();
+    expect(prisma.recoveryOffer.update).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
   });
 
   it("queues delivery without sending email in the admin request", async () => {
@@ -579,7 +663,7 @@ describe("RecoveryOffersService", () => {
     );
   });
 
-  it("keeps a prepared offer selectable so the campaign can be resent", async () => {
+  it("keeps a prepared offer visible but not sendable", async () => {
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },
     ]);
@@ -613,6 +697,7 @@ describe("RecoveryOffersService", () => {
       expect.objectContaining({
         email: "owner@example.com",
         offerStatus: RecoveryOfferStatus.PREPARED,
+        canSend: false,
       }),
     ]);
     expect(result.excluded).toEqual([]);
@@ -652,6 +737,7 @@ describe("RecoveryOffersService", () => {
       expect.objectContaining({
         email: "owner@example.com",
         offerStatus: RecoveryOfferStatus.EXPIRED,
+        canSend: true,
       }),
     ]);
     expect(result.excluded).toEqual([]);
@@ -670,7 +756,7 @@ describe("RecoveryOffersService", () => {
       status: RecoveryOfferStatus.PREPARED,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       createdBy: "admin-1",
-      user: { firstName: "Owner" },
+      user: { firstName: "Owner", marketingUnsubscribedAt: null },
       shop: { shopName: "Owner Gold" },
     });
     mail.send.mockResolvedValue({ success: true, messageId: "message-1" });
@@ -693,6 +779,15 @@ describe("RecoveryOffersService", () => {
           { name: "offer_id", value: "offer-1" },
           { name: "campaign", value: "customer-winback-2026-09" },
         ],
+        headers: {
+          "List-Unsubscribe": expect.stringMatching(
+            /^<https:\/\/api\.orivraa\.com\/api\/recovery-offers\/unsubscribe\?token=/,
+          ),
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+        context: expect.objectContaining({
+          unsubscribeUrl: expect.stringContaining("/offers/unsubscribe?token="),
+        }),
       }),
     );
     expect(prisma.recoveryOffer.updateMany).toHaveBeenCalledWith(
@@ -765,6 +860,52 @@ describe("RecoveryOffersService", () => {
     expect(
       JSON.stringify(prisma.recoveryOfferEmailEvent.create.mock.calls[0][0]),
     ).not.toContain("secret-token");
+  });
+
+  it("classifies festival landing clicks as claim events", async () => {
+    prisma.recoveryOfferEmailEvent.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.findFirst.mockResolvedValue({
+      id: "offer-festival",
+      email: "owner@example.com",
+      deliveryMessageId: "resend-email-2",
+      deliveredAt: null,
+      firstOpenedAt: null,
+      lastOpenedAt: null,
+      firstClickedAt: null,
+      lastClickedAt: null,
+      bouncedAt: null,
+      complainedAt: null,
+      failedAt: null,
+      suppressedAt: null,
+    });
+    prisma.recoveryOfferEmailEvent.create.mockResolvedValue({ id: "event-2" });
+    prisma.recoveryOffer.update.mockResolvedValue({});
+
+    await service.recordResendEvent("svix-event-2", {
+      type: "email.clicked",
+      created_at: "2026-09-02T10:00:00.000Z",
+      data: {
+        created_at: "2026-09-02T09:00:00.000Z",
+        email_id: "resend-email-2",
+        from: "Orivraa <support@orivraa.com>",
+        to: ["owner@example.com"],
+        subject: "Festival",
+        tags: { offer_id: "offer-festival" },
+        click: {
+          ipAddress: "203.0.113.10",
+          link: "https://www.orivraa.com/offers/festival-dashain-2026#token=secret-token",
+          timestamp: "2026-09-02T10:00:01.000Z",
+          userAgent: "Browser",
+        },
+      },
+    });
+
+    expect(prisma.recoveryOfferEmailEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        webhookId: "svix-event-2",
+        linkKind: "claim",
+      }),
+    });
   });
 
   it("deduplicates retried Resend webhook deliveries", async () => {
@@ -1117,5 +1258,154 @@ describe("RecoveryOffersService", () => {
     expect(result.recipient).not.toContain("owner@");
     expect(result.claimable).toBe(true);
     expect(result.requiresEmailVerification).toBe(false);
+  });
+
+  it("keeps claimed and unsubscribed recipients visible without allowing another send", async () => {
+    prisma.crashReport.findMany.mockResolvedValue([
+      { id: "report-1", userId: "user-claimed" },
+      { id: "report-2", userId: "user-unsub" },
+    ]);
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-claimed",
+        email: "claimed@example.com",
+        firstName: "Claimed",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        marketingUnsubscribedAt: null,
+        recoveryOffers: [
+          {
+            shopId: "shop-1",
+            status: RecoveryOfferStatus.CLAIMED,
+            sentAt: new Date("2026-08-20T00:00:00.000Z"),
+            claimedAt: new Date("2026-08-21T00:00:00.000Z"),
+            firstOpenedAt: new Date("2026-08-20T08:00:00.000Z"),
+            openCount: 2,
+            clickCount: 1,
+          },
+        ],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Claimed Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+      {
+        id: "user-unsub",
+        email: "unsub@example.com",
+        firstName: "Unsub",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        activeShopId: "shop-2",
+        marketingUnsubscribedAt: new Date("2026-08-15T00:00:00.000Z"),
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-2",
+            shopName: "Unsub Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+
+    const result = await service.preview(["report-1", "report-2"]);
+
+    expect(result.eligible).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: "claimed@example.com",
+          offerStatus: RecoveryOfferStatus.CLAIMED,
+          canSend: false,
+          claimedAt: new Date("2026-08-21T00:00:00.000Z"),
+        }),
+        expect.objectContaining({
+          email: "unsub@example.com",
+          unsubscribed: true,
+          canSend: false,
+        }),
+      ]),
+    );
+    expect(result.excluded).toEqual([]);
+  });
+
+  it("records an unsubscribe and cancels queued emails", async () => {
+    const token = service.createUnsubscribeToken("user-1");
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      marketingUnsubscribedAt: null,
+    });
+    prisma.user.update.mockResolvedValue({});
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.unsubscribe(token);
+
+    expect(result).toEqual({
+      unsubscribed: true,
+      alreadyUnsubscribed: false,
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "user-1" },
+        data: expect.objectContaining({
+          marketingUnsubscribedAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(prisma.recoveryOffer.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1", status: RecoveryOfferStatus.PREPARED },
+      }),
+    );
+  });
+
+  it("rejects a tampered unsubscribe token", async () => {
+    await expect(service.unsubscribe("user-1.not-a-real-signature")).rejects.toThrow(
+      "This unsubscribe link is invalid",
+    );
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("skips delivery when the recipient has unsubscribed", async () => {
+    const rawToken = "delivery-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-1",
+      campaignKey: "customer-winback-2026-09",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 40,
+      status: RecoveryOfferStatus.PREPARED,
+      user: {
+        firstName: "Owner",
+        marketingUnsubscribedAt: new Date("2026-08-01T00:00:00.000Z"),
+      },
+      shop: { shopName: "Owner Gold" },
+    });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.deliverQueuedOffer({
+      offerId: "offer-1",
+      rawToken,
+    });
+
+    expect(result).toEqual({ skipped: true, reason: "unsubscribed" });
+    expect(mail.send).not.toHaveBeenCalled();
+    expect(prisma.recoveryOffer.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: RecoveryOfferStatus.CANCELLED,
+        }),
+      }),
+    );
   });
 });

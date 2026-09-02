@@ -76,6 +76,13 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("crash-reports-filters");
   });
 
+  test("has tour steps for admin offers", () => {
+    expect(sourceFile).toContain('"/dashboard/admin/offers"');
+    expect(sourceFile).toContain("offers-campaigns");
+    expect(sourceFile).toContain("offers-audience");
+    expect(sourceFile).toContain("offers-schedule");
+  });
+
   test("has tour steps for all seven Supply Chain views", () => {
     expect(sourceFile).toContain('"/dashboard/shop/supply-chain"');
     expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-tower"');

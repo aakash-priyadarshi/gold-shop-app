@@ -2268,6 +2268,38 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
   ],
+  "/dashboard/admin/offers": [
+    {
+      element: "[data-tour='offers-campaigns']",
+      popover: {
+        title: "Recovery and festival offers",
+        description:
+          "Switch between the 50-day recovery campaign and festival campaigns. Festival offers have their own sale window, complimentary Pro days, discount, subject, and message.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='offers-audience']",
+      popover: {
+        title: "Choose recipients",
+        description:
+          "Select one shopkeeper or every visible row. Filters include pending, unverified, paid, and no-shop accounts; suppressed marketing addresses stay protected.",
+        side: "top",
+        align: "center",
+      },
+    },
+    {
+      element: "[data-tour='offers-schedule']",
+      popover: {
+        title: "Schedule delivery",
+        description:
+          "Send now, at each recipient's next local 10 AM, or at a custom time. The time in a recipient row overrides the campaign schedule for that email.",
+        side: "left",
+        align: "center",
+      },
+    },
+  ],
   "/dashboard/admin/crash-reports": [
     {
       element: "[data-tour='crash-reports-header']",

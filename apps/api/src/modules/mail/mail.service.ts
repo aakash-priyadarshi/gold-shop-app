@@ -16,6 +16,7 @@ export interface EmailOptions {
   allowAdminLinks?: boolean;
   idempotencyKey?: string;
   tags?: Array<{ name: string; value: string }>;
+  headers?: Record<string, string>;
   attachments?: Array<{
     filename: string;
     content?: Buffer | string;
@@ -289,6 +290,7 @@ export class MailService {
           options.attachments,
           options.idempotencyKey,
           options.tags,
+          options.headers,
         );
       }
 
@@ -302,6 +304,7 @@ export class MailService {
           options.replyTo,
           options.attachments,
           options.idempotencyKey,
+          options.headers,
         );
       }
 
@@ -321,6 +324,7 @@ export class MailService {
     attachments?: EmailOptions['attachments'],
     idempotencyKey?: string,
     tags?: EmailOptions['tags'],
+    extraHeaders?: EmailOptions['headers'],
   ): Promise<SendResult> {
     try {
       const resendAttachments = attachments?.map((a) => ({
@@ -343,6 +347,9 @@ export class MailService {
           ...(tags?.length ? { tags } : {}),
           ...(resendAttachments?.length
             ? { attachments: resendAttachments }
+            : {}),
+          ...(extraHeaders && Object.keys(extraHeaders).length
+            ? { headers: extraHeaders }
             : {}),
         },
         idempotencyKey ? { idempotencyKey } : undefined,
@@ -369,6 +376,7 @@ export class MailService {
     replyTo?: string,
     attachments?: EmailOptions['attachments'],
     idempotencyKey?: string,
+    extraHeaders?: EmailOptions['headers'],
   ): Promise<SendResult> {
     const maxRetries = 3;
     let lastError: Error | null = null;
@@ -391,7 +399,10 @@ export class MailService {
           html,
           replyTo,
           attachments,
-          headers: resendHeaders,
+          headers: {
+            ...(resendHeaders || {}),
+            ...(extraHeaders || {}),
+          },
         });
 
         this.logger.log(`✅ Email sent via SMTP: ${info.messageId} to ${to.join(', ')}`);
