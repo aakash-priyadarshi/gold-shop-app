@@ -4,8 +4,11 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
   Post,
   Query,
+  Redirect,
   UseGuards,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
@@ -15,17 +18,55 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
+  CreateOfferCampaignDto,
   PreviewRecoveryOffersDto,
   PreviewRecoveryAudienceDto,
   RecoveryOfferTokenDto,
   SendRecoveryAudienceDto,
   SendRecoveryOffersDto,
+  UpdateOfferCampaignDto,
 } from "./dto/recovery-offer.dto";
 import { RecoveryOffersService } from "./recovery-offers.service";
+
+function asSingleQueryValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
 
 @Controller("recovery-offers")
 export class RecoveryOffersController {
   constructor(private readonly recoveryOffers: RecoveryOffersService) {}
+
+  @Get("admin/campaigns")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  listCampaigns() {
+    return this.recoveryOffers.listCampaigns();
+  }
+
+  @Post("admin/campaigns")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  createCampaign(
+    @Body() dto: CreateOfferCampaignDto,
+    @CurrentUser("id") adminId: string,
+  ) {
+    return this.recoveryOffers.createCampaign(dto, adminId);
+  }
+
+  @Patch("admin/campaigns/:key")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  updateCampaign(
+    @Param("key") key: string,
+    @Body() dto: UpdateOfferCampaignDto,
+  ) {
+    return this.recoveryOffers.updateCampaign(key, dto);
+  }
+
+  @Get("campaigns/:key")
+  getCampaign(@Param("key") key: string) {
+    return this.recoveryOffers.getPublicCampaign(key);
+  }
 
   @Post("admin/preview")
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -101,5 +142,29 @@ export class RecoveryOffersController {
   @Roles(UserRole.ADMIN)
   metrics(@Query("campaignKey") campaignKey?: string) {
     return this.recoveryOffers.getCampaignMetrics(campaignKey);
+  }
+
+  @Get("unsubscribe")
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @Redirect()
+  unsubscribeLanding(@Query("token") token?: unknown) {
+    return {
+      url: this.recoveryOffers.unsubscribePageUrl(
+        asSingleQueryValue(token) || "",
+      ),
+      statusCode: 302,
+    };
+  }
+
+  @Post("unsubscribe")
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
+  unsubscribe(
+    @Query("token") queryToken?: unknown,
+    @Body() body?: { token?: unknown },
+  ) {
+    return this.recoveryOffers.unsubscribe(
+      asSingleQueryValue(queryToken) || asSingleQueryValue(body?.token),
+    );
   }
 }

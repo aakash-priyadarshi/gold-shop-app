@@ -9,8 +9,9 @@ export function isSafeRedirectUrl(url: string): boolean {
   if (!url.startsWith('/')) return false;
   // Block protocol-relative URLs (//evil.com)
   if (url.startsWith('//')) return false;
-  // Block javascript: or data: schemes
-  if (url.startsWith('/javascript:') || url.startsWith('/data:')) return false;
+  if (url.includes('\\') || /[\s]/.test(url)) return false;
+  // Block scheme-bearing values such as /javascript:alert(1)
+  if (url.includes(':')) return false;
   return true;
 }
 

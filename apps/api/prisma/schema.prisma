@@ -105,6 +105,8 @@ model User {
   pinFailedCount Int       @default(0)
   pinLockedUntil DateTime? // locked for 15min after 5 fails
 
+  marketingUnsubscribedAt DateTime?
+
   @@index([email])
   @@index([phone])
   @@index([role])
@@ -426,32 +428,33 @@ model Shop {
   rfqOffers                    RfqOffer[]
   shopQuotes                   ShopQuote[]
   walkInCustomers              WalkInCustomer[]
-  user                         User                     @relation(fields: [userId], references: [id])
+  user                         User                      @relation(fields: [userId], references: [id])
   finishPricing                ShopFinishPricing[]
   gemstoneRates                ShopGemstoneRate[]
   metalRates                   ShopMetalRate[]
   priceOverrides               ShopPriceOverride[]
   ratings                      ShopRating[]
-  verificationRequests         VerificationRequest[]    @relation("ShopVerificationRequests")
+  verificationRequests         VerificationRequest[]     @relation("ShopVerificationRequests")
   performance                  SellerPerformance?
   badges                       SellerBadge[]
   invoices                     Invoice[]
   invoiceSettings              InvoiceSettings?
-  customerNotes                CustomerNote[]           @relation("ShopCustomerNotes")
-  conversations                Conversation[]           @relation("ShopConversations")
+  customerNotes                CustomerNote[]            @relation("ShopCustomerNotes")
+  conversations                Conversation[]            @relation("ShopConversations")
   catalogues                   Catalogue[]
-  walkInRfqs                   RfqRequest[]             @relation("ShopWalkInRfqs")
+  walkInRfqs                   RfqRequest[]              @relation("ShopWalkInRfqs")
   showroomSessions             ShowroomSession[]
   posSessions                  PosSession[]
   stockReservations            StockReservation[]
   subscriptions                SellerSubscription[]
   recoveryOffers               RecoveryOffer[]
+  offerCampaignRedemptions     OfferCampaignRedemption[]
   platformReviews              PlatformReview[]
-  referralsMade                Referral[]               @relation("ShopReferralsMade")
-  referralsReceived            Referral[]               @relation("ShopReferralsReceived")
-  referralCode                 String?                  @unique
-  referralCommissionsEarned    ReferralCommission[]     @relation("ReferralCommissionsEarned")
-  referralCommissionsGenerated ReferralCommission[]     @relation("ReferralCommissionsGenerated")
+  referralsMade                Referral[]                @relation("ShopReferralsMade")
+  referralsReceived            Referral[]                @relation("ShopReferralsReceived")
+  referralCode                 String?                   @unique
+  referralCommissionsEarned    ReferralCommission[]      @relation("ReferralCommissionsEarned")
+  referralCommissionsGenerated ReferralCommission[]      @relation("ReferralCommissionsGenerated")
   referralPayoutProfile        ReferralPayoutProfile?
   referralPayoutRequests       ReferralPayoutRequest[]
   // Enterprise features
@@ -3481,10 +3484,10 @@ model RecoveryOffer {
   deliveredAt           DateTime?
   firstOpenedAt         DateTime?
   lastOpenedAt          DateTime?
-  openCount              Int                 @default(0)
+  openCount             Int                 @default(0)
   firstClickedAt        DateTime?
   lastClickedAt         DateTime?
-  clickCount             Int                 @default(0)
+  clickCount            Int                 @default(0)
   bouncedAt             DateTime?
   complainedAt          DateTime?
   failedAt              DateTime?
@@ -3497,8 +3500,8 @@ model RecoveryOffer {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop        Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   emailEvents RecoveryOfferEmailEvent[]
 
   @@unique([campaignKey, shopId])
@@ -3509,6 +3512,48 @@ model RecoveryOffer {
   @@index([userId])
   @@index([shopId])
   @@index([expiresAt])
+}
+
+model OfferCampaign {
+  id                String                    @id @default(cuid())
+  key               String                    @unique
+  name              String
+  kind              OfferCampaignKind
+  complimentaryDays Int
+  discountPercent   Float                     @default(0)
+  startsAt          DateTime
+  endsAt            DateTime
+  emailSubject      String
+  emailHeading      String
+  emailBody         String                    @db.Text
+  isActive          Boolean                   @default(true)
+  createdBy         String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  redemptions       OfferCampaignRedemption[]
+
+  @@index([kind, isActive, startsAt, endsAt])
+  @@index([endsAt])
+}
+
+model OfferCampaignRedemption {
+  id                String                        @id @default(cuid())
+  campaignId        String
+  shopId            String
+  discountPercent   Float
+  status            OfferCampaignRedemptionStatus @default(RESERVED)
+  stripeSessionId   String?                       @unique
+  reservationEndsAt DateTime?
+  redeemedAt        DateTime?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+
+  campaign OfferCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  shop     Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, shopId])
+  @@index([shopId, status])
+  @@index([status, reservationEndsAt])
 }
 
 /// Deduplicated Resend delivery and engagement events for recovery campaigns.
@@ -3566,6 +3611,17 @@ enum RecoveryOfferStatus {
   SEND_FAILED
   CANCELLED
   EXPIRED
+}
+
+enum OfferCampaignKind {
+  RECOVERY
+  FESTIVAL
+}
+
+enum OfferCampaignRedemptionStatus {
+  RESERVED
+  REDEEMED
+  RELEASED
 }
 
 enum MigrationStatus {

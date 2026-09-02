@@ -4,6 +4,7 @@ import { AuthBackground } from "@/components/auth/AuthBackground";
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardRoute, UserRole } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { isSafeRedirectUrl } from "@/lib/redirect-validation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
@@ -372,7 +373,23 @@ function OAuthCallbackHandler() {
             : shouldUseMobileRoute
               ? "/m/pos"
             : getDashboardRoute(user.role as UserRole);
-        window.location.href = dashboardRoute;
+        const storedReturnTo = sessionStorage.getItem("orivraa_oauth_return_to");
+        sessionStorage.removeItem("orivraa_oauth_return_to");
+        if (!shouldUseMobileRoute && storedReturnTo && isSafeRedirectUrl(storedReturnTo)) {
+          try {
+            const next = new URL(storedReturnTo, window.location.origin);
+            if (
+              (next.protocol === "https:" || next.protocol === "http:") &&
+              next.hostname === window.location.hostname
+            ) {
+              window.location.replace(next.href);
+              return;
+            }
+          } catch {
+            // Fall through to the role dashboard when the stored URL is unusable.
+          }
+        }
+        window.location.assign(dashboardRoute);
       } catch (error: any) {
         console.error("OAuth callback error:", error);
         localStorage.removeItem(TOKEN_KEY);

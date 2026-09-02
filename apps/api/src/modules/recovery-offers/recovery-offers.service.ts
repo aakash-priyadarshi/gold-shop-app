@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import {
   MarketRegion,
+  OfferCampaignKind,
   Prisma,
   RecoveryOfferStatus,
   SubscriptionStatus,
@@ -13,7 +14,7 @@ import {
   UserStatus,
   CurrencyCode,
 } from "@prisma/client";
-import { createHash, randomBytes } from "crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { ConfigService } from "@nestjs/config";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
@@ -22,11 +23,21 @@ import type { WebhookEventPayload } from "resend";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 import { RecoveryOfferDeliveryTiming } from "./dto/recovery-offer.dto";
+import type {
+  CreateOfferCampaignDto,
+  UpdateOfferCampaignDto,
+} from "./dto/recovery-offer.dto";
 
 const DEFAULT_INCIDENT_CAMPAIGN_KEY = "incident-recovery-2026-08";
 const DEFAULT_AUDIENCE_CAMPAIGN_KEY = "customer-winback-2026-09";
 const RECOVERY_DAYS = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ALREADY_CONTACTED_STATUSES: RecoveryOfferStatus[] = [
+  RecoveryOfferStatus.PREPARED,
+  RecoveryOfferStatus.SENT,
+  RecoveryOfferStatus.CLAIMING,
+  RecoveryOfferStatus.CLAIMED,
+];
 export const RECOVERY_OFFERS_QUEUE = "recovery-offers";
 export const DELIVER_RECOVERY_OFFER_JOB = "deliver";
 
@@ -60,11 +71,33 @@ type Candidate = {
   hasPaidPlan: boolean;
   accountStatus: UserStatus;
   offerStatus: RecoveryOfferStatus | null;
+  sentAt: Date | null;
+  deliveredAt: Date | null;
+  firstOpenedAt: Date | null;
+  claimedAt: Date | null;
+  openCount: number;
+  clickCount: number;
+  unsubscribed: boolean;
+  canSend: boolean;
+  cannotSendReason: string | null;
   phone: string | null;
   preferredCurrency: string;
 };
 
 type RecoveryGrantOutcome = "activated" | "extended" | "already_covered";
+
+type CampaignDefinition = {
+  key: string;
+  name: string;
+  kind: OfferCampaignKind;
+  complimentaryDays: number;
+  discountPercent: number;
+  startsAt: Date | null;
+  endsAt: Date | null;
+  emailSubject: string;
+  emailHeading: string;
+  emailBody: string;
+};
 
 type Exclusion = {
   userId?: string;
@@ -81,6 +114,95 @@ export class RecoveryOffersService {
     @InjectQueue(RECOVERY_OFFERS_QUEUE)
     private readonly queue: Queue<RecoveryOfferDeliveryJob>,
   ) {}
+
+  listCampaigns() {
+    return this.prisma.offerCampaign.findMany({
+      orderBy: [{ isActive: "desc" }, { startsAt: "desc" }],
+    });
+  }
+
+  async createCampaign(input: CreateOfferCampaignDto, adminId: string) {
+    this.validateCampaignWindow(input);
+    return this.prisma.offerCampaign.create({
+      data: {
+        ...input,
+        key: this.normalizeCampaignKey(input.key, input.key),
+        kind: input.kind as OfferCampaignKind,
+        startsAt: new Date(input.startsAt),
+        endsAt: new Date(input.endsAt),
+        createdBy: adminId,
+      },
+    });
+  }
+
+  async updateCampaign(key: string, input: UpdateOfferCampaignDto) {
+    const resolvedKey = this.normalizeCampaignKey(key, key);
+    const existing = await this.prisma.offerCampaign.findUnique({
+      where: { key: resolvedKey },
+    });
+    if (!existing) {
+      throw new NotFoundException("Offer campaign not found");
+    }
+
+    this.validateCampaignWindow({
+      startsAt: input.startsAt ?? existing.startsAt.toISOString(),
+      endsAt: input.endsAt ?? existing.endsAt.toISOString(),
+      kind: input.kind ?? existing.kind,
+      discountPercent: input.discountPercent ?? existing.discountPercent,
+    });
+
+    return this.prisma.offerCampaign.update({
+      where: { key: resolvedKey },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.kind !== undefined
+          ? { kind: input.kind as OfferCampaignKind }
+          : {}),
+        ...(input.complimentaryDays !== undefined
+          ? { complimentaryDays: input.complimentaryDays }
+          : {}),
+        ...(input.discountPercent !== undefined
+          ? { discountPercent: input.discountPercent }
+          : {}),
+        ...(input.startsAt !== undefined
+          ? { startsAt: new Date(input.startsAt) }
+          : {}),
+        ...(input.endsAt !== undefined
+          ? { endsAt: new Date(input.endsAt) }
+          : {}),
+        ...(input.emailSubject !== undefined
+          ? { emailSubject: input.emailSubject }
+          : {}),
+        ...(input.emailHeading !== undefined
+          ? { emailHeading: input.emailHeading }
+          : {}),
+        ...(input.emailBody !== undefined ? { emailBody: input.emailBody } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      },
+    });
+  }
+
+  async getPublicCampaign(key: string) {
+    const campaign = await this.prisma.offerCampaign.findUnique({
+      where: { key: this.normalizeCampaignKey(key, key) },
+      select: {
+        key: true,
+        name: true,
+        kind: true,
+        complimentaryDays: true,
+        discountPercent: true,
+        startsAt: true,
+        endsAt: true,
+        emailHeading: true,
+        emailBody: true,
+        isActive: true,
+      },
+    });
+    if (!campaign || !campaign.isActive) {
+      throw new NotFoundException("Offer campaign not found");
+    }
+    return campaign;
+  }
 
   async preview(reportIds: string[], campaignKey?: string) {
     const key = this.normalizeCampaignKey(
@@ -109,6 +231,15 @@ export class RecoveryOffersService {
         hasShop: Boolean(candidate.shopId),
         accountStatus: candidate.accountStatus,
         offerStatus: candidate.offerStatus,
+        sentAt: candidate.sentAt,
+        deliveredAt: candidate.deliveredAt,
+        firstOpenedAt: candidate.firstOpenedAt,
+        claimedAt: candidate.claimedAt,
+        openCount: candidate.openCount,
+        clickCount: candidate.clickCount,
+        unsubscribed: candidate.unsubscribed,
+        canSend: candidate.canSend,
+        cannotSendReason: candidate.cannotSendReason,
       })),
       excluded,
     };
@@ -119,12 +250,25 @@ export class RecoveryOffersService {
       campaignKey,
       DEFAULT_AUDIENCE_CAMPAIGN_KEY,
     );
+    const campaign = await this.getCampaignDefinition(key);
     const { candidates, excluded, totalAccounts } =
-      await this.resolveAudienceCandidates(undefined, key);
+      await this.resolveAudienceCandidates(undefined, key, campaign.kind);
+    const nearbyScheduled = await this.prisma.recoveryOffer.count({
+      where: {
+        campaignKey: { not: key },
+        status: RecoveryOfferStatus.PREPARED,
+        scheduledFor: {
+          gte: new Date(),
+          lte: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        },
+      },
+    });
 
     return {
       campaignKey: key,
-      days: RECOVERY_DAYS,
+      days: campaign.complimentaryDays,
+      campaign,
+      nearbyScheduled,
       totalAccounts,
       eligible: candidates.map((candidate) => {
         const delivery = this.resolveDelivery(
@@ -148,6 +292,15 @@ export class RecoveryOffersService {
           hasShop: Boolean(candidate.shopId),
           accountStatus: candidate.accountStatus,
           offerStatus: candidate.offerStatus,
+          sentAt: candidate.sentAt,
+          deliveredAt: candidate.deliveredAt,
+          firstOpenedAt: candidate.firstOpenedAt,
+          claimedAt: candidate.claimedAt,
+          openCount: candidate.openCount,
+          clickCount: candidate.clickCount,
+          unsubscribed: candidate.unsubscribed,
+          canSend: candidate.canSend,
+          cannotSendReason: candidate.cannotSendReason,
         };
       }),
       excluded,
@@ -172,6 +325,7 @@ export class RecoveryOffersService {
       input.campaignKey,
       DEFAULT_INCIDENT_CAMPAIGN_KEY,
     );
+    const campaign = await this.getCampaignDefinition(key);
     const expiresInDays = input.expiresInDays ?? 30;
     const { candidates, excluded } = await this.resolveCandidates(
       input.reportIds,
@@ -182,6 +336,7 @@ export class RecoveryOffersService {
       candidates,
       excluded,
       campaignKey: key,
+      campaign,
       expiresInDays,
       deliveryTiming: input.deliveryTiming,
       adminId: input.adminId,
@@ -217,9 +372,11 @@ export class RecoveryOffersService {
       input.campaignKey,
       DEFAULT_AUDIENCE_CAMPAIGN_KEY,
     );
+    const campaign = await this.getCampaignDefinition(key);
     const { candidates, excluded } = await this.resolveAudienceCandidates(
       userIds,
       key,
+      campaign.kind,
     );
 
     const scheduledFor = this.parseScheduleInstant(input.scheduledFor);
@@ -238,6 +395,7 @@ export class RecoveryOffersService {
       candidates,
       excluded,
       campaignKey: key,
+      campaign,
       expiresInDays: input.expiresInDays ?? 30,
       deliveryTiming: input.deliveryTiming,
       scheduledFor,
@@ -250,6 +408,7 @@ export class RecoveryOffersService {
     candidates: Candidate[];
     excluded: Exclusion[];
     campaignKey: string;
+    campaign?: CampaignDefinition;
     expiresInDays: number;
     deliveryTiming?: RecoveryOfferDeliveryTiming;
     scheduledFor?: Date | null;
@@ -266,6 +425,16 @@ export class RecoveryOffersService {
     }> = [];
 
     for (const candidate of candidates) {
+      if (!candidate.canSend) {
+        excluded.push({
+          userId: candidate.userId,
+          email: candidate.email,
+          reason:
+            candidate.cannotSendReason ||
+            "This account cannot receive another email for this campaign",
+        });
+        continue;
+      }
       const ready = await this.ensureShopForOffer(candidate);
       const delivery = this.resolveDelivery(
         ready.country,
@@ -283,8 +452,20 @@ export class RecoveryOffersService {
       const rawToken = randomBytes(32).toString("base64url");
       const tokenHash = this.hashToken(rawToken);
       const startsAt = delivery.scheduledFor || new Date();
+      const campaignEndsAt = input.campaign?.endsAt;
+      if (campaignEndsAt && startsAt.getTime() >= campaignEndsAt.getTime()) {
+        excluded.push({
+          userId: ready.userId,
+          email: ready.email,
+          reason: "The send time is after the campaign end time",
+        });
+        continue;
+      }
       const expiresAt = new Date(
-        startsAt.getTime() + input.expiresInDays * DAY_MS,
+        Math.min(
+          startsAt.getTime() + input.expiresInDays * DAY_MS,
+          input.campaign?.endsAt?.getTime() ?? Number.POSITIVE_INFINITY,
+        ),
       );
       let offerId: string | null = null;
       const existing = await this.prisma.recoveryOffer.findUnique({
@@ -305,22 +486,21 @@ export class RecoveryOffersService {
         scheduledFor: delivery.scheduledFor,
         status: RecoveryOfferStatus.PREPARED,
         failureReason: null,
-        days: RECOVERY_DAYS,
+        days: input.campaign?.complimentaryDays ?? RECOVERY_DAYS,
         createdBy: input.adminId,
       };
 
       if (existing) {
-        if (
-          existing.status === RecoveryOfferStatus.CLAIMED ||
-          existing.status === RecoveryOfferStatus.CLAIMING
-        ) {
+        if (ALREADY_CONTACTED_STATUSES.includes(existing.status)) {
           excluded.push({
             userId: ready.userId,
             email: ready.email,
             reason:
               existing.status === RecoveryOfferStatus.CLAIMED
-                ? "Recovery offer was already claimed"
-                : "Recovery offer is already being claimed",
+                ? "Offer was already claimed"
+                : existing.status === RecoveryOfferStatus.SENT
+                  ? "Offer email was already sent"
+                  : "Offer email is already queued or scheduled",
           });
           continue;
         }
@@ -410,7 +590,7 @@ export class RecoveryOffersService {
     const offer = await this.prisma.recoveryOffer.findUnique({
       where: { id: job.offerId },
       include: {
-        user: { select: { firstName: true } },
+        user: { select: { firstName: true, marketingUnsubscribedAt: true } },
         shop: { select: { shopName: true } },
       },
     });
@@ -422,31 +602,68 @@ export class RecoveryOffersService {
       return { skipped: true };
     }
 
-    const appUrl = (
-      this.config.get<string>("FRONTEND_URL") ||
-      this.config.get<string>("APP_URL") ||
-      "https://www.orivraa.com"
-    ).replace(/\/$/, "");
-    const claimUrl = `${appUrl}/recovery/pro#token=${encodeURIComponent(job.rawToken)}`;
-    const subject = `We’re sorry about the invoice issue — ${offer.days} days of Orivraa Pro on us`;
+    if (offer.user.marketingUnsubscribedAt) {
+      await this.prisma.recoveryOffer.updateMany({
+        where: {
+          id: offer.id,
+          status: RecoveryOfferStatus.PREPARED,
+          tokenHash,
+        },
+        data: {
+          status: RecoveryOfferStatus.CANCELLED,
+          failureReason: "Recipient unsubscribed from marketing email",
+        },
+      });
+      return { skipped: true, reason: "unsubscribed" };
+    }
+
+    const appUrl = this.frontendBaseUrl();
+    const campaign = await this.getCampaignDefinition(offer.campaignKey, {
+      requireActive: false,
+    });
+    const isFestival = campaign.kind === OfferCampaignKind.FESTIVAL;
+    const claimUrl = isFestival
+      ? `${appUrl}/offers/${encodeURIComponent(offer.campaignKey)}#token=${encodeURIComponent(job.rawToken)}`
+      : `${appUrl}/recovery/pro#token=${encodeURIComponent(job.rawToken)}`;
+    const unsubscribeToken = this.createUnsubscribeToken(offer.userId);
+    const unsubscribeUrl = this.unsubscribePageUrl(unsubscribeToken);
+    const unsubscribeApiUrl = this.unsubscribeApiUrl(unsubscribeToken);
+    const subject = isFestival
+      ? campaign.emailSubject
+      : `We’re sorry about the invoice issue — ${offer.days} days of Orivraa Pro on us`;
     const delivery = await this.mail.send({
       to: offer.email,
       subject,
-      template: "recovery-offer",
+      template: isFestival ? "festival-offer" : "recovery-offer",
       from: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
       replyTo: EMAIL_SENDERS.SUPPORT,
       idempotencyKey: `recovery-offer/${offer.id}/${tokenHash}`,
       tags: [
-        { name: "category", value: "recovery_offer" },
+        {
+          name: "category",
+          value: isFestival ? "festival_offer" : "recovery_offer",
+        },
         { name: "offer_id", value: offer.id },
         { name: "campaign", value: offer.campaignKey },
       ],
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
       context: {
         firstName: offer.user.firstName || "there",
         shopName: offer.shop.shopName,
         days: offer.days,
         claimUrl,
+        unsubscribeUrl,
         offerExpiresAt: offer.expiresAt,
+        campaignName: campaign.name,
+        emailHeading: campaign.emailHeading,
+        emailBody: campaign.emailBody,
+        discountPercent: campaign.discountPercent,
+        saleStartsAt: campaign.startsAt,
+        saleEndsAt: campaign.endsAt,
+        pricingUrl: `${appUrl}/dashboard/shop/billing?tab=upgrade&offer=${encodeURIComponent(offer.campaignKey)}`,
         brandIconUrl: `${appUrl}/favicon/android-chrome-192x192.png`,
         heroImageUrl: `${appUrl}/luxury-gold-globe.png`,
       },
@@ -475,11 +692,13 @@ export class RecoveryOffersService {
           fromAddress: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
           toAddress: offer.email,
           subject,
-          body: `Service recovery offer: ${offer.days} days of PRO; no card or automatic renewal.`,
+          body: isFestival
+            ? `${campaign.name}: ${offer.days} days of PRO and ${campaign.discountPercent}% off during the campaign window.`
+            : `Service recovery offer: ${offer.days} days of PRO; no card or automatic renewal.`,
           userId: offer.userId,
           adminId: offer.createdBy,
           messageId: delivery.messageId,
-          templateKey: "recovery_offer",
+          templateKey: isFestival ? "festival_offer" : "recovery_offer",
           threadId: offer.id,
         },
       });
@@ -582,9 +801,11 @@ export class RecoveryOffersService {
             update.lastClickedAt = later(offer.lastClickedAt, eventAt);
             update.clickCount = { increment: 1 };
             const safeDestination = emailEvent.data.click.link.split("#", 1)[0];
-            linkKind = safeDestination.includes("/recovery/pro")
-              ? "claim"
-              : "other";
+            linkKind =
+              safeDestination.includes("/recovery/pro") ||
+              /\/offers\/[a-z0-9][a-z0-9_-]{2,79}/i.test(safeDestination)
+                ? "claim"
+                : "other";
             break;
           }
           case "email.bounced":
@@ -647,6 +868,7 @@ export class RecoveryOffersService {
         status: true,
         expiresAt: true,
         claimedAt: true,
+        campaignKey: true,
         user: { select: { emailVerified: true } },
       },
     });
@@ -662,6 +884,9 @@ export class RecoveryOffersService {
       });
     }
 
+    const campaign = await this.getCampaignDefinition(offer.campaignKey, {
+      requireActive: false,
+    });
     return {
       recipient: this.maskEmail(offer.email),
       days: offer.days,
@@ -670,6 +895,7 @@ export class RecoveryOffersService {
       claimedAt: offer.claimedAt,
       claimable: !expired && offer.status === RecoveryOfferStatus.SENT,
       requiresEmailVerification: offer.user?.emailVerified === false,
+      campaign,
     };
   }
 
@@ -743,9 +969,14 @@ export class RecoveryOffersService {
           );
         }
 
+        const campaign = await tx.offerCampaign.findUnique({
+          where: { key: offer.campaignKey },
+          select: { kind: true },
+        });
         const { subscription, outcome } = await this.grantEntitlement(
           tx,
           offer,
+          campaign?.kind ?? OfferCampaignKind.RECOVERY,
         );
         const claimedAt = new Date();
         await tx.recoveryOffer.update({
@@ -810,6 +1041,7 @@ export class RecoveryOffersService {
         user: {
           select: {
             lastLoginAt: true,
+            marketingUnsubscribedAt: true,
             webSessions: {
               select: { startedAt: true },
               orderBy: { startedAt: "desc" },
@@ -867,6 +1099,9 @@ export class RecoveryOffersService {
       rejoined: count((offer) => Boolean(offer.rejoinedAt)),
       bounced: count((offer) => Boolean(offer.bouncedAt)),
       complained: count((offer) => Boolean(offer.complainedAt)),
+      unsubscribed: count((offer) =>
+        Boolean(offer.user.marketingUnsubscribedAt),
+      ),
       failed: count(
         (offer) =>
           offer.status === RecoveryOfferStatus.SEND_FAILED ||
@@ -970,6 +1205,7 @@ export class RecoveryOffersService {
   private async resolveAudienceCandidates(
     userIds: string[] | undefined,
     campaignKey: string,
+    campaignKind: OfferCampaignKind = OfferCampaignKind.RECOVERY,
   ) {
     const uniqueUserIds = userIds
       ? [...new Set(userIds.filter((id) => id.trim()))]
@@ -979,6 +1215,7 @@ export class RecoveryOffersService {
       campaignKey,
       new Map(),
       true,
+      campaignKind,
     );
 
     if (uniqueUserIds && resolved.totalAccounts !== uniqueUserIds.length) {
@@ -994,6 +1231,7 @@ export class RecoveryOffersService {
     campaignKey: string,
     reportIdsByUser: Map<string, string[]>,
     discoverInvoiceReports = false,
+    campaignKind: OfferCampaignKind = OfferCampaignKind.RECOVERY,
   ) {
     const now = new Date();
     const users = await this.prisma.user.findMany({
@@ -1064,6 +1302,23 @@ export class RecoveryOffersService {
     const proCountries = new Set(proPlans.map((plan) => plan.country));
     const candidates: Candidate[] = [];
     const excluded: Exclusion[] = [];
+    const marketingBlockedUserIds =
+      campaignKind === OfferCampaignKind.FESTIVAL
+        ? new Set(
+            (
+              await this.prisma.recoveryOffer.findMany({
+                where: {
+                  userId: { in: users.map((user) => user.id) },
+                  OR: [
+                    { complainedAt: { not: null } },
+                    { suppressedAt: { not: null } },
+                  ],
+                },
+                select: { userId: true },
+              })
+            ).map((offer) => offer.userId),
+          )
+        : new Set<string>();
 
     for (const user of users) {
       if (user.role !== UserRole.SHOPKEEPER) {
@@ -1102,21 +1357,13 @@ export class RecoveryOffersService {
       const existingOffer = shop
         ? user.recoveryOffers.find((offer) => offer.shopId === shop.id)
         : user.recoveryOffers[0];
-      if (
-        existingOffer &&
-        (existingOffer.status === RecoveryOfferStatus.CLAIMED ||
-          existingOffer.status === RecoveryOfferStatus.CLAIMING)
-      ) {
-        excluded.push({
-          userId: user.id,
-          email: user.email,
-          reason:
-            existingOffer.status === RecoveryOfferStatus.CLAIMED
-              ? "Recovery offer was already claimed"
-              : "Recovery offer is already being claimed",
-        });
-        continue;
-      }
+      const unsubscribed = Boolean(user.marketingUnsubscribedAt);
+      const marketingSuppressed = marketingBlockedUserIds.has(user.id);
+      const contact = this.describeContactability({
+        unsubscribed,
+        marketingSuppressed,
+        offerStatus: existingOffer?.status || null,
+      });
 
       const hasPaidPlan = Boolean(
         shop?.subscriptions.some(
@@ -1154,6 +1401,15 @@ export class RecoveryOffersService {
         hasPaidPlan,
         accountStatus: user.status || UserStatus.PENDING_VERIFICATION,
         offerStatus: existingOffer?.status || null,
+        sentAt: existingOffer?.sentAt || null,
+        deliveredAt: existingOffer?.deliveredAt || null,
+        firstOpenedAt: existingOffer?.firstOpenedAt || null,
+        claimedAt: existingOffer?.claimedAt || null,
+        openCount: existingOffer?.openCount || 0,
+        clickCount: existingOffer?.clickCount || 0,
+        unsubscribed,
+        canSend: contact.canSend,
+        cannotSendReason: contact.cannotSendReason,
         phone: user.phone || null,
         preferredCurrency: user.preferredCurrency || "USD",
       });
@@ -1169,6 +1425,7 @@ export class RecoveryOffersService {
       shopId: string;
       days: number;
     },
+    campaignKind: OfferCampaignKind = OfferCampaignKind.RECOVERY,
   ): Promise<{
     subscription: {
       id: string;
@@ -1178,7 +1435,7 @@ export class RecoveryOffersService {
     outcome: RecoveryGrantOutcome;
   }> {
     const now = new Date();
-    const targetEnd = new Date(now.getTime() + offer.days * DAY_MS);
+    let targetEnd = new Date(now.getTime() + offer.days * DAY_MS);
     const shop = await tx.shop.findFirst({
       where: { id: offer.shopId, userId: offer.userId },
     });
@@ -1217,6 +1474,13 @@ export class RecoveryOffersService {
       (subscription) => subscription.plan.name !== "FREE",
     );
     if (existingPro) {
+      if (campaignKind === OfferCampaignKind.FESTIVAL) {
+        const extensionStart =
+          existingPro.currentPeriodEnd.getTime() > now.getTime()
+            ? existingPro.currentPeriodEnd
+            : now;
+        targetEnd = new Date(extensionStart.getTime() + offer.days * DAY_MS);
+      }
       if (existingPro.currentPeriodEnd.getTime() > targetEnd.getTime()) {
         return { subscription: existingPro, outcome: "already_covered" };
       }
@@ -1274,12 +1538,193 @@ export class RecoveryOffersService {
     return { subscription, outcome: "activated" };
   }
 
+  async unsubscribe(token: unknown) {
+    const userId = this.verifyUnsubscribeToken(token);
+    if (!userId) {
+      throw new BadRequestException("This unsubscribe link is invalid");
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, marketingUnsubscribedAt: true },
+    });
+    if (!user) {
+      throw new NotFoundException("This unsubscribe link is invalid");
+    }
+    if (user.marketingUnsubscribedAt) {
+      return { unsubscribed: true, alreadyUnsubscribed: true };
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { marketingUnsubscribedAt: now },
+      }),
+      this.prisma.recoveryOffer.updateMany({
+        where: { userId, status: RecoveryOfferStatus.PREPARED },
+        data: {
+          status: RecoveryOfferStatus.CANCELLED,
+          failureReason: "Recipient unsubscribed from marketing email",
+        },
+      }),
+    ]);
+    return { unsubscribed: true, alreadyUnsubscribed: false };
+  }
+
+  unsubscribePageUrl(token: string) {
+    return `${this.frontendBaseUrl()}/offers/unsubscribe?token=${encodeURIComponent(token)}`;
+  }
+
+  private unsubscribeApiUrl(token: string) {
+    return `${this.apiBaseUrl()}/api/recovery-offers/unsubscribe?token=${encodeURIComponent(token)}`;
+  }
+
+  private frontendBaseUrl() {
+    return (
+      this.config.get<string>("FRONTEND_URL") ||
+      this.config.get<string>("APP_URL") ||
+      "https://www.orivraa.com"
+    ).replace(/\/$/, "");
+  }
+
+  private apiBaseUrl() {
+    return (
+      this.config.get<string>("API_URL") || "https://api.orivraa.com"
+    ).replace(/\/$/, "");
+  }
+
+  createUnsubscribeToken(userId: string) {
+    const signature = createHmac("sha256", this.unsubscribeSecret())
+      .update(`offer-unsub:${userId}`)
+      .digest("base64url");
+    return `${userId}.${signature}`;
+  }
+
+  private verifyUnsubscribeToken(token: unknown) {
+    if (typeof token !== "string" || !token.includes(".")) return null;
+    const separator = token.lastIndexOf(".");
+    const userId = token.slice(0, separator);
+    const signature = token.slice(separator + 1);
+    if (!userId || !signature) return null;
+    const expected = createHmac("sha256", this.unsubscribeSecret())
+      .update(`offer-unsub:${userId}`)
+      .digest("base64url");
+    const left = Buffer.from(signature);
+    const right = Buffer.from(expected);
+    if (left.length !== right.length) return null;
+    if (!timingSafeEqual(left, right)) return null;
+    return userId;
+  }
+
+  private unsubscribeSecret() {
+    return (
+      this.config.get<string>("JWT_SECRET") || process.env.JWT_SECRET || ""
+    );
+  }
+
+  private describeContactability(input: {
+    unsubscribed: boolean;
+    marketingSuppressed: boolean;
+    offerStatus: RecoveryOfferStatus | null;
+  }): { canSend: boolean; cannotSendReason: string | null } {
+    if (input.unsubscribed) {
+      return {
+        canSend: false,
+        cannotSendReason: "Unsubscribed from marketing emails",
+      };
+    }
+    if (input.marketingSuppressed) {
+      return {
+        canSend: false,
+        cannotSendReason: "Marketing email is suppressed for this account",
+      };
+    }
+    if (
+      input.offerStatus &&
+      ALREADY_CONTACTED_STATUSES.includes(input.offerStatus)
+    ) {
+      if (input.offerStatus === RecoveryOfferStatus.CLAIMED) {
+        return { canSend: false, cannotSendReason: "Offer was already claimed" };
+      }
+      if (input.offerStatus === RecoveryOfferStatus.CLAIMING) {
+        return {
+          canSend: false,
+          cannotSendReason: "Offer is already being claimed",
+        };
+      }
+      if (input.offerStatus === RecoveryOfferStatus.SENT) {
+        return {
+          canSend: false,
+          cannotSendReason: "Offer email was already sent",
+        };
+      }
+      return {
+        canSend: false,
+        cannotSendReason: "Offer email is already queued or scheduled",
+      };
+    }
+    return { canSend: true, cannotSendReason: null };
+  }
+
   private normalizeCampaignKey(value: string | undefined, fallback: string) {
     const key = (value || fallback).trim();
     if (!/^[a-z0-9][a-z0-9_-]{2,79}$/i.test(key)) {
       throw new BadRequestException("Invalid recovery campaign key");
     }
     return key;
+  }
+
+  private async getCampaignDefinition(
+    key?: string,
+    options: { requireActive?: boolean } = {},
+  ): Promise<CampaignDefinition> {
+    const resolvedKey = key || DEFAULT_AUDIENCE_CAMPAIGN_KEY;
+    const campaign = await this.prisma.offerCampaign.findUnique({
+      where: { key: resolvedKey },
+    });
+    if (campaign) {
+      if (options.requireActive !== false && !campaign.isActive) {
+        throw new BadRequestException("This offer campaign is inactive");
+      }
+      return campaign;
+    }
+    if (
+      resolvedKey === DEFAULT_AUDIENCE_CAMPAIGN_KEY ||
+      resolvedKey === DEFAULT_INCIDENT_CAMPAIGN_KEY
+    ) {
+      return {
+        key: resolvedKey,
+        name: "Customer win-back",
+        kind: OfferCampaignKind.RECOVERY,
+        complimentaryDays: RECOVERY_DAYS,
+        discountPercent: 0,
+        startsAt: null,
+        endsAt: null,
+        emailSubject: `We’re sorry about the invoice issue — ${RECOVERY_DAYS} days of Orivraa Pro on us`,
+        emailHeading: "We’re sorry about the invoice issue.",
+        emailBody:
+          "We fixed the issue, strengthened monitoring, and improved invoice reliability.",
+      };
+    }
+    throw new NotFoundException("Offer campaign not found");
+  }
+
+  private validateCampaignWindow(
+    input: Pick<
+      CreateOfferCampaignDto,
+      "startsAt" | "endsAt" | "kind" | "discountPercent"
+    >,
+  ) {
+    const startsAt = new Date(input.startsAt);
+    const endsAt = new Date(input.endsAt);
+    if (startsAt.getTime() >= endsAt.getTime()) {
+      throw new BadRequestException("Offer end time must be after its start time");
+    }
+    if (input.kind === "FESTIVAL" && input.discountPercent <= 0) {
+      throw new BadRequestException(
+        "Festival campaigns require a positive discount",
+      );
+    }
   }
 
   private resolveDelivery(

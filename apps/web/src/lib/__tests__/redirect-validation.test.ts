@@ -40,6 +40,13 @@ describe('Redirect URL Validation (Open Redirect Prevention)', () => {
     it('should allow paths with fragments', () => {
       expect(isSafeRedirectUrl('/dashboard#section')).toBe(true);
     });
+
+    it('should block scheme-bearing or whitespace-padded paths', () => {
+      expect(isSafeRedirectUrl('/javascript:alert(1)')).toBe(false);
+      expect(isSafeRedirectUrl('/\tevil.com')).toBe(false);
+      expect(isSafeRedirectUrl('/\\evil.com')).toBe(false);
+      expect(isSafeRedirectUrl('/dashboard?next=https://evil.com')).toBe(false);
+    });
   });
 
   describe('sanitizeRedirectUrl', () => {

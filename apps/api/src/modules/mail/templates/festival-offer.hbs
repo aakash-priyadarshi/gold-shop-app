@@ -1,0 +1,59 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{campaignName}} from Orivraa</title>
+  </head>
+  <body style="margin:0;background:#f6f1e6;color:#172033;font-family:Arial,Helvetica,sans-serif;line-height:1.6">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0">
+      Claim {{days}} days of Pro and save {{discountPercent}}% on any paid plan during {{campaignName}}.
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        <td align="center" style="padding:28px 14px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#fff;border:1px solid #e6dcc6;border-radius:20px;overflow:hidden">
+            <tr>
+              <td style="background:#0d1830;padding:20px 28px;color:#fff">
+                <img src="{{brandIconUrl}}" width="42" height="42" alt="Orivraa" style="vertical-align:middle;border-radius:10px" />
+                <strong style="margin-left:10px;font-size:22px">Orivraa</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img src="{{heroImageUrl}}" width="640" alt="Orivraa festival offer" style="display:block;width:100%;height:auto;border:0" />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px">
+                <div style="color:#8a5b13;font-size:12px;font-weight:700;text-transform:uppercase">{{campaignName}}</div>
+                <h1 style="margin:12px 0;color:#13213c;font-family:Georgia,'Times New Roman',serif;font-size:31px">{{emailHeading}}</h1>
+                <p style="font-size:16px;color:#344054">Hi {{firstName}},</p>
+                <p style="font-size:16px;color:#344054">{{emailBody}}</p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background:#fbf7ed;border:1px solid #ead9b6;border-radius:16px">
+                  <tr>
+                    <td align="center" style="padding:24px">
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:34px;font-weight:700">{{days}} days Pro free</div>
+                      <div style="font-size:24px;font-weight:700;color:#8a5b13">plus {{discountPercent}}% off every paid plan</div>
+                      <p style="color:#667085">Discount valid from {{formatDate saleStartsAt}} through {{formatDate saleEndsAt}}.</p>
+                      <a href="{{claimUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#b7791f;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Claim {{days}} free days</a>
+                      <a href="{{pricingUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#172033;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Buy a plan and save {{discountPercent}}%</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="font-size:13px;color:#667085">The complimentary Pro grant has no card and no automatic renewal. The plan discount applies once per shop while this festival campaign is live.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#0d1830;padding:22px 30px;text-align:center;color:#cbd2df;font-size:12px">
+                Need help? Reply to this email. You received this because you created an Orivraa shop account.
+                <br />
+                <a href="{{unsubscribeUrl}}" style="color:#e5c477;text-decoration:underline">Unsubscribe from future offers</a>.
+              </td>
+            </tr>
+          </table>
+          <p style="color:#9a8f79;font-size:11px">© {{year}} Orivraa. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

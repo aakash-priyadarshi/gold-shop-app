@@ -315,8 +315,8 @@ const navItems: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
-    label: "Customer Recovery",
-    href: "/dashboard/admin/customer-recovery",
+    label: "Offers",
+    href: "/dashboard/admin/offers",
     icon: Megaphone,
     roles: ["ADMIN"],
   },

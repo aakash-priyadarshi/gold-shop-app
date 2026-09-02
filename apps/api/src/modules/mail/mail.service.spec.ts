@@ -44,6 +44,8 @@ describe("MailService template rendering", () => {
         shopName: "Alice Gold",
         days: 50,
         claimUrl: "https://www.orivraa.com/recovery/pro#token=test",
+        unsubscribeUrl:
+          "https://www.orivraa.com/offers/unsubscribe?token=user-1.sig",
         offerExpiresAt: new Date("2026-10-01T00:00:00.000Z"),
         brandIconUrl:
           "https://www.orivraa.com/favicon/android-chrome-192x192.png",
@@ -55,6 +57,40 @@ describe("MailService template rendering", () => {
     expect(html).toContain("Founder &amp; CEO, Orivraa");
     expect(html).toContain("luxury-gold-globe.png");
     expect(html).toContain("Return to Orivraa and claim Pro");
+    expect(html).toContain("/offers/unsubscribe?token");
+    expect(html).toContain("Unsubscribe from future offers");
+    expect(html).not.toContain("Reply “unsubscribe”");
+  });
+
+  it("renders a festival email with both offer actions", async () => {
+    const template = await (service as any).loadTemplate("festival-offer");
+    const html = template(
+      (service as any).buildTemplateContext({
+        campaignName: "Dashain 2026",
+        emailHeading: "Celebrate your jewellery business",
+        emailBody: "A seasonal offer for your shop.",
+        firstName: "Alice",
+        days: 14,
+        discountPercent: 10,
+        claimUrl: "https://www.orivraa.com/offers/festival-dashain-2026",
+        unsubscribeUrl:
+          "https://www.orivraa.com/offers/unsubscribe?token=user-1.sig",
+        pricingUrl:
+          "https://www.orivraa.com/dashboard/shop/billing?tab=upgrade",
+        saleStartsAt: new Date("2026-09-20T00:00:00.000Z"),
+        saleEndsAt: new Date("2026-10-05T00:00:00.000Z"),
+        brandIconUrl:
+          "https://www.orivraa.com/favicon/android-chrome-192x192.png",
+        heroImageUrl: "https://www.orivraa.com/luxury-gold-globe.png",
+      }),
+    );
+
+    expect(html).toContain("14 days Pro free");
+    expect(html).toContain("10% off every paid plan");
+    expect(html).toContain("Buy a plan and save 10%");
+    expect(html).toContain("/offers/unsubscribe?token");
+    expect(html).toContain("Unsubscribe from future offers");
+    expect(html).not.toContain("Reply “unsubscribe”");
   });
 
   it("preserves idempotency keys for Resend SMTP delivery", async () => {
@@ -128,6 +164,46 @@ describe("MailService template rendering", () => {
         ],
       }),
       { idempotencyKey: "recovery-offer-1" },
+    );
+  });
+
+  it("passes List-Unsubscribe headers to Resend", async () => {
+    const resendService = new MailService({
+      get: (_key: string, fallback?: unknown) => fallback,
+    } as any);
+    const send = jest.fn().mockResolvedValue({
+      data: { id: "resend-email-1" },
+      error: null,
+    });
+    Object.assign(resendService as any, {
+      provider: "resend",
+      resend: { emails: { send } },
+    });
+    jest
+      .spyOn(resendService as any, "loadTemplate")
+      .mockResolvedValue(() => "<p>Recovery offer</p>");
+
+    await resendService.send({
+      to: "owner@example.com",
+      subject: "Recovery offer",
+      template: "recovery-offer",
+      context: {},
+      headers: {
+        "List-Unsubscribe":
+          "<https://api.orivraa.com/api/recovery-offers/unsubscribe?token=abc>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: {
+          "List-Unsubscribe":
+            "<https://api.orivraa.com/api/recovery-offers/unsubscribe?token=abc>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      }),
+      undefined,
     );
   });
 });
