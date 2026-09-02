@@ -797,7 +797,7 @@ export default function PricingPage() {
                 }`}
               >
                 {billing === "monthly" && (
-                  <motion.div
+                  <motion.span
                     layoutId="activeBillingPill"
                     className="absolute inset-0 bg-amber-500 rounded-full shadow-sm"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -814,7 +814,7 @@ export default function PricingPage() {
                 }`}
               >
                 {billing === "annual" && (
-                  <motion.div
+                  <motion.span
                     layoutId="activeBillingPill"
                     className="absolute inset-0 bg-amber-500 rounded-full shadow-sm"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -946,7 +946,7 @@ export default function PricingPage() {
                           </div>
                           {billing === "annual" && plan.annualPrice > 0 && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {formatPrice(plan.annualPrice, plan.currency)}{" "}
+                              <span>{formatPrice(plan.annualPrice, plan.currency)}</span>{" "}
                               <T>billed annually</T>
                             </p>
                           )}

@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 const PILLARS = [
   {
@@ -78,10 +79,14 @@ export function BillingCalculationSpotlight() {
               </p>
             </ScrollReveal>
 
-            <ScrollReveal direction="up" staggerChildren={0.06} className="space-y-4">
+            <ScrollReveal direction="up" staggerChildren={0.06} className="space-y-3">
               {PILLARS.map((pillar) => (
-                <div key={pillar.title} className="flex gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gold-100 dark:bg-gold-900/30 flex items-center justify-center shrink-0">
+                <motion.div
+                  key={pillar.title}
+                  whileHover={{ x: 5, transition: { duration: 0.2 } }}
+                  className="flex gap-3 p-2 rounded-xl hover:bg-gold-50/40 dark:hover:bg-gold-950/20 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-gold-100 dark:bg-gold-900/40 border border-gold-200/40 dark:border-gold-800/40 flex items-center justify-center shrink-0 shadow-sm">
                     <pillar.icon className="h-4 w-4 text-gold-600 dark:text-gold-400" />
                   </div>
                   <div>
@@ -92,7 +97,7 @@ export function BillingCalculationSpotlight() {
                       <T>{pillar.desc}</T>
                     </p>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </ScrollReveal>
 
@@ -101,7 +106,7 @@ export function BillingCalculationSpotlight() {
                 <Link href="/auth/register">
                   <Button
                     size="lg"
-                    className="h-11 px-7 rounded-xl text-sm font-bold gold-gradient text-white shadow-md"
+                    className="h-11 px-7 rounded-xl text-sm font-bold gold-gradient text-white shadow-md active:scale-95 transition-all"
                   >
                     <T>Start free trial</T>
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -111,7 +116,7 @@ export function BillingCalculationSpotlight() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-11 px-7 rounded-xl text-sm font-bold"
+                    className="h-11 px-7 rounded-xl text-sm font-bold active:scale-95 transition-all"
                   >
                     <T>See billing software</T>
                   </Button>
@@ -120,7 +125,7 @@ export function BillingCalculationSpotlight() {
                   <Button
                     size="lg"
                     variant="ghost"
-                    className="h-11 px-5 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300"
+                    className="h-11 px-5 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300 active:scale-95 transition-all"
                   >
                     <T>Watch billing demo</T>
                   </Button>
@@ -130,7 +135,10 @@ export function BillingCalculationSpotlight() {
           </div>
 
           <ScrollReveal direction="right" delay={0.12}>
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-[#faf6f0] to-white dark:from-[#0b1420] dark:to-gray-950 shadow-xl overflow-hidden">
+            <motion.div
+              whileHover={{ y: -4, transition: { duration: 0.25 } }}
+              className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-[#faf6f0] to-white dark:from-[#0b1420] dark:to-gray-950 shadow-xl overflow-hidden hover:border-gold-400/30 transition-colors"
+            >
               <SampleBillByMarket className="border-0 rounded-none bg-transparent dark:bg-transparent" />
 
               <div className="mx-4 mb-4 rounded-xl border border-gold-300/40 bg-gold-50/60 dark:bg-gold-950/20 p-3">
@@ -151,7 +159,7 @@ export function BillingCalculationSpotlight() {
                   <Gem className="h-4 w-4 text-gold-500 shrink-0 opacity-60" />
                 </div>
               </div>
-            </div>
+            </motion.div>
           </ScrollReveal>
         </div>
       </div>

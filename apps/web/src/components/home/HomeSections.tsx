@@ -26,8 +26,10 @@ import {
     Store,
     Truck,
     Zap,
+    Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const features = [
@@ -155,11 +157,12 @@ export function BuyerSections() {
           </div>
           <ScrollReveal direction="up" staggerChildren={0.08} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
             {features.map((f, i) => (
-              <div
+              <motion.div
                 key={i}
+                whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.25 } }}
                 className={`premium-card p-6 lg:p-8 gold-glow-hover border-gray-150 dark:border-gray-850 h-full ${i === 2 ? "sm:col-span-2 lg:col-span-1" : ""}`}
               >
-                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner animate-pulse border border-gold-200/20">
+                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-4 lg:mb-6 shadow-inner border border-gold-200/20">
                   <f.icon className="h-6 w-6 lg:h-7 lg:w-7 text-gold-500 dark:text-gold-400" />
                 </div>
                 <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 lg:mb-3">
@@ -168,7 +171,7 @@ export function BuyerSections() {
                 <p className="text-gray-655 dark:text-gray-300 text-sm lg:text-base leading-relaxed">
                   {t(f.desc)}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </ScrollReveal>
         </div>
@@ -191,8 +194,12 @@ export function BuyerSections() {
           </div>
           <ScrollReveal direction="up" staggerChildren={0.08} className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
             {steps.map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-gold-400 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-gold-500/30 animate-pulse">
+              <motion.div
+                key={item.step}
+                whileHover={{ y: -4, scale: 1.04, transition: { duration: 0.2 } }}
+                className="text-center p-3 rounded-2xl transition-colors hover:bg-gold-50/20 dark:hover:bg-gold-950/10"
+              >
+                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-gold-400 to-gold-500 text-white rounded-full flex items-center justify-center text-lg lg:text-2xl font-bold mx-auto mb-3 lg:mb-4 shadow-lg shadow-gold-500/30">
                   {item.step}
                 </div>
                 <h3 className="text-sm lg:text-lg font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">
@@ -201,7 +208,7 @@ export function BuyerSections() {
                 <p className="text-gray-655 dark:text-gray-400 text-xs lg:text-sm">
                   {t(item.desc)}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </ScrollReveal>
         </div>
@@ -265,26 +272,27 @@ export function SellerFeaturesSection() {
             const bgImage = featureImages[feature.title];
 
             return (
-                <div
-                  key={feature.title}
-                  className="group relative p-5 lg:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 gold-glow-hover overflow-hidden h-full min-h-[200px] hover:-translate-y-1 hover:border-gold-300/60 dark:hover:border-gold-700/50 transition-all duration-300"
-                >
-                  {bgImage && (
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center opacity-[0.04] dark:opacity-[0.06] -z-10 mix-blend-luminosity group-hover:scale-105 transition-transform duration-500"
-                      style={{ backgroundImage: `url('${bgImage}')` }}
-                    />
-                  )}
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-gold-200/40 dark:from-navy-900/30 dark:to-navy-950/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform shadow-inner shadow-gold-500/5 relative z-10 border border-gold-200/20">
-                    <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-500 dark:text-gold-400" />
-                  </div>
-                  <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1.5 relative z-10">
-                    {t(feature.title)}
-                  </h3>
-                  <p className="text-gray-655 dark:text-gray-400 text-sm leading-relaxed relative z-10">
-                    {t(feature.desc)}
-                  </p>
+              <motion.div
+                key={feature.title}
+                whileHover={{ y: -6, scale: 1.015, transition: { duration: 0.25, ease: "easeOut" } }}
+                className="group relative p-5 lg:p-6 rounded-2xl border border-gray-200/80 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/60 backdrop-blur-sm shadow-sm hover:shadow-xl hover:border-gold-400/50 dark:hover:border-gold-500/40 overflow-hidden h-full min-h-[200px] transition-colors duration-300"
+              >
+                {bgImage && (
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.04] dark:opacity-[0.06] -z-10 mix-blend-luminosity group-hover:scale-110 transition-transform duration-700 ease-out"
+                    style={{ backgroundImage: `url('${bgImage}')` }}
+                  />
+                )}
+                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-gold-100 to-gold-200/50 dark:from-gold-950/40 dark:to-gold-900/20 rounded-xl flex items-center justify-center mb-3 lg:mb-4 group-hover:scale-110 transition-transform duration-300 shadow-inner relative z-10 border border-gold-300/30 dark:border-gold-700/30">
+                  <feature.icon className="h-5 w-5 lg:h-6 lg:w-6 text-gold-500 dark:text-gold-400 transition-transform duration-300 group-hover:rotate-6" />
                 </div>
+                <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1.5 relative z-10">
+                  {t(feature.title)}
+                </h3>
+                <p className="text-gray-655 dark:text-gray-400 text-sm leading-relaxed relative z-10">
+                  {t(feature.desc)}
+                </p>
+              </motion.div>
             );
           })}
         </ScrollReveal>
@@ -421,21 +429,26 @@ export function SellerResourceHubSection() {
             <Link
               key={card.href}
               href={card.href}
-              className="group flex flex-col rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 lg:p-6 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all"
+              className="h-full"
             >
-              <div className="w-11 h-11 rounded-xl bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300 flex items-center justify-center mb-4">
-                <card.icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                {t(card.title)}
-              </h3>
-              <p className="flex-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {t(card.desc)}
-              </p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-600 dark:text-gold-400">
-                {t(card.cta)}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </span>
+              <motion.div
+                whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.25, ease: "easeOut" } }}
+                className="group flex flex-col rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 lg:p-6 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-xl hover:shadow-gold-500/5 transition-all duration-300 h-full"
+              >
+                <div className="w-11 h-11 rounded-xl bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <card.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {t(card.title)}
+                </h3>
+                <p className="flex-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {t(card.desc)}
+                </p>
+                <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-600 dark:text-gold-400">
+                  {t(card.cta)}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1.5 duration-300" />
+                </span>
+              </motion.div>
             </Link>
           ))}
         </ScrollReveal>
@@ -603,46 +616,136 @@ export function BlogSection() {
 export function SellerCtaSection() {
   const t = useT();
   return (
-    <section className="py-16 lg:py-24 gold-river-dark relative overflow-hidden border-t border-b border-gold-900/60">
-      <div className="absolute inset-0 bg-[url('/patterns/luxury-pattern.svg')] opacity-[0.03] dark:opacity-[0.05]" />
-      <div className="container mx-auto px-4 text-center relative z-10">
-        <ScrollReveal direction="up" delay={0.05}>
-          <h2 className="text-3xl lg:text-5xl font-black text-white mb-4 tracking-tight">
-            <T>Grow Your Jewellery Business Online</T>
-          </h2>
-        </ScrollReveal>
-        <ScrollReveal direction="up" delay={0.12}>
-          <p className="text-gold-100/90 mb-8 lg:mb-10 max-w-xl mx-auto text-sm lg:text-base font-medium leading-relaxed">
-            {t(
-              `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
-            )}
-          </p>
-        </ScrollReveal>
-        <ScrollReveal direction="up" delay={0.2}>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <Link href="/auth/register" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="w-full h-12 px-8 rounded-xl text-base bg-gold-100 text-navy-950 hover:bg-gold-200 font-extrabold border-none shadow-lg active:scale-95 transition-all"
-              >
-                <T>Start free trial</T>
-              </Button>
-            </Link>
-            <Link href="/support" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="w-full h-12 px-8 rounded-xl text-base bg-transparent text-white border border-white/50 hover:bg-white/10 active:scale-95 transition-all"
-              >
-                <T>Get onboarding help</T>
-              </Button>
-            </Link>
+    <section className="py-20 lg:py-28 relative overflow-hidden bg-[#060a0f] border-t border-b border-gold-500/20">
+      {/* Dynamic ambient radial gold glow & aurora */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(212,175,55,0.18),rgba(0,0,0,0))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_110%,rgba(212,175,55,0.12),rgba(0,0,0,0))]" />
+      
+      {/* Animated luxury floating orbs with Framer Motion */}
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.15, 0.28, 0.15],
+          x: [0, 25, 0],
+          y: [0, -20, 0],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-24 left-1/4 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"
+      />
+      <motion.div
+        animate={{
+          scale: [1.2, 1, 1.2],
+          opacity: [0.12, 0.25, 0.12],
+          x: [0, -30, 0],
+          y: [0, 25, 0],
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute -bottom-24 right-1/4 w-[28rem] h-[28rem] bg-gold-400/20 rounded-full blur-3xl pointer-events-none"
+      />
+
+      {/* Subtle luxury geometric grid mask */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_75%_60%_at_50%_50%,#000_60%,transparent_100%)] pointer-events-none opacity-40" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-4xl mx-auto">
+          {/* Main Card Shell with frosted obsidian and subtle gold border */}
+          <div className="relative rounded-3xl md:rounded-[2.5rem] border border-gold-500/25 bg-gradient-to-b from-[#0e1726]/90 via-[#0a111a]/85 to-[#070c12]/95 backdrop-blur-xl p-8 sm:p-12 lg:p-16 shadow-[0_0_80px_rgba(212,175,55,0.08)] text-center overflow-hidden">
+            
+            {/* Top glowing accent line */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1.5px] bg-gradient-to-r from-transparent via-gold-400/80 to-transparent" />
+            
+            {/* Badge */}
+            <ScrollReveal direction="assemble" delay={0.05} spring>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-300 text-xs sm:text-sm font-semibold mb-6 shadow-[0_0_15px_rgba(212,175,55,0.15)]">
+                <Sparkles className="h-4 w-4 text-gold-400 animate-spin" style={{ animationDuration: "8s" }} />
+                <span><T>Join Over 500+ Jewellery Boutiques & Chains</T></span>
+              </div>
+            </ScrollReveal>
+
+            {/* Headline with radiant gold typography */}
+            <ScrollReveal direction="assemble" delay={0.12} spring>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-5 tracking-tight leading-tight">
+                <T>Grow Your Jewellery Business Online</T>
+              </h2>
+            </ScrollReveal>
+
+            {/* Description */}
+            <ScrollReveal direction="up" delay={0.18} spring>
+              <p className="text-gray-300 mb-8 max-w-2xl mx-auto text-sm sm:text-base lg:text-lg font-normal leading-relaxed">
+                {t(
+                  `Join hundreds of verified jewellers across Nepal, India, Dubai, USA & UK who are selling on ${BRAND.name}. List your shop for free and start receiving orders today.`,
+                )}
+              </p>
+            </ScrollReveal>
+
+            {/* Interactive Feature Value Badges */}
+            <ScrollReveal direction="up" delay={0.24} staggerChildren={0.05} className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 mb-10">
+              {[
+                { icon: Zap, label: "10-Minute Setup" },
+                { icon: ShieldCheck, label: "Bank-Grade AES-256" },
+                { icon: Smartphone, label: "Works on Any Phone" },
+                { icon: Globe, label: "GST, VAT & IRD Ready" },
+              ].map((pill) => {
+                const Icon = pill.icon;
+                return (
+                  <div
+                    key={pill.label}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-gray-300 text-xs sm:text-sm font-medium hover:border-gold-400/40 hover:text-white transition-colors"
+                  >
+                    <Icon className="h-3.5 w-3.5 text-gold-400 shrink-0" />
+                    <span><T>{pill.label}</T></span>
+                  </div>
+                );
+              })}
+            </ScrollReveal>
+
+            {/* Action Buttons */}
+            <ScrollReveal direction="assemble" delay={0.3} spring>
+              <div className="flex flex-col sm:flex-row gap-3.5 justify-center items-center">
+                <Link href="/auth/register" className="w-full sm:w-auto">
+                  <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                    <Button
+                      size="lg"
+                      className="w-full sm:w-auto h-13 px-9 rounded-xl text-base bg-gradient-to-r from-amber-400 via-gold-400 to-amber-500 text-gray-950 font-black shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] border-none transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      <span><T>Start free trial</T></span>
+                      <ArrowRight className="h-5 w-5 stroke-[2.5]" />
+                    </Button>
+                  </motion.div>
+                </Link>
+                <Link href="/support" className="w-full sm:w-auto">
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full sm:w-auto h-13 px-8 rounded-xl text-base bg-white/[0.05] hover:bg-white/[0.1] text-white border-white/20 hover:border-gold-400/50 backdrop-blur-md transition-all font-semibold"
+                    >
+                      <T>Get onboarding help</T>
+                    </Button>
+                  </motion.div>
+                </Link>
+              </div>
+            </ScrollReveal>
+
+            {/* Micro-proof footer with checkmarks */}
+            <ScrollReveal direction="up" delay={0.36}>
+              <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs text-gray-400 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-gold-400 shrink-0" />
+                  <T>Free plan includes up to 15 products</T>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-gold-400 shrink-0" />
+                  <T>60-day Pro trial included</T>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-gold-400 shrink-0" />
+                  <T>No credit card required</T>
+                </span>
+              </div>
+            </ScrollReveal>
           </div>
-        </ScrollReveal>
-        <ScrollReveal direction="up" delay={0.28}>
-          <p className="mt-4 text-sm text-gold-100/80 font-medium">
-            <T>Free plan includes up to 15 products · 60-day Pro trial · no credit card</T>
-          </p>
-        </ScrollReveal>
+        </div>
       </div>
     </section>
   );
@@ -712,11 +815,14 @@ export function MobilePosSpotlight() {
           {/* Right: CSS phone mockup */}
           <div className="flex justify-center lg:justify-end">
             <ScrollReveal direction="right" delay={0.15}>
-              <div className="relative">
+              <motion.div
+                whileHover={{ y: -8, scale: 1.02, rotateZ: 0.5, transition: { duration: 0.3 } }}
+                className="relative cursor-pointer"
+              >
                 {/* Glow */}
-                <div className="absolute inset-0 bg-gold-500/10 blur-3xl rounded-full scale-110" />
+                <div className="absolute inset-0 bg-gold-500/15 blur-3xl rounded-full scale-110 pointer-events-none" />
                 {/* Phone frame with smooth floating animation */}
-                <div className="relative w-64 lg:w-72 bg-[#0B0C10] rounded-[2.5rem] p-3.5 shadow-2xl border-4 border-gray-900 ring-1 ring-white/20 animate-float">
+                <div className="relative w-64 lg:w-72 bg-[#0B0C10] rounded-[2.5rem] p-3.5 shadow-2xl border-4 border-gray-900 ring-1 ring-gold-400/30 animate-float">
                   {/* Notch */}
                   <div className="w-24 h-5 bg-gray-950 rounded-full mx-auto mb-3" />
                   {/* Screen */}
@@ -735,7 +841,7 @@ export function MobilePosSpotlight() {
                         { name: "22K Gold Ring", weight: "4.2g", price: "NPR 42,000" },
                         { name: "Silver Chain", weight: "12g", price: "NPR 8,400" },
                       ].map((item) => (
-                        <div key={item.name} className="flex items-center justify-between bg-[#0b1420]/60 rounded-lg px-3 py-2.5 border border-white/[0.04] gold-glow-hover">
+                        <div key={item.name} className="flex items-center justify-between bg-[#0b1420]/60 rounded-lg px-3 py-2.5 border border-white/[0.04] hover:border-gold-400/30 hover:bg-[#0b1420] transition-colors duration-200">
                           <div>
                             <p className="text-[11px] font-bold text-white">{item.name}</p>
                             <p className="text-[9px] text-gray-400 font-medium">{item.weight}</p>
@@ -745,7 +851,7 @@ export function MobilePosSpotlight() {
                       ))}
                     </div>
                     {/* Total + checkout */}
-                    <div className="mx-3.5 mb-3.5 mt-1.5 bg-gradient-to-br from-[#111b2b] to-[#0b1420] border border-gold-500/20 rounded-xl px-4 py-3.5 text-center shadow-md">
+                    <div className="mx-3.5 mb-3.5 mt-1.5 bg-gradient-to-br from-[#111b2b] to-[#0b1420] border border-gold-500/25 rounded-xl px-4 py-3.5 text-center shadow-md">
                       <p className="text-gray-400 text-[9px] font-medium"><T>Total Amount</T></p>
                       <p className="text-white font-black text-base">NPR 50,400</p>
                       <p className="text-gold-400 text-[10px] font-black mt-1.5 animate-pulse flex items-center justify-center gap-1">
@@ -756,7 +862,7 @@ export function MobilePosSpotlight() {
                   {/* Home bar */}
                   <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto mt-3.5" />
                 </div>
-              </div>
+              </motion.div>
             </ScrollReveal>
           </div>
         </div>
