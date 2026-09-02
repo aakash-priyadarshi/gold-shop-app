@@ -36,9 +36,10 @@ export const OPEN_GRAPH_LOCALES = {
 } as const;
 
 export function openGraphLocaleForLang(lang: string): string {
-  return (
-    OPEN_GRAPH_LOCALES[lang as keyof typeof OPEN_GRAPH_LOCALES] ?? "en_US"
-  );
+  if (Object.prototype.hasOwnProperty.call(OPEN_GRAPH_LOCALES, lang)) {
+    return OPEN_GRAPH_LOCALES[lang as keyof typeof OPEN_GRAPH_LOCALES];
+  }
+  return "en_US";
 }
 
 type MarketingOgVideo = {
@@ -93,6 +94,7 @@ export function buildMarketingMetadata(input: MarketingMetadataInput): Metadata 
   const ogImage = input.ogImage ?? DEFAULT_OG_IMAGE;
   const title = brandPageTitle(input.title);
   const ogTitle = brandPageTitle(input.ogTitle ?? input.title);
+  const hasVideos = Boolean(input.videos && input.videos.length > 0);
 
   return {
     title: { absolute: title },
@@ -106,11 +108,11 @@ export function buildMarketingMetadata(input: MarketingMetadataInput): Metadata 
       title: ogTitle,
       description: input.ogDescription ?? input.description,
       url: canonical,
-      type: input.type ?? (input.videos ? "video.other" : "website"),
+      type: input.type ?? (hasVideos ? "video.other" : "website"),
       siteName: "Orivraa",
       locale: input.locale ?? "en_US",
       images: [ogImage],
-      ...(input.videos ? { videos: input.videos } : {}),
+      ...(hasVideos ? { videos: input.videos } : {}),
     },
     twitter: {
       card: "summary_large_image",

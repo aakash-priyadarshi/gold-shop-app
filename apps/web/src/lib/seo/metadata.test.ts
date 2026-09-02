@@ -40,8 +40,11 @@ describe("openGraphLocaleForLang", () => {
     expect(openGraphLocaleForLang("en")).toBe("en_US");
   });
 
-  it("falls back to en_US for unknown languages", () => {
+  it("falls back to en_US for unknown languages and prototype properties", () => {
     expect(openGraphLocaleForLang("xx")).toBe("en_US");
+    expect(openGraphLocaleForLang("toString")).toBe("en_US");
+    expect(openGraphLocaleForLang("constructor")).toBe("en_US");
+    expect(openGraphLocaleForLang("__proto__")).toBe("en_US");
   });
 });
 
@@ -51,6 +54,21 @@ describe("buildMarketingMetadata", () => {
       title: "Pricing",
       description: "Plans for jewellery shops",
       path: "/pricing",
+    });
+
+    expect(metadata.openGraph).toMatchObject({
+      type: "website",
+      locale: "en_US",
+    });
+    expect(metadata.openGraph).not.toHaveProperty("videos");
+  });
+
+  it("omits videos and defaults to website type when videos array is empty", () => {
+    const metadata = buildMarketingMetadata({
+      title: "Pricing",
+      description: "Plans for jewellery shops",
+      path: "/pricing",
+      videos: [],
     });
 
     expect(metadata.openGraph).toMatchObject({
@@ -72,7 +90,6 @@ describe("buildMarketingMetadata", () => {
       title: "Demo",
       description: "Watch the demo",
       path: "/demo",
-      type: "video.other",
       videos,
     });
 

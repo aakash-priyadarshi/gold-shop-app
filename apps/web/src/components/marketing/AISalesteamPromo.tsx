@@ -118,10 +118,10 @@ export function AISalesteamPromo({
 
           <ScrollReveal direction="assemble" delay={0.25} spring>
             <div className="flex flex-col sm:flex-row gap-3.5 justify-center items-center">
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-gold-400 to-amber-500 text-gray-950 hover:brightness-105 h-13 px-8 rounded-xl text-base font-extrabold shadow-[0_0_25px_rgba(212,175,55,0.25)] active:scale-95 transition-all border-none"
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-gold-400 to-amber-500 text-gray-950 hover:brightness-105 h-12 px-8 rounded-xl text-base font-extrabold shadow-[0_0_25px_rgba(212,175,55,0.25)] active:scale-95 transition-all border-none"
                   onClick={() =>
                     requestSupportChat({
                       message:
@@ -134,11 +134,11 @@ export function AISalesteamPromo({
                 </Button>
               </motion.div>
               <Link href="/support" className="w-full sm:w-auto">
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="w-full sm:w-auto bg-white/[0.05] hover:bg-white/[0.1] text-white border-white/20 hover:border-gold-400/40 backdrop-blur-md h-13 px-8 rounded-xl text-base font-semibold active:scale-95 transition-all"
+                    className="w-full sm:w-auto bg-white/[0.05] hover:bg-white/[0.1] text-white border-white/20 hover:border-gold-400/40 backdrop-blur-md h-12 px-8 rounded-xl text-base font-semibold active:scale-95 transition-all"
                   >
                     <T>Open support center</T>
                   </Button>

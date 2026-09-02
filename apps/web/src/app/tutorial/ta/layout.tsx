@@ -7,14 +7,6 @@ export const metadata: Metadata = buildMarketingMetadata({
     "Orivraa நகை கடை மென்பொருளின் 24-நிமிட முழு வழிகாட்டி தமிழில்: சரக்கு, GST பில்லிங், POS, கேட்டலாக் மற்றும் AI. இலவச சோதனை.",
   path: "/tutorial/ta",
   locale: "ta_IN",
-  type: "video.other",
-  videos: [
-    {
-      url: "https://images.orivraa.com/tutorial/ta",
-      secureUrl: "https://images.orivraa.com/tutorial/ta",
-      type: "video/mp4",
-    },
-  ],
   languages: {
     ta: "/tutorial/ta",
     en: "/tutorial",

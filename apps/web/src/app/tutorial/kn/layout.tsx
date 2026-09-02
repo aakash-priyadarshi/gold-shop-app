@@ -7,14 +7,6 @@ export const metadata: Metadata = buildMarketingMetadata({
     "Orivraa ಆಭರಣ ಸಾಫ್ಟ್‌ವೇರ್‌ನ 24-ನಿಮಿಷಗಳ ಮಾರ್ಗದರ್ಶಿ ಕನ್ನಡದಲ್ಲಿ: ದಾಸ್ತಾನು, GST ಬಿಲ್ಲಿಂಗ್, POS, ಕಾರಿಗರ ಟ್ರ್ಯಾಕಿಂಗ್ ಮತ್ತು AI. ಉಚಿತ ಪ್ರಯೋಗ.",
   path: "/tutorial/kn",
   locale: "kn_IN",
-  type: "video.other",
-  videos: [
-    {
-      url: "https://images.orivraa.com/tutorial/kn",
-      secureUrl: "https://images.orivraa.com/tutorial/kn",
-      type: "video/mp4",
-    },
-  ],
   languages: {
     kn: "/tutorial/kn",
     en: "/tutorial",

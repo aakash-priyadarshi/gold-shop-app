@@ -703,10 +703,10 @@ export function SellerCtaSection() {
             <ScrollReveal direction="assemble" delay={0.3} spring>
               <div className="flex flex-col sm:flex-row gap-3.5 justify-center items-center">
                 <Link href="/auth/register" className="w-full sm:w-auto">
-                  <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                     <Button
                       size="lg"
-                      className="w-full sm:w-auto h-13 px-9 rounded-xl text-base bg-gradient-to-r from-amber-400 via-gold-400 to-amber-500 text-gray-950 font-black shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] border-none transition-all duration-300 flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto h-12 px-9 rounded-xl text-base bg-gradient-to-r from-amber-400 via-gold-400 to-amber-500 text-gray-950 font-black shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] border-none transition-all duration-300 flex items-center justify-center gap-2"
                     >
                       <span><T>Start free trial</T></span>
                       <ArrowRight className="h-5 w-5 stroke-[2.5]" />
@@ -714,11 +714,11 @@ export function SellerCtaSection() {
                   </motion.div>
                 </Link>
                 <Link href="/support" className="w-full sm:w-auto">
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                     <Button
                       size="lg"
                       variant="outline"
-                      className="w-full sm:w-auto h-13 px-8 rounded-xl text-base bg-white/[0.05] hover:bg-white/[0.1] text-white border-white/20 hover:border-gold-400/50 backdrop-blur-md transition-all font-semibold"
+                      className="w-full sm:w-auto h-12 px-8 rounded-xl text-base bg-white/[0.05] hover:bg-white/[0.1] text-white border-white/20 hover:border-gold-400/50 backdrop-blur-md transition-all font-semibold"
                     >
                       <T>Get onboarding help</T>
                     </Button>
