@@ -378,10 +378,14 @@ function OAuthCallbackHandler() {
           "",
         );
         sessionStorage.removeItem("orivraa_oauth_return_to");
-        window.location.href =
-          !shouldUseMobileRoute && storedReturnTo
-            ? storedReturnTo
-            : dashboardRoute;
+        const canReturnInternally =
+          !shouldUseMobileRoute &&
+          storedReturnTo.charAt(0) === "/" &&
+          storedReturnTo.charAt(1) !== "/" &&
+          !storedReturnTo.includes(":");
+        window.location.assign(
+          canReturnInternally ? storedReturnTo : dashboardRoute,
+        );
       } catch (error: any) {
         console.error("OAuth callback error:", error);
         localStorage.removeItem(TOKEN_KEY);

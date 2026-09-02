@@ -28,6 +28,10 @@ import {
 } from "./dto/recovery-offer.dto";
 import { RecoveryOffersService } from "./recovery-offers.service";
 
+function asSingleQueryValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 @Controller("recovery-offers")
 export class RecoveryOffersController {
   constructor(private readonly recoveryOffers: RecoveryOffersService) {}
@@ -143,9 +147,11 @@ export class RecoveryOffersController {
   @Get("unsubscribe")
   @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Redirect()
-  unsubscribeLanding(@Query("token") token?: string) {
+  unsubscribeLanding(@Query("token") token?: unknown) {
     return {
-      url: this.recoveryOffers.unsubscribePageUrl(token || ""),
+      url: this.recoveryOffers.unsubscribePageUrl(
+        asSingleQueryValue(token) || "",
+      ),
       statusCode: 302,
     };
   }
@@ -154,9 +160,11 @@ export class RecoveryOffersController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { ttl: 60000, limit: 20 } })
   unsubscribe(
-    @Query("token") queryToken?: string,
-    @Body() body?: { token?: string },
+    @Query("token") queryToken?: unknown,
+    @Body() body?: { token?: unknown },
   ) {
-    return this.recoveryOffers.unsubscribe(queryToken || body?.token);
+    return this.recoveryOffers.unsubscribe(
+      asSingleQueryValue(queryToken) || asSingleQueryValue(body?.token),
+    );
   }
 }

@@ -173,6 +173,32 @@ const preview = {
       canSend: true,
     },
     {
+      userId: "user-6",
+      shopId: "shop-6",
+      email: "usa@example.com",
+      firstName: "Usa",
+      shopName: "USA Gold",
+      country: "US",
+      lastActiveAt: "2026-07-01T00:00:00.000Z",
+      activitySegment: "lapsed",
+      incidentAffected: false,
+      timeZone: "America/New_York",
+      recommendedSendAt: "2026-09-01T14:00:00.000Z",
+      emailVerified: true,
+      hasPaidPlan: false,
+      hasShop: true,
+      accountStatus: "ACTIVE",
+      offerStatus: null,
+      sentAt: null,
+      deliveredAt: null,
+      firstOpenedAt: null,
+      claimedAt: null,
+      openCount: 0,
+      clickCount: 0,
+      unsubscribed: false,
+      canSend: true,
+    },
+    {
       userId: "user-5",
       shopId: "shop-5",
       email: "repeat@example.com",
@@ -299,7 +325,7 @@ describe("OffersAdminPage", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Select all sendable" }),
     );
-    expect(screen.getByText("3 account(s) selected")).toBeInTheDocument();
+    expect(screen.getByText("4 account(s) selected")).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole("button", { name: "Schedule selected at local 10 AM" }),
@@ -307,7 +333,7 @@ describe("OffersAdminPage", () => {
 
     await waitFor(() => {
       expect(mocks.sendAudience).toHaveBeenCalledWith({
-        userIds: ["user-1", "user-2", "user-4"],
+        userIds: ["user-1", "user-2", "user-4", "user-6"],
         campaignKey: "customer-winback-2026-09",
         expiresInDays: 30,
         deliveryTiming: "NEXT_LOCAL_10AM",
@@ -368,5 +394,51 @@ describe("OffersAdminPage", () => {
     fireEvent.click(claimedCheckbox);
     expect(screen.getByText("0 account(s) selected")).toBeInTheDocument();
     expect(screen.getByText(/2 opens/)).toBeInTheDocument();
+  });
+
+  it("does not email selected accounts hidden by the current filter", async () => {
+    await renderLoadedPage();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select all sendable" }),
+    );
+    fireEvent.change(screen.getByDisplayValue("All countries"), {
+      target: { value: "US" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Schedule selected at local 10 AM" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.sendAudience).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: ["user-6"],
+        }),
+      );
+    });
+  });
+
+  it("rejects a festival window that ends before it starts", async () => {
+    await renderLoadedPage();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create festival offer" }),
+    );
+    fireEvent.change(screen.getByLabelText("Sale starts"), {
+      target: { value: "2026-10-05T10:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Sale ends"), {
+      target: { value: "2026-10-01T10:00" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save festival campaign" }),
+    );
+
+    expect(mocks.createCampaign).not.toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "The sale must end after it starts",
+      }),
+    );
   });
 });

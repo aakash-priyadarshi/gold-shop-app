@@ -97,6 +97,33 @@ describe("RecoveryOffersService", () => {
     });
   });
 
+  it("updates only supplied festival campaign fields", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      name: "Dashain 2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date("2026-09-20T00:00:00.000Z"),
+      endsAt: new Date("2026-10-05T00:00:00.000Z"),
+      emailSubject: "Celebrate with Orivraa",
+      emailHeading: "A festival offer for your shop",
+      emailBody: "Claim complimentary Pro and save on a paid plan.",
+      isActive: true,
+    });
+    prisma.offerCampaign.update.mockResolvedValue({
+      key: "festival-dashain-2026",
+      isActive: false,
+    });
+
+    await service.updateCampaign("festival-dashain-2026", { isActive: false });
+
+    expect(prisma.offerCampaign.update).toHaveBeenCalledWith({
+      where: { key: "festival-dashain-2026" },
+      data: { isActive: false },
+    });
+  });
+
   it("adds festival days after an existing Pro end date", async () => {
     const existingEnd = new Date("2026-10-01T00:00:00.000Z");
     prisma.shop.findFirst.mockResolvedValue({
@@ -1374,6 +1401,13 @@ describe("RecoveryOffersService", () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
+  it("rejects a repeated unsubscribe query token instead of throwing", async () => {
+    await expect(
+      service.unsubscribe(["user-1.abc", "user-1.def"] as unknown as string),
+    ).rejects.toThrow("This unsubscribe link is invalid");
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
   it("skips delivery when the recipient has unsubscribed", async () => {
     const rawToken = "delivery-token";
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
@@ -1405,6 +1439,115 @@ describe("RecoveryOffersService", () => {
         data: expect.objectContaining({
           status: RecoveryOfferStatus.CANCELLED,
         }),
+      }),
+    );
+  });
+
+  it("does not queue a festival send after the campaign end time", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      name: "Dashain 2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date("2026-09-01T00:00:00.000Z"),
+      endsAt: new Date("2026-09-10T00:00:00.000Z"),
+      emailSubject: "Festival",
+      emailHeading: "Hello",
+      emailBody: "Body",
+      isActive: true,
+    });
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        lastLoginAt: null,
+        webSessions: [],
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+
+    const result = await service.sendAudience({
+      userIds: ["user-1"],
+      campaignKey: "festival-dashain-2026",
+      confirmed: true,
+      adminId: "admin-1",
+      deliveryTiming: "CUSTOM",
+      scheduledFor: "2026-09-10T00:00:00.000Z",
+    });
+
+    expect(result.queued).toBe(0);
+    expect(result.scheduled).toBe(0);
+    expect(result.excluded).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: "owner@example.com",
+          reason: "The send time is after the campaign end time",
+        }),
+      ]),
+    );
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it("delivers a queued offer after the campaign is deactivated", async () => {
+    const rawToken = "delivery-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-1",
+      campaignKey: "festival-dashain-2026",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 14,
+      status: RecoveryOfferStatus.PREPARED,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: "admin-1",
+      user: { firstName: "Owner", marketingUnsubscribedAt: null },
+      shop: { shopName: "Owner Gold" },
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      name: "Dashain 2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date("2026-09-20T00:00:00.000Z"),
+      endsAt: new Date("2026-10-05T00:00:00.000Z"),
+      emailSubject: "Celebrate with Orivraa",
+      emailHeading: "A festival offer for your shop",
+      emailBody: "Claim complimentary Pro and save on a paid plan.",
+      isActive: false,
+    });
+    mail.send.mockResolvedValue({ success: true, messageId: "message-1" });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emailLog.create.mockResolvedValue({ id: "log-1" });
+
+    const result = await service.deliverQueuedOffer({
+      offerId: "offer-1",
+      rawToken,
+    });
+
+    expect(result).toEqual({ skipped: false });
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: "festival-offer",
+        subject: "Celebrate with Orivraa",
       }),
     );
   });

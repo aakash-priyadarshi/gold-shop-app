@@ -1,3 +1,4 @@
+import { PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
@@ -75,7 +76,9 @@ export class CreateOfferCampaignDto {
   emailBody: string;
 }
 
-export class UpdateOfferCampaignDto extends CreateOfferCampaignDto {
+export class UpdateOfferCampaignDto extends PartialType(
+  CreateOfferCampaignDto,
+) {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

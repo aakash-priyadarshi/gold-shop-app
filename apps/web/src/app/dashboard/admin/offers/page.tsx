@@ -233,6 +233,13 @@ export default function OffersAdminPage() {
       });
       return;
     }
+    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      toast({
+        title: t("The sale must end after it starts"),
+        variant: "destructive",
+      });
+      return;
+    }
     setSavingCampaign(true);
     try {
       const payload = {
@@ -438,11 +445,9 @@ export default function OffersAdminPage() {
     deliveryTiming: "IMMEDIATE" | "NEXT_LOCAL_10AM" | "CUSTOM",
   ) => {
     if (!preview || selectedIds.size === 0) return;
-    const sendableIds = [...selectedIds].filter((userId) =>
-      (preview.eligible || []).some(
-        (recipient) => recipient.userId === userId && recipient.canSend,
-      ),
-    );
+    const sendableIds = selectableFiltered
+      .filter((recipient) => selectedIds.has(recipient.userId))
+      .map((recipient) => recipient.userId);
     if (sendableIds.length === 0) {
       toast({
         title: t("Those accounts were already emailed"),
@@ -473,17 +478,19 @@ export default function OffersAdminPage() {
       .filter((item): item is { userId: string; scheduledAt: string } =>
         Boolean(item),
       );
-    const action =
+    const confirmMessage =
       deliveryTiming === "CUSTOM"
-        ? "schedule these emails at the chosen time"
+        ? t(
+            `You are about to schedule these emails at the chosen time for ${sendableIds.length} selected account(s) in ${preview.campaign.name}. Continue?`,
+          )
         : deliveryTiming === "NEXT_LOCAL_10AM"
-          ? "schedule these emails for the next local 10:00 AM"
-          : "send these emails now";
-    if (
-      !window.confirm(
-        `You are about to ${action} for ${sendableIds.length} selected account(s) in ${preview.campaign.name}. Continue?`,
-      )
-    ) {
+          ? t(
+              `You are about to schedule these emails for the next local 10:00 AM for ${sendableIds.length} selected account(s) in ${preview.campaign.name}. Continue?`,
+            )
+          : t(
+              `You are about to send these emails now for ${sendableIds.length} selected account(s) in ${preview.campaign.name}. Continue?`,
+            );
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
