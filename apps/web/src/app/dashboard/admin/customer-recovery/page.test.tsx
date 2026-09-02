@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CustomerRecoveryPage from "./page";
 
+const t = (value: string) => value;
+
 const mocks = vi.hoisted(() => ({
   previewAudience: vi.fn(),
   metrics: vi.fn(),
@@ -26,7 +28,7 @@ vi.mock("@/components/ui/T", () => ({
 }));
 
 vi.mock("@/providers/translation-provider", () => ({
-  useT: () => (value: string) => value,
+  useT: () => t,
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -45,7 +47,7 @@ vi.mock("@/lib/api", () => ({
 const preview = {
   campaignKey: "customer-winback-2026-09",
   days: 50,
-  totalAccounts: 3,
+  totalAccounts: 4,
   eligible: [
     {
       userId: "user-1",
@@ -61,6 +63,9 @@ const preview = {
       recommendedSendAt: "2026-09-01T04:30:00.000Z",
       emailVerified: true,
       hasPaidPlan: false,
+      hasShop: true,
+      accountStatus: "ACTIVE",
+      offerStatus: null,
     },
     {
       userId: "user-2",
@@ -76,6 +81,9 @@ const preview = {
       recommendedSendAt: "2026-09-01T04:30:00.000Z",
       emailVerified: true,
       hasPaidPlan: true,
+      hasShop: true,
+      accountStatus: "ACTIVE",
+      offerStatus: null,
     },
     {
       userId: "user-3",
@@ -89,15 +97,36 @@ const preview = {
       incidentAffected: false,
       timeZone: "Asia/Kolkata",
       recommendedSendAt: "2026-09-01T04:30:00.000Z",
+      emailVerified: true,
+      hasPaidPlan: false,
+      hasShop: true,
+      accountStatus: "PENDING_VERIFICATION",
+      offerStatus: "PREPARED",
+    },
+    {
+      userId: "user-4",
+      shopId: "",
+      email: "noshop@example.com",
+      firstName: "NoShop",
+      shopName: "No shop yet",
+      country: "IN",
+      lastActiveAt: null,
+      activitySegment: "lapsed",
+      incidentAffected: false,
+      timeZone: "Asia/Kolkata",
+      recommendedSendAt: "2026-09-01T04:30:00.000Z",
       emailVerified: false,
       hasPaidPlan: false,
+      hasShop: false,
+      accountStatus: "PENDING_VERIFICATION",
+      offerStatus: null,
     },
   ],
   excluded: [
     {
-      userId: "user-4",
+      userId: "user-5",
       email: "repeat@example.com",
-      reason: "Recovery offer was already sent",
+      reason: "Recovery offer was already claimed",
     },
   ],
 };
@@ -143,6 +172,11 @@ const metrics = {
   updatedAt: "2026-09-01T12:00:00.000Z",
 };
 
+async function renderLoadedPage() {
+  render(<CustomerRecoveryPage />);
+  expect(await screen.findByText("Owner Gold")).toBeInTheDocument();
+}
+
 describe("CustomerRecoveryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -155,39 +189,91 @@ describe("CustomerRecoveryPage", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
-  it("previews the branded 50-day campaign and selects eligible accounts", async () => {
-    render(<CustomerRecoveryPage />);
+  it("previews the branded 50-day campaign without auto-selecting accounts", async () => {
+    await renderLoadedPage();
 
-    await waitFor(() => {
-      expect(screen.getByText("Owner Gold")).toBeInTheDocument();
-    });
     expect(screen.getByText("50 days free")).toBeInTheDocument();
     expect(screen.getByText("Founder & CEO, Orivraa")).toBeInTheDocument();
     expect(screen.getByText("Invoice report linked")).toBeInTheDocument();
     expect(screen.getByText("Paid Gold")).toBeInTheDocument();
     expect(screen.getByText("Pending Gold")).toBeInTheDocument();
+    expect(screen.getAllByText("No shop yet").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Already on Pro").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Email not verified").length).toBeGreaterThan(0);
-    expect(screen.getByText("3 account(s) selected")).toBeInTheDocument();
+    expect(screen.getAllByText("Pending verification").length).toBeGreaterThan(
+      1,
+    );
+    expect(screen.getByText("Queued offer")).toBeInTheDocument();
+    expect(screen.getByText("0 account(s) selected")).toBeInTheDocument();
     expect(screen.getByText("Recovery campaign funnel")).toBeInTheDocument();
     expect(screen.getAllByText("Rejoined")).toHaveLength(2);
     expect(screen.getByText("37.5% of sent")).toBeInTheDocument();
   });
 
-  it("schedules the selected account using country-local timing", async () => {
-    render(<CustomerRecoveryPage />);
+  it("lets an admin select one email, then schedule the visible list", async () => {
+    await renderLoadedPage();
 
-    const scheduleButton = await screen.findByRole("button", {
-      name: "Schedule selected at local 10 AM",
-    });
-    fireEvent.click(scheduleButton);
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Select Owner Gold",
+      }),
+    );
+    expect(screen.getByText("1 account(s) selected")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select all visible" }),
+    );
+    expect(screen.getByText("4 account(s) selected")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Schedule selected at local 10 AM" }),
+    );
 
     await waitFor(() => {
       expect(mocks.sendAudience).toHaveBeenCalledWith({
-        userIds: ["user-1", "user-2", "user-3"],
+        userIds: ["user-1", "user-2", "user-3", "user-4"],
         campaignKey: "customer-winback-2026-09",
         expiresInDays: 30,
         deliveryTiming: "NEXT_LOCAL_10AM",
+        scheduledFor: undefined,
+        recipientSchedules: undefined,
+      });
+    });
+  });
+
+  it("sends a custom campaign time and a per-email override", async () => {
+    await renderLoadedPage();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select Owner Gold" }),
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select Pending Gold" }),
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Custom date and time" }));
+    fireEvent.change(screen.getByLabelText("Custom send time"), {
+      target: { value: "2026-09-05T10:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Send time for pending@example.com"), {
+      target: { value: "2026-09-06T14:30" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Schedule selected at custom time" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.sendAudience).toHaveBeenCalledWith({
+        userIds: ["user-1", "user-3"],
+        campaignKey: "customer-winback-2026-09",
+        expiresInDays: 30,
+        deliveryTiming: "CUSTOM",
+        scheduledFor: new Date("2026-09-05T10:00").toISOString(),
+        recipientSchedules: [
+          {
+            userId: "user-3",
+            scheduledAt: new Date("2026-09-06T14:30").toISOString(),
+          },
+        ],
       });
     });
   });

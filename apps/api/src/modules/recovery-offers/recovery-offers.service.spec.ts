@@ -2,6 +2,7 @@ import {
   RecoveryOfferStatus,
   SubscriptionStatus,
   UserRole,
+  UserStatus,
 } from "@prisma/client";
 import { createHash } from "crypto";
 import { RecoveryOffersService } from "./recovery-offers.service";
@@ -9,7 +10,7 @@ import { RecoveryOffersService } from "./recovery-offers.service";
 describe("RecoveryOffersService", () => {
   const prisma: any = {
     crashReport: { findMany: jest.fn() },
-    user: { findMany: jest.fn(), findUnique: jest.fn() },
+    user: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     subscriptionPlan: { findMany: jest.fn(), findFirst: jest.fn() },
     sellerSubscription: {
       findMany: jest.fn(),
@@ -17,7 +18,7 @@ describe("RecoveryOffersService", () => {
       updateMany: jest.fn(),
       create: jest.fn(),
     },
-    shop: { findFirst: jest.fn() },
+    shop: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
     recoveryOffer: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -271,6 +272,169 @@ describe("RecoveryOffersService", () => {
     expect(result.excluded).toEqual([]);
   });
 
+  it("includes pending-verification shopkeepers and accounts with no shop", async () => {
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-pending",
+        email: "pending-status@example.com",
+        firstName: "Pending",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.PENDING_VERIFICATION,
+        emailVerified: true,
+        preferredCountry: "IN",
+        preferredCurrency: "INR",
+        phone: "9999999999",
+        activeShopId: "shop-1",
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Pending Gold",
+            country: "IN",
+            isActive: false,
+            subscriptions: [],
+          },
+        ],
+      },
+      {
+        id: "user-noshop",
+        email: "noshop@example.com",
+        firstName: "NoShop",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.PENDING_VERIFICATION,
+        emailVerified: false,
+        preferredCountry: "IN",
+        preferredCurrency: "INR",
+        phone: null,
+        activeShopId: null,
+        recoveryOffers: [],
+        shops: [],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+
+    const result = await service.previewAudience();
+
+    expect(result.eligible).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: "pending-status@example.com",
+          hasShop: true,
+          accountStatus: UserStatus.PENDING_VERIFICATION,
+        }),
+        expect.objectContaining({
+          email: "noshop@example.com",
+          hasShop: false,
+          shopName: "No shop yet",
+        }),
+      ]),
+    );
+    expect(result.excluded).toEqual([]);
+  });
+
+  it("creates a shop and uses a custom send time for a no-shop recipient", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-09-02T00:00:00.000Z"));
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-noshop",
+        email: "noshop@example.com",
+        firstName: "NoShop",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.PENDING_VERIFICATION,
+        emailVerified: false,
+        preferredCountry: "IN",
+        preferredCurrency: "INR",
+        phone: "8888888888",
+        activeShopId: null,
+        lastLoginAt: null,
+        webSessions: [],
+        recoveryOffers: [],
+        shops: [],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+    prisma.shop.create.mockResolvedValue({
+      id: "shop-created",
+      shopName: "NoShop's shop",
+    });
+    prisma.user.update.mockResolvedValue({});
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.create.mockResolvedValue({ id: "offer-new" });
+    queue.add.mockResolvedValue({ id: "job-1" });
+    const sendAt = new Date("2026-09-05T10:00:00.000Z");
+
+    const result = await service.sendAudience({
+      userIds: ["user-noshop"],
+      confirmed: true,
+      adminId: "admin-1",
+      deliveryTiming: "CUSTOM",
+      scheduledFor: sendAt.toISOString(),
+    });
+
+    expect(prisma.shop.create).toHaveBeenCalled();
+    expect(result.scheduled).toBe(1);
+    expect(result.results[0].scheduledFor).toEqual(sendAt);
+    expect(queue.add).toHaveBeenCalledWith(
+      "deliver",
+      expect.objectContaining({ offerId: "offer-new" }),
+      expect.objectContaining({ delay: expect.any(Number) }),
+    );
+  });
+
+  it("reissues an unclaimed prepared offer instead of excluding it", async () => {
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        lastLoginAt: null,
+        webSessions: [],
+        recoveryOffers: [
+          { shopId: "shop-1", status: RecoveryOfferStatus.PREPARED },
+        ],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "IN",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([{ country: "IN" }]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue({
+      id: "offer-existing",
+      status: RecoveryOfferStatus.PREPARED,
+    });
+    prisma.recoveryOffer.update.mockResolvedValue({ id: "offer-existing" });
+    queue.add.mockResolvedValue({ id: "job-1" });
+
+    const result = await service.sendAudience({
+      userIds: ["user-1"],
+      confirmed: true,
+      adminId: "admin-1",
+    });
+
+    expect(result.queued).toBe(1);
+    expect(prisma.recoveryOffer.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "offer-existing" },
+        data: expect.objectContaining({
+          status: RecoveryOfferStatus.PREPARED,
+        }),
+      }),
+    );
+    expect(prisma.recoveryOffer.create).not.toHaveBeenCalled();
+  });
+
   it("queues delivery without sending email in the admin request", async () => {
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },
@@ -415,7 +579,7 @@ describe("RecoveryOffersService", () => {
     );
   });
 
-  it("never reopens an offer that is already prepared", async () => {
+  it("keeps a prepared offer selectable so the campaign can be resent", async () => {
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },
     ]);
@@ -425,6 +589,7 @@ describe("RecoveryOffersService", () => {
         email: "owner@example.com",
         firstName: "Owner",
         role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
         emailVerified: true,
         activeShopId: "shop-1",
         recoveryOffers: [
@@ -444,16 +609,16 @@ describe("RecoveryOffersService", () => {
 
     const result = await service.preview(["report-1"]);
 
-    expect(result.eligible).toEqual([]);
-    expect(result.excluded).toEqual([
+    expect(result.eligible).toEqual([
       expect.objectContaining({
-        reason: "Recovery offer is already being processed",
+        email: "owner@example.com",
+        offerStatus: RecoveryOfferStatus.PREPARED,
       }),
     ]);
-    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
+    expect(result.excluded).toEqual([]);
   });
 
-  it("reports an expired offer accurately without reissuing the campaign", async () => {
+  it("includes expired unclaimed offers so they can be reissued", async () => {
     prisma.crashReport.findMany.mockResolvedValue([
       { id: "report-1", userId: "user-1" },
     ]);
@@ -463,6 +628,7 @@ describe("RecoveryOffersService", () => {
         email: "owner@example.com",
         firstName: "Owner",
         role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
         emailVerified: true,
         activeShopId: "shop-1",
         recoveryOffers: [
@@ -482,13 +648,13 @@ describe("RecoveryOffersService", () => {
 
     const result = await service.preview(["report-1"]);
 
-    expect(result.eligible).toEqual([]);
-    expect(result.excluded).toEqual([
+    expect(result.eligible).toEqual([
       expect.objectContaining({
-        reason: "Recovery offer expired unclaimed",
+        email: "owner@example.com",
+        offerStatus: RecoveryOfferStatus.EXPIRED,
       }),
     ]);
-    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
+    expect(result.excluded).toEqual([]);
   });
 
   it("delivers a queued offer idempotently before marking it sent", async () => {
@@ -861,6 +1027,54 @@ describe("RecoveryOffersService", () => {
         }),
       }),
     );
+  });
+
+  it("activates a pending-verification account after email is verified", async () => {
+    const now = Date.now();
+    prisma.recoveryOffer.findUnique.mockResolvedValue({
+      id: "offer-1",
+      userId: "user-1",
+      shopId: "shop-1",
+      days: 50,
+      status: RecoveryOfferStatus.SENT,
+      expiresAt: new Date(now + 24 * 60 * 60 * 1000),
+      claimedAt: null,
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      emailVerified: true,
+      status: UserStatus.PENDING_VERIFICATION,
+    });
+    prisma.user.update.mockResolvedValue({});
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.shop.findFirst.mockResolvedValue({
+      id: "shop-1",
+      userId: "user-1",
+      country: "IN",
+      isActive: false,
+    });
+    prisma.shop.update.mockResolvedValue({});
+    prisma.sellerSubscription.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findFirst.mockResolvedValue({
+      id: "plan-pro",
+      country: "IN",
+      name: "PRO",
+    });
+    prisma.sellerSubscription.create.mockResolvedValue({
+      id: "sub-1",
+      currentPeriodEnd: new Date(now + 50 * 24 * 60 * 60 * 1000),
+      plan: { name: "PRO" },
+    });
+    prisma.recoveryOffer.update.mockResolvedValue({});
+
+    const result = await service.claim("f".repeat(32), "user-1");
+
+    expect(result.claimed).toBe(true);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: UserStatus.ACTIVE },
+      }),
+    );
+    expect(prisma.shop.update).toHaveBeenCalled();
   });
 
   it("refuses to grant the offer before the recipient verifies email", async () => {

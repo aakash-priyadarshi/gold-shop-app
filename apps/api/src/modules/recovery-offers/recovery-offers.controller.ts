@@ -67,6 +67,8 @@ export class RecoveryOffersController {
       campaignKey: dto.campaignKey,
       expiresInDays: dto.expiresInDays,
       deliveryTiming: dto.deliveryTiming,
+      scheduledFor: dto.scheduledFor,
+      recipientSchedules: dto.recipientSchedules,
       confirmed: dto.confirmed,
       adminId,
     });

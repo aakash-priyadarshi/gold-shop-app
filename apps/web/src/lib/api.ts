@@ -2346,9 +2346,12 @@ export interface RecoveryAudiencePreview {
     activitySegment: "recent" | "dormant" | "lapsed";
     incidentAffected: boolean;
     timeZone: string;
-    recommendedSendAt: string;
+    recommendedSendAt: string | null;
     emailVerified: boolean;
     hasPaidPlan: boolean;
+    hasShop: boolean;
+    accountStatus: string;
+    offerStatus: string | null;
   }>;
   excluded: Array<{ userId?: string; email?: string; reason: string }>;
 }
@@ -2419,7 +2422,9 @@ export const recoveryOffersApi = {
     userIds: string[];
     campaignKey?: string;
     expiresInDays?: number;
-    deliveryTiming?: "IMMEDIATE" | "NEXT_LOCAL_10AM";
+    deliveryTiming?: "IMMEDIATE" | "NEXT_LOCAL_10AM" | "CUSTOM";
+    scheduledFor?: string;
+    recipientSchedules?: Array<{ userId: string; scheduledAt: string }>;
   }) =>
     api.post<{
       campaignKey: string;
