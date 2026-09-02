@@ -1,10 +1,11 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Orivraa Jewellery Shop Software Demo"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Orivraa Jewellery Shop Software Demo",
   description:
     "Watch a 30-second demo of Orivraa jewellery software: live dashboards, weight-based inventory, POS, GST invoices, and catalogues.",
+  path: "/demo",
   keywords: [
     "jewellery shop software demo",
     "jewellery software demo video",
@@ -29,28 +30,7 @@ export const metadata: Metadata = {
     "jewellery digital catalogue preview",
     "jewellery AI insights",
   ],
-  alternates: { canonical: "/demo" },
-  openGraph: {
-    title: "Orivraa Jewellery Shop Software Demo",
-    description:
-      "30-second visual demo of Orivraa jewellery shop software — dashboard, inventory, POS, GST invoices, catalogues, analytics, and AI insights.",
-    url: "https://www.orivraa.com/demo",
-    type: "video.other",
-    videos: [
-      {
-        url: "https://images.orivraa.com/demo/en",
-        secureUrl: "https://images.orivraa.com/demo/en",
-        type: "video/mp4",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Orivraa Jewellery Shop Software Demo",
-    description:
-      "Quick 30-second visual tour of Orivraa — inventory by weight & purity, POS, GST invoicing, catalogues, and AI insights.",
-  },
-};
+});
 
 export default function DemoLayout({ children }: { children: React.ReactNode }) {
   return children;

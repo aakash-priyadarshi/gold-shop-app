@@ -1,10 +1,11 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Jewellery Business Blog and Software Guides"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Business Blog and Software Guides",
   description:
     "Guides on jewellery shop software, GST billing, inventory, and growing a gold or diamond business with Orivraa.",
+  path: "/blog",
   keywords: [
     "jewellery business blog",
     "jewellery shop tips",
@@ -20,21 +21,7 @@ export const metadata: Metadata = {
     "gold business guide",
     "jewellery ERP blog",
   ],
-  alternates: { canonical: "/blog" },
-  openGraph: {
-    title: "Jewellery Business Blog | Orivraa",
-    description:
-      "Expert guides on jewellery shop software, billing software, tax reports, inventory management, and growing your gold & diamond business.",
-    url: "https://www.orivraa.com/blog",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Jewellery Business Blog | Orivraa",
-    description:
-      "Expert guides on jewellery shop software, billing software, tax reports, inventory management, and growing your gold & diamond business.",
-  },
-};
+});
 
 export default function BlogLayout({
   children,

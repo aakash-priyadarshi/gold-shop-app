@@ -398,7 +398,7 @@ export default function CrashReportsPage() {
         toast({
           title: t("No eligible recovery recipients"),
           description: t(
-            "The selected reports are anonymous, already offered recovery, or belong to accounts that already have a paid plan.",
+            "The selected reports are anonymous, already offered recovery, or belong to accounts that cannot receive this campaign.",
           ),
         });
       }
@@ -927,6 +927,8 @@ export default function CrashReportsPage() {
                       {recipient.firstName} · {recipient.shopName} · {recipient.country} · {recipient.email}
                       {" · "}
                       {recipient.reportCount} <T>report(s)</T>
+                      {recipient.hasPaidPlan ? " · Pro" : ""}
+                      {!recipient.emailVerified ? " · unverified" : ""}
                     </li>
                   ))}
                 </ul>
@@ -949,7 +951,9 @@ export default function CrashReportsPage() {
               <p className="mt-3 text-xs text-amber-800 dark:text-amber-300">
                 <T>
                   Sending does not mark reports fixed. Each recipient must sign
-                  in and claim the offer; paid accounts are never modified.
+                  in and claim the offer. Current Pro shops are extended to 50
+                  days from the claim date unless more than 50 days already
+                  remain. Unverified addresses can verify first, then claim.
                 </T>
               </p>
               <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">

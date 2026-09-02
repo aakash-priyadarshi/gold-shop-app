@@ -1,18 +1,18 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Download Orivraa Desktop App"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Download Orivraa Desktop App for Windows & Mac",
   description:
     "Download the Orivraa desktop app for Windows and macOS to run jewellery billing, inventory, and shop tools from the counter.",
-  alternates: { canonical: "/download" },
-  openGraph: {
-    title: "Download Orivraa App | Desktop & Mobile",
-    description:
-      "Get the Orivraa app for a seamless jewellery shopping experience across 5+ countries.",
-    url: "https://www.orivraa.com/download",
-  },
-};
+  path: "/download",
+  keywords: [
+    "download orivraa",
+    "jewellery software for windows",
+    "jewellery billing software for mac",
+    "desktop pos jewellery",
+  ],
+});
 
 export default function DownloadLayout({
   children,
@@ -21,3 +21,4 @@ export default function DownloadLayout({
 }) {
   return children;
 }
+

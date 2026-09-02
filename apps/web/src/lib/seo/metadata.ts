@@ -25,12 +25,29 @@ type MarketingMetadataInput = {
   ogDescription?: string;
   ogImage?: { url: string; width: number; height: number; alt: string };
   type?: "website" | "article";
+  languages?: Record<string, string>;
+  locale?: string;
+  robots?: Metadata["robots"];
 };
+
+const BRAND_PATTERNS = [
+  /orivraa/i,
+  /أوريفرا/,
+  /ओरिव्रा/,
+  /ઓરિવ્રા/,
+  /ಒರಿವ್ರಾ/,
+  /ஒரிவ்ரா/,
+  /ఒరివ్రా/,
+  /אוריברה/,
+  /אָריווראַ/,
+  /ඔරිව්රා/,
+];
 
 /** Strip a trailing brand suffix, then add ` | Orivraa` once if the title is unbranded. */
 export function brandPageTitle(title: string): string {
   const cleaned = title.replace(/\s*\|\s*Orivraa(?:\s*2026)?\s*$/i, "").trim();
-  if (/orivraa/i.test(cleaned)) return cleaned;
+  const alreadyBranded = BRAND_PATTERNS.some((pattern) => pattern.test(cleaned));
+  if (alreadyBranded) return cleaned;
   return `${cleaned} | Orivraa`;
 }
 
@@ -49,12 +66,17 @@ export function buildMarketingMetadata(input: MarketingMetadataInput): Metadata 
     title: { absolute: title },
     description: input.description,
     keywords: input.keywords,
-    alternates: { canonical },
+    alternates: {
+      canonical,
+      ...(input.languages ? { languages: input.languages } : {}),
+    },
     openGraph: {
       title: ogTitle,
       description: input.ogDescription ?? input.description,
       url: canonical,
       type: input.type ?? "website",
+      siteName: "Orivraa",
+      locale: input.locale ?? "en_US",
       images: [ogImage],
     },
     twitter: {
@@ -63,6 +85,7 @@ export function buildMarketingMetadata(input: MarketingMetadataInput): Metadata 
       description: input.ogDescription ?? input.description,
       images: [ogImage.url],
     },
+    robots: input.robots,
   };
 }
 
@@ -82,3 +105,4 @@ export function buildFaqJsonLd(
     })),
   };
 }
+

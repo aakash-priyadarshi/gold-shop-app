@@ -18,20 +18,20 @@ import {
   Zap,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Jewellery Shop Software for Sri Lanka"),
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Shop Software for Sri Lanka | LKR Billing & POS",
   description:
-    "Jewellery billing for Sri Lanka with LKR pricing, VAT invoices, mobile POS, and catalog-linked stock. Free plan available.",
-  alternates: {
-    canonical: "https://www.orivraa.com/lk/jewellery-shop-software",
-  },
-  openGraph: {
-    title: "Jewellery Shop Software Sri Lanka | Orivraa",
-    description:
-      "Purpose-built jewellery POS for Sri Lanka. LKR billing, VAT-ready invoices, mobile POS. Pro from LKR 4,500/mo. Free plan.",
-    url: "https://www.orivraa.com/lk/jewellery-shop-software",
-  },
-};
+    "Jewellery billing for Sri Lanka with LKR pricing, 18% VAT invoices, savings schemes, and mobile counter POS. Free plan available.",
+  path: "/lk/jewellery-shop-software",
+  keywords: [
+    "jewellery software Sri Lanka",
+    "gold shop software Colombo",
+    "LKR gold billing software",
+    "Sri Lanka jewellery POS",
+  ],
+});
 
 const jsonLd = {
   "@context": "https://schema.org",

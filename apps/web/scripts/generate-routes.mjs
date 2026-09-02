@@ -35,6 +35,7 @@ const EXCLUDED_EXACT_ROUTES = new Set([
   "/sitemap",
   "/sentry-example-page",
   "/recovery/pro",
+  "/help",
 ]);
 
 function isIgnoredDirectory(name) {

@@ -1,10 +1,11 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Mobile Jewellery POS Software"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Mobile Jewellery POS Software",
   description:
     "Mobile jewellery POS for gold shops: live rates, making charges, old-gold exchange, and GST/VAT receipts from any phone.",
+  path: "/jewellery-pos-software",
   keywords: [
     "jewellery POS software",
     "mobile jewellery POS software",
@@ -22,21 +23,7 @@ export const metadata: Metadata = {
     "diamond POS software",
     "jewellery checkout software",
   ],
-  alternates: { canonical: "/jewellery-pos-software" },
-  openGraph: {
-    title: "Mobile Jewellery POS Software | Orivraa",
-    description:
-      "Mobile jewellery POS for gold shops: live rates, making charges, old-gold exchange, and GST/VAT receipts from any phone.",
-    url: "https://www.orivraa.com/jewellery-pos-software",
-    type: "article",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Mobile Jewellery POS Software — Starts Free | Orivraa",
-    description:
-      "Point-of-sale software designed for jewellery shops. Phone billing, live rates, weight-based pricing, making charges, and GST/VAT receipts.",
-  },
-};
+});
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

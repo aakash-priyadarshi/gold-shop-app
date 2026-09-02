@@ -4,7 +4,7 @@ import {
     INDIA_PRO_PLUS_MONTHLY_PRICE,
     NEPAL_PRO_MONTHLY_PRICE,
 } from "@/lib/seo/pricing-copy";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { absolutePageTitle, DEFAULT_OG_IMAGE } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 import { headers } from "next/headers";
 
@@ -217,11 +217,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title: seo.openGraphTitle,
       description: seo.openGraphDescription,
       url: "https://www.orivraa.com/pricing",
+      images: [DEFAULT_OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: seo.twitterTitle,
       description: seo.twitterDescription,
+      images: [DEFAULT_OG_IMAGE.url],
     },
     other: {
       "script:ld+json": JSON.stringify(pricingJsonLd),

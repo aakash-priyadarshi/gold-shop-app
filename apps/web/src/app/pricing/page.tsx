@@ -44,6 +44,7 @@ import {
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  TYPES                                                         */
@@ -786,27 +787,41 @@ export default function PricingPage() {
             </div>
 
             {/* Billing toggle */}
-            <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="relative inline-flex items-center bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setBilling("monthly")}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`relative z-10 px-5 py-2 rounded-full text-sm font-medium transition-colors ${
                   billing === "monthly"
-                    ? "bg-amber-500 text-white shadow-sm"
+                    ? "text-white"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                <T>Monthly</T>
+                {billing === "monthly" && (
+                  <motion.div
+                    layoutId="activeBillingPill"
+                    className="absolute inset-0 bg-amber-500 rounded-full shadow-sm"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10"><T>Monthly</T></span>
               </button>
               <button
                 onClick={() => setBilling("annual")}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`relative z-10 px-5 py-2 rounded-full text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
                   billing === "annual"
-                    ? "bg-amber-500 text-white shadow-sm"
+                    ? "text-white"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                <T>Annual</T>
-                <span className="ml-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                {billing === "annual" && (
+                  <motion.div
+                    layoutId="activeBillingPill"
+                    className="absolute inset-0 bg-amber-500 rounded-full shadow-sm"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10"><T>Annual</T></span>
+                <span className={`relative z-10 text-xs font-semibold ${billing === "annual" ? "text-amber-100" : "text-green-600 dark:text-green-400"}`}>
                   <T>Save 17%</T>
                 </span>
               </button>
@@ -877,11 +892,12 @@ export default function PricingPage() {
               const btnClass = btnColor ? "hover:opacity-90" : meta.ctaClass;
 
               return (
-                <div
+                <motion.div
                   key={plan.id}
-                  className={`relative rounded-2xl border bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-lg ${
+                  whileHover={{ y: -6, transition: { duration: 0.25, ease: "easeOut" } }}
+                  className={`relative rounded-2xl border bg-white dark:bg-gray-900 shadow-sm transition-shadow duration-300 hover:shadow-xl ${
                     hasHighlight
-                      ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/20 scale-[1.02]"
+                      ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/20"
                       : "border-gray-200 dark:border-gray-800"
                   }`}
                 >
@@ -1007,7 +1023,7 @@ export default function PricingPage() {
                       })}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>

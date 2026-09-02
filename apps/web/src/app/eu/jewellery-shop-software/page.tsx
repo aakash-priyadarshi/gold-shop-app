@@ -18,20 +18,20 @@ import {
   Zap,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Jewellery Shop Software for Europe"),
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Shop Software for Europe | EU OSS VAT & POS",
   description:
-    "Cloud jewellery POS for EU shops with country VAT, EUR billing, weight-based pricing, and hallmark fields. Free plan available.",
-  alternates: {
-    canonical: "https://www.orivraa.com/eu/jewellery-shop-software",
-  },
-  openGraph: {
-    title: "Jewellery Shop Software Europe | Orivraa",
-    description:
-      "Purpose-built jewellery POS for EU shops. Country VAT rates, EUR billing, weight-based pricing. Pro from €12.99/mo. Free plan.",
-    url: "https://www.orivraa.com/eu/jewellery-shop-software",
-  },
-};
+    "Cloud jewellery POS for EU shops with OSS VAT compliance, EUR billing, weight-based pricing, and hallmark fields. Free plan available.",
+  path: "/eu/jewellery-shop-software",
+  keywords: [
+    "jewellery software Europe",
+    "gold shop software EU",
+    "OSS VAT jewellery billing",
+    "European jewellery POS",
+  ],
+});
 
 const jsonLd = {
   "@context": "https://schema.org",

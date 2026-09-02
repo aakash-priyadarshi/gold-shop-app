@@ -19,20 +19,21 @@ import {
   Zap,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Jewellery Shop Software for Nepal"),
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Shop Software for Nepal | NRB Rates & Tola POS",
   description:
-    "Jewellery billing for Nepal with NRB gold rates, tola/gram weights, NPR invoices, and mobile POS. Pro from NPR 399/month.",
-  alternates: {
-    canonical: "https://www.orivraa.com/np/jewellery-shop-software",
-  },
-  openGraph: {
-    title: "Jewellery Shop Software for Nepal | Orivraa",
-    description:
-      "Nepal jewellery billing software with NRB gold rates, tola weight, NPR billing, mobile POS, and IRD VAT compliance. Better than Tally. Free to start.",
-    url: "https://www.orivraa.com/np/jewellery-shop-software",
-  },
-};
+    "Jewellery billing for Nepal with NRB gold rates, tola/gram weights, Skill Promotion Fee, NPR invoices, and mobile POS. Pro from NPR 399/month.",
+  path: "/np/jewellery-shop-software",
+  keywords: [
+    "jewellery software Nepal",
+    "gold shop software Kathmandu",
+    "NRB gold rate billing",
+    "tola gold billing software",
+    "Nepal jewellery POS",
+  ],
+});
 
 const jsonLd = {
   "@context": "https://schema.org",

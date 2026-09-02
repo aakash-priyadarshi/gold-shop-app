@@ -1,10 +1,11 @@
 import { Metadata } from "next";
-import { absolutePageTitle } from "@/lib/seo/metadata";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: absolutePageTitle("Jewellery Shop Software with Mobile POS"),
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Shop Software with Mobile POS",
   description:
     "Cloud jewellery shop software with mobile POS, live gold rates, weight-based inventory, and GST/VAT billing. Free plan available.",
+  path: "/jewellery-shop-software",
   keywords: [
     "jewellery shop software",
     "jewellery software",
@@ -52,21 +53,7 @@ export const metadata: Metadata = {
     "jewellery weight management",
     "jewellery purity tracking",
   ],
-  alternates: { canonical: "/jewellery-shop-software" },
-  openGraph: {
-    title: "Jewellery Shop Software with Mobile POS | Orivraa",
-    description:
-      "Cloud jewellery shop software with mobile POS, live gold rates, weight-based inventory, and GST/VAT billing. Free plan available.",
-    url: "https://www.orivraa.com/jewellery-shop-software",
-    type: "article",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Jewellery Shop Software with Mobile POS | Orivraa",
-    description:
-      "Free jewellery shop software with mobile POS, 7-day live gold rate trends, billing, tax-ready invoices, customer chat, and analytics.",
-  },
-};
+});
 
 export default function JewelleryShopSoftwareLayout({
   children,

@@ -18,21 +18,21 @@ import {
   Zap,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title:
-    "Jewellery Shop Software for the UK | Cloud POS, VAT & Hallmark Billing | Orivraa",
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: "Jewellery Shop Software for the UK | Cloud POS & VAT",
   description:
-    "Cloud jewellery shop management software purpose-built for UK jewellers. Handles HMRC VAT, MTD-ready reports, hallmark fields for UK assay offices (London, Birmingham, Sheffield, Edinburgh), investment gold zero-rating, and GBP billing. Pro from £9.99/month. Free plan available.",
-  alternates: {
-    canonical: "https://www.orivraa.com/uk/jewellery-shop-software",
-  },
-  openGraph: {
-    title: "Jewellery Shop Software UK | Orivraa",
-    description:
-      "Cloud jewellery software for UK shops. HMRC VAT, MTD-ready, UK hallmark fields, investment gold zero-rating. Pro from £9.99/mo. Free plan.",
-    url: "https://www.orivraa.com/uk/jewellery-shop-software",
-  },
-};
+    "Cloud jewellery POS for UK shops with HMRC MTD VAT, UK Assay Office hallmarking, live bullion pricing, and GBP counter billing. Free plan available.",
+  path: "/uk/jewellery-shop-software",
+  keywords: [
+    "jewellery software UK",
+    "gold shop software London",
+    "UK assay office hallmarking",
+    "HMRC MTD jewellery POS",
+    "Hatton Garden jewellery software",
+  ],
+});
 
 const jsonLd = {
   "@context": "https://schema.org",
