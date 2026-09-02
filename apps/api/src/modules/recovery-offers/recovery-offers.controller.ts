@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
@@ -15,7 +16,9 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
   PreviewRecoveryOffersDto,
+  PreviewRecoveryAudienceDto,
   RecoveryOfferTokenDto,
+  SendRecoveryAudienceDto,
   SendRecoveryOffersDto,
 } from "./dto/recovery-offer.dto";
 import { RecoveryOffersService } from "./recovery-offers.service";
@@ -31,12 +34,36 @@ export class RecoveryOffersController {
     return this.recoveryOffers.preview(dto.reportIds, dto.campaignKey);
   }
 
+  @Post("admin/audience/preview")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  previewAudience(@Body() dto: PreviewRecoveryAudienceDto) {
+    return this.recoveryOffers.previewAudience(dto.campaignKey);
+  }
+
   @Post("admin/send")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   send(@Body() dto: SendRecoveryOffersDto, @CurrentUser("id") adminId: string) {
     return this.recoveryOffers.send({
       reportIds: dto.reportIds,
+      campaignKey: dto.campaignKey,
+      expiresInDays: dto.expiresInDays,
+      deliveryTiming: dto.deliveryTiming,
+      confirmed: dto.confirmed,
+      adminId,
+    });
+  }
+
+  @Post("admin/audience/send")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  sendAudience(
+    @Body() dto: SendRecoveryAudienceDto,
+    @CurrentUser("id") adminId: string,
+  ) {
+    return this.recoveryOffers.sendAudience({
+      userIds: dto.userIds,
       campaignKey: dto.campaignKey,
       expiresInDays: dto.expiresInDays,
       deliveryTiming: dto.deliveryTiming,
@@ -65,5 +92,12 @@ export class RecoveryOffersController {
   @Roles(UserRole.ADMIN)
   recent() {
     return this.recoveryOffers.listRecent();
+  }
+
+  @Get("admin/metrics")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  metrics(@Query("campaignKey") campaignKey?: string) {
+    return this.recoveryOffers.getCampaignMetrics(campaignKey);
   }
 }

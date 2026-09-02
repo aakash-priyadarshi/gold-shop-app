@@ -603,7 +603,7 @@ const FAQS = [
   },
   {
     q: "Can I ask ChatGPT or Claude if Orivraa is right for my jewellery shop?",
-    a: "Yes. Open /ask-ai and choose ChatGPT, Claude, Gemini, or Perplexity. The link sends the question “How is Orivraa for jewellery business software?” plus our public product URLs. On a phone it opens the AI app when installed; on a computer it opens the website.",
+    a: "Yes. Open /ask-ai and choose ChatGPT, Claude, Google AI, or Perplexity. The link sends the question “How is Orivraa for jewellery business software?” plus our public product URLs. On a phone it opens the AI app when installed; on a computer it opens the website.",
   },
   {
     q: "Can I connect ChatGPT or Claude to my jewellery inventory?",

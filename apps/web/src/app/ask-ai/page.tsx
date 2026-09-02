@@ -25,10 +25,10 @@ export default function AskAiPage() {
             <p className="mt-5 text-base lg:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
               <T>
                 Google and shoppers can read this page. The buttons below are
-                ordinary links, so search bots see ChatGPT, Claude, Gemini, and
-                Perplexity as ways to evaluate Orivraa jewellery shop software.
-                ChatGPT, Claude, and Perplexity receive the prepared question.
-                Gemini opens with that question copied, ready for you to paste.
+                ordinary links, so search bots see ChatGPT, Claude, Google AI
+                Mode, and Perplexity as ways to evaluate Orivraa jewellery shop
+                software. Each link carries the prepared question plus public
+                product URLs.
               </T>
             </p>
             <div className="mt-8 flex justify-center">
@@ -42,8 +42,8 @@ export default function AskAiPage() {
               <span className="inline-flex items-center gap-2">
                 <Monitor className="h-4 w-4 text-amber-600" />
                 <T>
-                  Computer: opens ChatGPT, Claude, Gemini, or Perplexity on the
-                  web
+                  Computer: opens ChatGPT, Claude, Google AI, or Perplexity on
+                  the web
                 </T>
               </span>
             </div>
@@ -87,8 +87,8 @@ export default function AskAiPage() {
               </li>
               <li>
                 <T>
-                  Gemini (Google) — opens Gemini with the question copied for
-                  you to paste
+                  Google AI Mode — runs a sourced Google Search AI answer on
+                  the same question
                 </T>
               </li>
               <li>
@@ -127,9 +127,8 @@ export default function AskAiPage() {
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   <T>
                     You may be asked to sign in first. After login the question
-                    is usually still in the URL. Perplexity often runs without
-                    an account. Gemini uses your Google account; paste the
-                    copied question after it opens.
+                    is usually still in the URL. Perplexity and Google AI Mode
+                    often run without a chat-app account.
                   </T>
                 </p>
               </details>

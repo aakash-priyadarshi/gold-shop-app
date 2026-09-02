@@ -1,7 +1,8 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Orivraa Tutorial 2026 | நகை கடை மென்பொருள் முழு வழிகாட்டி தமிழில்",
+  title: absolutePageTitle("Orivraa Tutorial 2026 | நகை கடை மென்பொருள் முழு வழிகாட்டி தமிழில்"),
   description:
     "Orivraa நகை கடை மென்பொருளின் 24-நிமிட முழு வழிகாட்டி தமிழில். சரக்கு மேலாண்மை, GST/VAT ரசீது, விற்பனை நிலையம், டிஜிட்டல் கேட்டலாக், தொழிலாளர் கண்காணிப்பு, வரி அறிக்கை மற்றும் AI — ஒரே பயன்பாட்டில். 30 நாள் இலவச சோதனை.",
   keywords: [

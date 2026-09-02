@@ -867,7 +867,7 @@ export default function CrashReportsPage() {
                 ) : (
                   <Gift className="h-3.5 w-3.5" />
                 )}
-                <T>Preview 40-day recovery offer</T>
+                <T>Preview 50-day recovery offer</T>
               </button>
               <button
                 type="button"

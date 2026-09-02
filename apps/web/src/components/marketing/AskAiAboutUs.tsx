@@ -4,7 +4,6 @@ import { T } from "@/components/ui/T";
 import { SITE_URL } from "@/config/site";
 import {
   getAskAiLinks,
-  getAskAiPrompt,
 } from "@/lib/ask-ai";
 import {
   SELLER_AI_MCP_CLIENTS,
@@ -35,8 +34,8 @@ function usePreferAppWindow() {
 
 /**
  * Real <a href> buttons so Googlebot sees the destinations in HTML.
- * On phones, same-tab navigation lets ChatGPT/Claude/Gemini/Perplexity
- * Universal Links open the installed app; on desktop they open the website.
+ * On phones, same-tab navigation lets ChatGPT/Claude/Google AI/Perplexity
+ * links open the installed app when available; on desktop they open the website.
  */
 export function AskAiProviderButtons({
   className = "",
@@ -44,7 +43,6 @@ export function AskAiProviderButtons({
 }: AskAiButtonsProps) {
   const preferApp = usePreferAppWindow();
   const links = useMemo(() => getAskAiLinks(SITE_URL), []);
-  const [geminiCopied, setGeminiCopied] = useState(false);
   const padding = size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-2.5 text-sm";
 
   return (
@@ -60,27 +58,10 @@ export function AskAiProviderButtons({
           rel="noopener noreferrer"
           aria-label={`${provider.shortLabel} about Orivraa jewellery business software`}
           className={`inline-flex items-center justify-center rounded-full font-semibold border shadow-sm active:scale-95 transition-all ${padding} ${provider.className}`}
-          onClick={() => {
-            if (provider.id !== "gemini") return;
-            const prompt = getAskAiPrompt(SITE_URL);
-            if (!navigator.clipboard?.writeText) {
-              setGeminiCopied(false);
-              return;
-            }
-            void navigator.clipboard
-              .writeText(prompt)
-              .then(() => setGeminiCopied(true))
-              .catch(() => setGeminiCopied(false));
-          }}
         >
           <T>{provider.shortLabel}</T>
         </a>
       ))}
-      {geminiCopied && (
-        <span className="w-full text-center text-xs text-muted-foreground">
-          <T>Gemini question copied. Paste it into Gemini.</T>
-        </span>
-      )}
     </div>
   );
 }
@@ -103,9 +84,9 @@ export function AskAiAboutUs({
             </h2>
             <p className="mt-1 text-sm text-gray-400">
               <T>
-                Opens ChatGPT, Claude, Gemini, or Perplexity. Gemini copies the
-                question for you to paste; on a phone the app opens when it is
-                installed, and on a computer the website opens.
+                Opens ChatGPT, Claude, Google AI Mode, or Perplexity with a
+                prepared question. On a phone the app opens when it is
+                installed; on a computer the website opens.
               </T>
             </p>
           </div>
@@ -154,9 +135,9 @@ export function AskAiAboutUs({
           </h2>
           <p className="mt-3 text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
             <T>
-              Pick ChatGPT, Claude, Gemini, or Perplexity. Gemini copies the
-              question for you to paste; the other links carry it plus our
-              public product pages where supported.
+              Pick ChatGPT, Claude, Google AI, or Perplexity. Each link carries
+              the question plus our public product pages so the assistant can
+              read current facts.
             </T>
           </p>
         </div>
@@ -312,10 +293,9 @@ export function AiDiscoverySection() {
               </h2>
               <p className="mt-3 text-sm lg:text-base text-gray-300 leading-relaxed">
                 <T>
-                  Choose OpenAI ChatGPT, Anthropic Claude, Google Gemini, or
-                  Perplexity. Gemini copies the question for you to paste; the
-                  other links carry it plus our public product URLs where
-                  supported.
+                  Choose OpenAI ChatGPT, Anthropic Claude, Google AI Mode, or
+                  Perplexity. Each link includes the question and our public
+                  product URLs so the assistant can fetch current facts.
                 </T>
               </p>
               <AskAiProviderButtons className="mt-6" />

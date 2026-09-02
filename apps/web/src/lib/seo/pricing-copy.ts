@@ -29,10 +29,9 @@ export function getRegionalPricingSeo(
 
   if (normalized === "IN") {
     return {
-      title:
-        "Orivraa Pricing India 2026 | Jewellery Software, Mobile POS from ₹299/month",
+      title: "Orivraa Pricing in India from ₹299/month",
       description:
-        "Local pricing for India. Free plan available. India Pro starts at ₹299/month with mobile POS, 7-day live gold rate trends, billing, GSTIN-ready invoices, tax reports, AI tools, digital catalogues, and marketplace access.",
+        "Free plan available. India Pro starts at ₹299/month with mobile POS, live gold rates, GST invoices, and jewellery billing.",
       openGraphTitle:
         "Orivraa Pricing India | Jewellery Software + Mobile POS from ₹299/month",
       openGraphDescription:
@@ -55,10 +54,9 @@ export function getRegionalPricingSeo(
 
   if (normalized === "NP") {
     return {
-      title:
-        "Orivraa Pricing Nepal 2026 | Jewellery Software, Mobile POS from NPR 399/month",
+      title: "Orivraa Pricing in Nepal from NPR 399",
       description:
-        "Local pricing for Nepal. Free plan available. Nepal Pro starts at NPR 399/month with mobile POS, live gold rate trends, billing, tax-ready workflows, AI tools, digital catalogues, and marketplace access.",
+        "Free plan available. Nepal Pro starts at NPR 399/month with mobile POS, live gold rates, billing, and tax-ready jewellery workflows.",
       openGraphTitle:
         "Orivraa Pricing Nepal | Jewellery Shop Software from NPR 399/month",
       openGraphDescription:
@@ -80,10 +78,9 @@ export function getRegionalPricingSeo(
   }
 
   return {
-    title:
-      "Orivraa Pricing 2026 | Jewellery Software, Mobile POS from ₹299/month",
+    title: "Orivraa Jewellery Software Pricing",
     description:
-      "Orivraa jewellery software pricing is local by country. Free plan available. Paid plans start at ₹299/month in India, with mobile POS, 7-day live gold rate trends, billing, GSTIN-ready invoices, tax reports, AI tools, and marketplace access.",
+      "Free plan available. Paid plans start at ₹299/month in India, with local currency pricing by country for jewellery shops.",
     openGraphTitle:
       "Orivraa Pricing | Jewellery Software from ₹299/month",
     openGraphDescription:

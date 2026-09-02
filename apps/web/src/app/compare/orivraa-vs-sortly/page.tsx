@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs Sortly for Jewellery Shops | Billing vs Inventory Tracker",
+  title: absolutePageTitle("Orivraa vs Sortly for Jewellery Shops"),
   description:
-    "Sortly is a great visual inventory organiser — but it cannot create invoices, bill customers by gold weight, calculate making charges, or handle GST/VAT. Compare Orivraa: a full jewellery shop management platform with POS, billing, and marketplace.",
+    "Sortly organises inventory photos. Orivraa bills by gold weight, calculates making charges, and issues GST/VAT jewellery invoices.",
   alternates: { canonical: "https://www.orivraa.com/compare/orivraa-vs-sortly" },
 };
 

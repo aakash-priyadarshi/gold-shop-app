@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Platform Guidelines",
+  title: absolutePageTitle("Orivraa Platform Guidelines for Shops"),
   description:
-    "Orivraa platform guidelines for sellers and buyers. Understand our quality standards, listing requirements, and community rules.",
+    "Quality standards, listing rules, and community guidelines for jewellery sellers and buyers on Orivraa.",
   alternates: { canonical: "/platform-guidelines" },
   robots: { index: true, follow: true },
 };

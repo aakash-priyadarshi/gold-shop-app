@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs Marg ERP | Modern Jewellery Software vs Legacy ERP",
+  title: absolutePageTitle("Orivraa vs Marg ERP for Jewellery Shops"),
   description:
-    "Marg ERP is a legacy desktop ERP — installed per machine, India-only, and complex to set up. Orivraa is a cloud-first jewellery platform you can run from any phone or counter, with live gold rates, weight-based billing, making charges, purity tracking and multi-region GST/VAT support. Free plan available.",
+    "Marg ERP is a legacy desktop ERP. Orivraa is cloud jewellery software with live rates, weight-based billing, and multi-region GST/VAT. Free to start.",
   keywords: [
     "Orivraa vs Marg ERP",
     "Marg ERP alternative",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/compare/orivraa-vs-marg-erp" },
   openGraph: {
-    title: "Orivraa vs Marg ERP — Cloud Jewellery Platform vs Legacy Desktop",
+    title: "Orivraa vs Marg ERP for Jewellery Shops",
     description:
       "Why jewellers move from Marg ERP to Orivraa: cloud access from any device, live rates, weight-based billing, making charges and multi-region support.",
     url: "https://www.orivraa.com/compare/orivraa-vs-marg-erp",

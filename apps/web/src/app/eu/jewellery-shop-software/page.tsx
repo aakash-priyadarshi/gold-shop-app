@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,10 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title:
-    "Jewellery Shop Software for Europe | Cloud POS, EU VAT & EUR Billing | Orivraa",
+  title: absolutePageTitle("Jewellery Shop Software for Europe"),
   description:
-    "Cloud jewellery shop software for European jewellers. EU VAT by country, weight × purity pricing, hallmark fields, investment gold rules, and EUR billing. Pro from €12.99/month. Free plan available.",
+    "Cloud jewellery POS for EU shops with country VAT, EUR billing, weight-based pricing, and hallmark fields. Free plan available.",
   alternates: {
     canonical: "https://www.orivraa.com/eu/jewellery-shop-software",
   },

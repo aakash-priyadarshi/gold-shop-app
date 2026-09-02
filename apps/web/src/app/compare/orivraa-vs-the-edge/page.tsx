@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs The Edge for Jewellers | Cloud Alternative to Desktop POS",
+  title: absolutePageTitle("Orivraa vs The Edge for Jewellers"),
   description:
-    "The Edge is a respected jewellery POS — but it's Windows-only, requires a local server, and is built exclusively for North America. Compare Orivraa: cloud-native, works on any device, supports India, Nepal, UAE & UK, free plan available.",
+    "The Edge is a Windows jewellery POS. Orivraa is cloud-native on any device, with India, Nepal, UAE, and UK support. Free plan available.",
   alternates: { canonical: "https://www.orivraa.com/compare/orivraa-vs-the-edge" },
 };
 

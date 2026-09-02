@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Orivraa vs Jewel360 | Jewellery Software for Global Markets | 2026",
+  title: absolutePageTitle("Orivraa vs Jewel360 for Jewellery Shops"),
   description:
-    "Jewel360 is a strong US/Canada jewellery POS — but it doesn't support India, Nepal, UAE, or UK tax rules, and has no multi-currency billing beyond USD/CAD. Orivraa is the cloud-native alternative built for global jewellers. Free plan available.",
+    "Jewel360 is a US/Canada jewellery POS. Orivraa adds India, Nepal, UAE, and UK tax rules with multi-currency jewellery billing. Free plan available.",
   alternates: { canonical: "https://www.orivraa.com/compare/orivraa-vs-jewel360" },
 };
 

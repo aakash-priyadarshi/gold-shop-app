@@ -4,6 +4,7 @@ import {
     INDIA_PRO_PLUS_MONTHLY_PRICE,
     NEPAL_PRO_MONTHLY_PRICE,
 } from "@/lib/seo/pricing-copy";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 import { headers } from "next/headers";
 
@@ -189,7 +190,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 
   return {
-    title: seo.title,
+    title: absolutePageTitle(seo.title),
     description: seo.description,
     keywords: [
       "orivraa pricing",

@@ -350,9 +350,9 @@ export default async function RootLayout({
               fontFamily: "system-ui, sans-serif",
             }}
           >
-            <h1 style={{ fontSize: "24px", marginBottom: "16px" }}>
+            <p style={{ fontSize: "24px", marginBottom: "16px", fontWeight: 700 }}>
               Orivraa — Premium Jewellery Marketplace
-            </h1>
+            </p>
             <p
               style={{
                 fontSize: "14px",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import Link from "next/link";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -18,10 +19,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title:
-    "Jewellery Shop Software for Sri Lanka | LKR Billing, VAT & Mobile POS | Orivraa",
+  title: absolutePageTitle("Jewellery Shop Software for Sri Lanka"),
   description:
-    "Jewellery billing software for Sri Lankan gold shops. LKR pricing, gram and tola weights, 18% VAT invoices with TIN fields, mobile POS, QR/RFID tag printing, and catalog-linked stock. Pro from LKR 4,500/month. Free plan available.",
+    "Jewellery billing for Sri Lanka with LKR pricing, VAT invoices, mobile POS, and catalog-linked stock. Free plan available.",
   alternates: {
     canonical: "https://www.orivraa.com/lk/jewellery-shop-software",
   },

@@ -2329,6 +2329,65 @@ export interface RecoveryOfferPreview {
   excluded: Array<{ userId?: string; email?: string; reason: string }>;
 }
 
+export interface RecoveryAudiencePreview {
+  campaignKey: string;
+  days: number;
+  totalAccounts: number;
+  eligible: Array<{
+    userId: string;
+    shopId: string;
+    email: string;
+    firstName: string;
+    shopName: string;
+    country: string;
+    lastActiveAt?: string | null;
+    activitySegment: "recent" | "dormant" | "lapsed";
+    incidentAffected: boolean;
+    timeZone: string;
+    recommendedSendAt: string;
+  }>;
+  excluded: Array<{ userId?: string; email?: string; reason: string }>;
+}
+
+export interface RecoveryCampaignMetrics {
+  campaignKey: string;
+  totals: {
+    targeted: number;
+    scheduled: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    totalOpens: number;
+    clicked: number;
+    totalClicks: number;
+    claimed: number;
+    rejoined: number;
+    bounced: number;
+    complained: number;
+    failed: number;
+  };
+  rates: {
+    delivery: number;
+    open: number;
+    click: number;
+    claim: number;
+    rejoin: number;
+  };
+  byCountry: Array<{
+    country: string;
+    targeted: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    claimed: number;
+    rejoined: number;
+  }>;
+  webhookConfigured: boolean;
+  resendApiConfigured: boolean;
+  updatedAt: string;
+}
+
 export const recoveryOffersApi = {
   preview: (reportIds: string[], campaignKey?: string) =>
     api.post<RecoveryOfferPreview>("/recovery-offers/admin/preview", {
@@ -2347,6 +2406,31 @@ export const recoveryOffersApi = {
       failed: number;
       excluded: Array<{ userId?: string; email?: string; reason: string }>;
     }>("/recovery-offers/admin/send", { ...data, confirmed: true }),
+  previewAudience: (campaignKey?: string) =>
+    api.post<RecoveryAudiencePreview>(
+      "/recovery-offers/admin/audience/preview",
+      { campaignKey },
+    ),
+  sendAudience: (data: {
+    userIds: string[];
+    campaignKey?: string;
+    expiresInDays?: number;
+    deliveryTiming?: "IMMEDIATE" | "NEXT_LOCAL_10AM";
+  }) =>
+    api.post<{
+      campaignKey: string;
+      queued: number;
+      scheduled: number;
+      failed: number;
+      excluded: Array<{ userId?: string; email?: string; reason: string }>;
+    }>("/recovery-offers/admin/audience/send", {
+      ...data,
+      confirmed: true,
+    }),
+  metrics: (campaignKey?: string) =>
+    api.get<RecoveryCampaignMetrics>("/recovery-offers/admin/metrics", {
+      params: campaignKey ? { campaignKey } : undefined,
+    }),
   lookup: (token: string) =>
     api.post<{
       recipient: string;
@@ -2368,12 +2452,22 @@ export const recoveryOffersApi = {
     api.get<
       Array<{
         id: string;
+        campaignKey: string;
         email: string;
+        days: number;
         status: string;
         sentAt?: string;
+        deliveredAt?: string;
+        firstOpenedAt?: string;
+        openCount: number;
+        firstClickedAt?: string;
+        clickCount: number;
+        bouncedAt?: string;
+        complainedAt?: string;
         scheduledFor?: string;
         claimedAt?: string;
         expiresAt: string;
+        createdAt: string;
       }>
     >("/recovery-offers/admin/recent"),
 };

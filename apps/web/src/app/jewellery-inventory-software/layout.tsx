@@ -1,10 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title:
-    "Jewellery Inventory Software — Gold & Diamond Inventory Management | Orivraa 2026",
+  title: absolutePageTitle("Jewellery Inventory Software"),
   description:
-    "Best jewellery inventory management software. Track gold, silver, diamond inventory by weight, purity, and piece, with mobile POS stock sync, barcode scanning, automatic stock alerts, karigar management, and batch tracking. India Pro ₹299/month · Nepal NPR 399 · UK £9.99 · UAE AED 39.99 · US $12.99. Free plan always available.",
+    "Track gold, silver, and diamond stock by weight, purity, and piece, synced with mobile POS. Free jewellery inventory software to start.",
   keywords: [
     "jewellery inventory software",
     "jewellery inventory management",

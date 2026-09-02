@@ -16,11 +16,28 @@ import { T } from "@/components/ui/T";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
+import { buildMarketingMetadata } from "@/lib/seo/metadata";
 import { resolveHeroVideo, mapCountryToMarket } from "@/lib/geo";
+import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+
+export const metadata: Metadata = buildMarketingMetadata({
+  title: BRAND.seo.title,
+  description:
+    "Jewellery ERP and POS with live gold rates, karigar tracking, GST/VAT billing, mobile counter POS, and seller MCP integration for ChatGPT and Claude.",
+  path: "/",
+  keywords: [
+    "jewellery shop software",
+    "jewellery MCP integration",
+    "ChatGPT jewellery inventory",
+    "seller AI key jewellery",
+    "gold shop POS",
+    "Orivraa",
+  ],
+});
 
 // Lazy-load below-the-fold footer
 const DynamicFooter = dynamic(
@@ -71,7 +88,7 @@ export default async function HomePage() {
       "Weight-based billing in gram, tola, ounce, and laal",
       "GST/VAT-ready invoices and mobile POS",
       "Artisan (karigar) metal and wastage tracking",
-      "Ask ChatGPT, Claude, Gemini, or Perplexity about Orivraa",
+      "Ask ChatGPT, Claude, Google AI, or Perplexity about Orivraa",
       "Seller AI integration keys and scoped MCP tools",
     ],
     offers: {

@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Support",
+  title: absolutePageTitle("Orivraa Support for Jewellery Software"),
   description:
-    "Contact Orivraa support for help with your jewellery purchases, shop management, or any platform issues. We're here to help.",
+    "Get help with Orivraa jewellery purchases, shop billing, inventory, and platform issues from our support team.",
   alternates: { canonical: "/support" },
 };
 

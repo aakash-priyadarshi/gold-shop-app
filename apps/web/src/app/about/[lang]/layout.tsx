@@ -11,6 +11,7 @@ import {
 } from "@/data/about-summary-i18n";
 import { BRAND } from "@/config/brand";
 import { SITE_URL } from "@/config/site";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 
 const BASE_URL = SITE_URL;
@@ -46,7 +47,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: c.metaTitle,
+    title: absolutePageTitle(c.metaTitle),
     description: c.metaDescription,
     alternates: {
       canonical: `${BASE_URL}/about/${lang}`,

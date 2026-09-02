@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: Railway web preview URL
-        required: true
+        description: Optional public preview URL (web or API)
+        required: false
         type: string
 
 permissions:
@@ -27,55 +27,131 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url }}
+      INPUT_BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url }}
+      DEPLOY_ENV: ${{ github.event.deployment.environment }}
+      EXPECTED_SHA: ${{ github.event.deployment.sha || github.sha }}
     steps:
+      - name: Resolve preview hosts and verify commit
+        id: service
+        run: |
+          set -euo pipefail
+          EXPECTED="$EXPECTED_SHA"
+
+          host_of() {
+            echo "$1" | sed -E 's#^https://([^/]+).*#\1#'
+          }
+
+          is_dashboard_url() {
+            local host
+            host="$(host_of "$1")"
+            [[ "$host" == "railway.com" || "$host" == "www.railway.com" ||
+               "$host" == "railway.app" || "$host" == "www.railway.app" ]]
+          }
+
+          is_public_app_url() {
+            [[ "$1" == https://* ]] || return 1
+            is_dashboard_url "$1" && return 1
+            return 0
+          }
+
+          CANDIDATES=()
+          add_candidate() {
+            local url="${1%/}"
+            [[ -n "$url" ]] || return 0
+            local existing
+            for existing in "${CANDIDATES[@]+"${CANDIDATES[@]}"}"; do
+              [[ "$existing" == "$url" ]] && return 0
+            done
+            CANDIDATES+=("$url")
+          }
+
+          if is_public_app_url "${INPUT_BASE_URL:-}"; then
+            add_candidate "$INPUT_BASE_URL"
+          elif [[ -n "${INPUT_BASE_URL:-}" ]]; then
+            echo "Ignoring Railway dashboard URL: $INPUT_BASE_URL"
+          fi
+
+          if [[ "${DEPLOY_ENV:-}" =~ gold-shop-app-pr-[0-9]+ ]]; then
+            SLUG="${BASH_REMATCH[0]}"
+            add_candidate "https://gold-shopweb-${SLUG}.up.railway.app"
+            add_candidate "https://gold-shopapi-${SLUG}.up.railway.app"
+          fi
+
+          if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
+            echo "::error::No public Railway preview URL. Pass base_url or deploy a gold-shop-app-pr-* environment."
+            exit 1
+          fi
+
+          echo "Candidates:"
+          printf '  %s\n' "${CANDIDATES[@]}"
+
+          probe_web_sha() {
+            local base="$1"
+            local code
+            code="$(curl -sS -o /tmp/build-info.json -w "%{http_code}" --connect-timeout 10 --max-time 20 "$base/api/build-info" || true)"
+            [[ "$code" == "200" ]] || return 1
+            jq -r '.sha // empty' /tmp/build-info.json
+          }
+
+          probe_api_sha() {
+            local base="$1"
+            local code
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --connect-timeout 10 --max-time 20 "$base/api/health" || true)"
+            [[ "$code" == "200" ]] || return 1
+            jq -r '.release.sha // .data.release.sha // empty' /tmp/health.json
+          }
+
+          for attempt in $(seq 1 8); do
+            WEB_MATCH=""
+            API_MATCH=""
+            for base in "${CANDIDATES[@]}"; do
+              WEB_SHA="$(probe_web_sha "$base" || true)"
+              API_SHA="$(probe_api_sha "$base" || true)"
+              echo "$base web=${WEB_SHA:-none} api=${API_SHA:-none}"
+              if [[ "$WEB_SHA" == "$EXPECTED" ]]; then
+                WEB_MATCH="$base"
+              fi
+              if [[ "$API_SHA" == "$EXPECTED" ]]; then
+                API_MATCH="$base"
+              fi
+            done
+
+            if [[ -n "$WEB_MATCH" ]]; then
+              echo "Web preview serves $EXPECTED at $WEB_MATCH"
+              echo "BASE_URL=$WEB_MATCH" >> "$GITHUB_ENV"
+              echo "is_web=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [[ -n "$API_MATCH" ]]; then
+              echo "API preview serves $EXPECTED at $API_MATCH"
+              echo "BASE_URL=$API_MATCH" >> "$GITHUB_ENV"
+              echo "is_web=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Attempt $attempt/8: expected SHA $EXPECTED not on preview yet"
+            [[ $attempt -eq 8 ]] || sleep 15
+          done
+
+          echo "::error::Neither web nor API preview serves commit $EXPECTED"
+          exit 1
+
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        if: steps.service.outputs.is_web == 'true'
         with:
           ref: ${{ github.event.deployment.sha || github.sha }}
           persist-credentials: false
 
       - uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
+        if: steps.service.outputs.is_web == 'true'
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        if: steps.service.outputs.is_web == 'true'
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
-
-      - name: Require a public preview URL
-        run: |
-          if [[ -z "$BASE_URL" || "$BASE_URL" != https://* ]]; then
-            echo "::error::Railway did not publish an HTTPS preview URL"
-            exit 1
-          fi
-
-      - name: Detect the service and verify its commit
-        id: service
-        run: |
-          EXPECTED="${{ github.event.deployment.sha || github.sha }}"
-          STATUS=$(curl -sS -o /tmp/build-info.json -w "%{http_code}" "$BASE_URL/api/build-info" || true)
-          if [[ "$STATUS" == "200" ]]; then
-            ACTUAL=$(jq -r '.sha // ""' /tmp/build-info.json)
-            [[ "$ACTUAL" == "$EXPECTED" ]] || {
-              echo "::error::Web preview serves $ACTUAL, expected $EXPECTED"
-              exit 1
-            }
-            echo "is_web=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          API_STATUS=$(curl -sS -o /tmp/health.json -w "%{http_code}" "$BASE_URL/api/health" || true)
-          [[ "$API_STATUS" == "200" ]] || {
-            echo "::error::Preview is neither a healthy web nor API service (web $STATUS, API $API_STATUS)"
-            exit 1
-          }
-          ACTUAL=$(jq -r '.release.sha // .data.release.sha // ""' /tmp/health.json)
-          [[ "$ACTUAL" == "$EXPECTED" ]] || {
-            echo "::error::API preview serves $ACTUAL, expected $EXPECTED"
-            exit 1
-          }
-          echo "is_web=false" >> "$GITHUB_OUTPUT"
 
       - name: Install browser test dependencies
         if: steps.service.outputs.is_web == 'true'
@@ -92,3 +168,4 @@ jobs:
         run: npx playwright test homepage.spec.ts auth.spec.ts --project=chromium --workers=1
         env:
           CI: "true"
+          BASE_URL: ${{ env.BASE_URL }}

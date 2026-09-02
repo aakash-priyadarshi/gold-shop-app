@@ -1,9 +1,10 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Seller Guide — Start Selling Jewellery Online | Orivraa",
+  title: absolutePageTitle("Seller Guide for Jewellery Shops"),
   description:
-    "Complete step-by-step guide for jewellery sellers on Orivraa. Learn how to set up your online shop, list gold & diamond products, manage inventory, and sell to B2B buyers in Nepal, India, Dubai, USA & UK.",
+    "Set up an Orivraa jewellery shop, list gold and diamond products, manage inventory, and sell to buyers across supported markets.",
   keywords: [
     "sell jewellery online",
     "jewellery seller guide",

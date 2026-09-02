@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title:
-    "Billing Software for Jewellery Shops in India | GST Invoicing | Orivraa",
+  title: absolutePageTitle("Jewellery Billing Software for India"),
   description:
-    "GST-ready billing software made for jewellery shops in India. Weight-based pricing (gram/tola), live gold & silver rates, making charges & wastage, purity/hallmark/HUID tracking, old-gold exchange and instant GST invoices you can share on WhatsApp. India Pro ₹299/month. Free plan always available.",
+    "GST jewellery billing for India with gram/tola pricing, live gold rates, making charges, HUID tracking, and WhatsApp invoices.",
   keywords: [
     "billing software for jewellery shops India",
     "jewellery billing software",

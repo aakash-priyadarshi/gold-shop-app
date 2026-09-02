@@ -1,7 +1,8 @@
 import { Metadata } from "next";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "شرح أوريفرا 2026 | الدليل الكامل لبرنامج محلات المجوهرات بالعربية",
+  title: absolutePageTitle("شرح أوريفرا 2026 | الدليل الكامل لبرنامج محلات المجوهرات بالعربية"),
   description:
     "شرح كامل مدته 24 دقيقة بالعربية لبرنامج أوريفرا لمحلات المجوهرات. المخزون، الفوترة GST، نقطة البيع، الكتالوج الرقمي، إدارة الصانع، التقارير الضريبية والذكاء الاصطناعي — كل شيء في مكان واحد.",
   keywords: [

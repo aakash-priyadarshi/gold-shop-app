@@ -1,6 +1,7 @@
 "use client";
 
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
+import { SettingsSaveStatus } from "@/components/settings/SettingsSaveStatus";
 import { T } from "@/components/ui/T";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -38,7 +39,6 @@ import {
     Loader2,
     Monitor,
     Printer,
-    Save,
     ScanLine,
     Tag,
     Usb,
@@ -46,7 +46,8 @@ import {
     Wrench,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { AutoSaveStatus } from "@/hooks/use-auto-save";
 
 export type HardwareSettingsPanelProps = {
   /** Where the back arrow returns (mobile vs desktop settings). */
@@ -143,7 +144,8 @@ export default function HardwareSettingsPanel({
   const { toast } = useToast();
   const [cfg, setCfg] = useState<HardwareConfig>(defaultHardwareConfig);
   const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>("idle");
+  const saveStatusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pairing, setPairing] = useState(false);
   const [pairingLabel, setPairingLabel] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -156,21 +158,43 @@ export default function HardwareSettingsPanel({
     void listDetectedPrinters().then(setDetected);
   }, []);
 
-  const updateScanner = (patch: Partial<HardwareConfig["scanner"]>) =>
-    setCfg((c) => ({ ...c, scanner: { ...c.scanner, ...patch } }));
-  const updatePrinter = (patch: Partial<HardwareConfig["printer"]>) =>
-    setCfg((c) => ({ ...c, printer: { ...c.printer, ...patch } }));
+  useEffect(
+    () => () => {
+      if (saveStatusTimeout.current) clearTimeout(saveStatusTimeout.current);
+    },
+    [],
+  );
+
+  const markAutoSaved = () => {
+    setSaveStatus("saved");
+    if (saveStatusTimeout.current) clearTimeout(saveStatusTimeout.current);
+    saveStatusTimeout.current = setTimeout(() => setSaveStatus("idle"), 2000);
+  };
+
+  const persistConfig = (next: HardwareConfig) => {
+    saveHardwareConfig(next);
+    markAutoSaved();
+  };
+
+  const updateScanner = (patch: Partial<HardwareConfig["scanner"]>) => {
+    const next = { ...cfg, scanner: { ...cfg.scanner, ...patch } };
+    setCfg(next);
+    persistConfig(next);
+  };
+  const updatePrinter = (patch: Partial<HardwareConfig["printer"]>) => {
+    const next = { ...cfg, printer: { ...cfg.printer, ...patch } };
+    setCfg(next);
+    persistConfig(next);
+  };
   const updateLabelPrinter = (
     patch: Partial<HardwareConfig["labelPrinter"]>,
-  ) => setCfg((c) => ({ ...c, labelPrinter: { ...c.labelPrinter, ...patch } }));
-
-  const handleSave = () => {
-    setSaving("saving");
-    saveHardwareConfig(cfg);
-    setTimeout(() => {
-      setSaving("saved");
-      setTimeout(() => setSaving("idle"), 1500);
-    }, 250);
+  ) => {
+    const next = {
+      ...cfg,
+      labelPrinter: { ...cfg.labelPrinter, ...patch },
+    };
+    setCfg(next);
+    persistConfig(next);
   };
 
   const handlePair = async () => {
@@ -564,34 +588,32 @@ export default function HardwareSettingsPanel({
                   type="button"
                   key={item.id}
                   onClick={() => {
-                    setCfg((c) => {
-                      const printer =
-                        item.kind === "thermal"
-                          ? {
-                              ...c.printer,
-                              enabled: true,
-                              preferA4: false,
-                              transport:
-                                item.source === "os"
-                                  ? ("os" as const)
-                                  : item.source === "usb"
-                                    ? ("webusb" as const)
-                                    : item.source === "bluetooth"
-                                      ? ("bluetooth" as const)
-                                      : item.source === "network"
-                                        ? ("network" as const)
-                                        : c.printer.transport,
-                              deviceLabel: item.name,
-                            }
-                          : {
-                              ...c.printer,
-                              transport: "browser" as const,
-                              preferA4: true,
-                            };
-                      const next = { ...c, printer };
-                      saveHardwareConfig(next);
-                      return next;
-                    });
+                    const printer =
+                      item.kind === "thermal"
+                        ? {
+                            ...cfg.printer,
+                            enabled: true,
+                            preferA4: false,
+                            transport:
+                              item.source === "os"
+                                ? ("os" as const)
+                                : item.source === "usb"
+                                  ? ("webusb" as const)
+                                  : item.source === "bluetooth"
+                                    ? ("bluetooth" as const)
+                                    : item.source === "network"
+                                      ? ("network" as const)
+                                      : cfg.printer.transport,
+                            deviceLabel: item.name,
+                          }
+                        : {
+                            ...cfg.printer,
+                            transport: "browser" as const,
+                            preferA4: true,
+                          };
+                    const next = { ...cfg, printer };
+                    setCfg(next);
+                    persistConfig(next);
                     toast({
                       title:
                         item.kind === "thermal"
@@ -972,23 +994,14 @@ export default function HardwareSettingsPanel({
         </section>
       </div>
 
-      {/* Sticky save */}
+      {/* Auto-save status */}
       <div className="px-4 py-3 bg-white border-t border-gray-100">
-        <button
-          onClick={handleSave}
-          disabled={saving === "saving"}
-          data-tour="hardware-save"
-          className="w-full py-3 bg-amber-500 text-white text-sm font-semibold rounded-2xl flex items-center justify-center gap-2 active:bg-amber-600 disabled:opacity-60"
-        >
-          {saving === "saving" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : saving === "saved" ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          <T>{saving === "saved" ? "Saved" : "Save hardware settings"}</T>
-        </button>
+        <div className="flex justify-center" data-tour="hardware-save">
+          <SettingsSaveStatus
+            status={saveStatus}
+            idleLabel="Hardware changes save automatically"
+          />
+        </div>
       </div>
     </div>
   );

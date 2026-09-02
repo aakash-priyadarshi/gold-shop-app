@@ -2,58 +2,192 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>40 days of Orivraa Pro on us</title>
+    <meta name="color-scheme" content="light" />
+    <title>{{days}} days of Orivraa Pro on us</title>
   </head>
   <body
-    style="margin:0;background:#f8fafc;color:#1f2937;font-family:Arial,sans-serif;line-height:1.6"
+    style="margin:0;background:#f5f2ea;color:#172033;font-family:Arial,Helvetica,sans-serif;line-height:1.6"
   >
-    <div style="max-width:620px;margin:0 auto;padding:32px 18px">
-      <div
-        style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:32px"
-      >
-        <p style="margin-top:0">Hi {{firstName}},</p>
-        <p>
-          Recently, some Orivraa customers experienced problems with checkout,
-          invoices, and account-related workflows. If this interrupted your
-          work, I’m genuinely sorry.
-        </p>
-        <p>
-          We fixed the affected workflows and added real-time error monitoring
-          and alerts so we can detect problems much faster. Our target is to
-          begin investigating a new customer-impacting report within 24 hours.
-        </p>
-        <p>
-          To make up for the inconvenience, we would like to give
-          <strong>{{shopName}}</strong>
-          <strong>{{days}} days of Orivraa Pro</strong>
-          at no cost. No card is required and it will not renew automatically.
-        </p>
-        <p style="margin:28px 0;text-align:center">
-          <a
-            href="{{claimUrl}}"
-            style="display:inline-block;border-radius:10px;background:#b7791f;color:#fff;padding:13px 22px;text-decoration:none;font-weight:700"
-          >
-            Claim my
-            {{days}}
-            days
-          </a>
-        </p>
-        <p style="font-size:14px;color:#6b7280">
-          This account-bound offer expires on
-          {{formatDate offerExpiresAt}}. If anything does not work, reply
-          directly to this email or contact
-          {{supportEmail}}.
-        </p>
-        <p>
-          We will not pretend software can never fail. What we can promise is
-          that we will listen, investigate quickly, and keep you informed.
-        </p>
-        <p style="margin-bottom:0">— Aakash<br />Founder, Orivraa</p>
-      </div>
-      <p style="font-size:12px;color:#94a3b8;text-align:center">
-        You received this service-recovery message because an error report was
-        linked to your signed-in Orivraa account.
-      </p>
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0">
+      We fixed the invoice issue and would like to welcome you back with
+      {{days}}
+      days of Orivraa Pro.
     </div>
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      style="background:#f5f2ea"
+    >
+      <tr>
+        <td align="center" style="padding:28px 14px">
+          <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            style="max-width:640px;background:#ffffff;border:1px solid #e6dcc6;border-radius:20px;overflow:hidden;box-shadow:0 12px 36px rgba(23,32,51,.08)"
+          >
+            <tr>
+              <td style="background:#0d1830;padding:20px 28px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  <tr>
+                    <td width="48" valign="middle">
+                      <img
+                        src="{{brandIconUrl}}"
+                        width="42"
+                        height="42"
+                        alt="Orivraa"
+                        style="display:block;border:0;border-radius:10px"
+                      />
+                    </td>
+                    <td
+                      valign="middle"
+                      style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:.4px"
+                    >
+                      Orivraa
+                      <div
+                        style="color:#dcb86a;font-size:11px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase"
+                      >Jewellery business software</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img
+                  src="{{heroImageUrl}}"
+                  width="640"
+                  alt="A golden globe representing Orivraa shops around the world"
+                  style="display:block;width:100%;height:auto;border:0"
+                />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:34px 34px 16px">
+                <div
+                  style="display:inline-block;background:#fbf2dc;color:#8a5b13;border:1px solid #ecd6a4;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase"
+                >
+                  A message from our CEO
+                </div>
+                <h1
+                  style="margin:18px 0 12px;color:#13213c;font-family:Georgia,'Times New Roman',serif;font-size:31px;line-height:1.2;font-weight:700"
+                >
+                  We’re sorry about the invoice issue.
+                </h1>
+                <p style="margin:0 0 18px;font-size:16px;color:#344054">Hi
+                  {{firstName}},</p>
+                <p style="margin:0 0 18px;font-size:16px;color:#344054">
+                  Recently, an invoice issue disrupted the experience for some
+                  Orivraa shops. We fixed the issue, strengthened our
+                  monitoring, and made further improvements to invoice
+                  reliability.
+                </p>
+                <p style="margin:0 0 18px;font-size:16px;color:#344054">
+                  I’m genuinely sorry if this interrupted your work. Orivraa
+                  continues to improve, and we would be grateful for the
+                  opportunity to earn back your trust.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 34px 26px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                  style="background:#fbf7ed;border:1px solid #ead9b6;border-radius:16px"
+                >
+                  <tr>
+                    <td align="center" style="padding:26px 22px">
+                      <div
+                        style="color:#8a5b13;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase"
+                      >Welcome-back gift</div>
+                      <div
+                        style="margin:3px 0;color:#172033;font-family:Georgia,'Times New Roman',serif;font-size:40px;font-weight:700;line-height:1.2"
+                      >{{days}} days free</div>
+                      <div style="color:#667085;font-size:14px">Orivraa Pro for
+                        {{shopName}}
+                        · No card · No automatic renewal</div>
+                      <div style="margin-top:22px">
+                        <a
+                          href="{{claimUrl}}"
+                          style="display:inline-block;border-radius:11px;background:#b7791f;color:#ffffff;padding:14px 25px;text-decoration:none;font-size:16px;font-weight:700;box-shadow:0 5px 14px rgba(183,121,31,.24)"
+                        >
+                          Return to Orivraa and claim Pro
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 34px 34px">
+                <p style="margin:0 0 18px;font-size:14px;color:#667085">
+                  This secure, account-bound offer expires on
+                  {{formatDate offerExpiresAt}}. Sign in with the account that
+                  received this email to claim it.
+                </p>
+                <p style="margin:0 0 22px;font-size:16px;color:#344054">
+                  We will never pretend software cannot fail. What I can promise
+                  is that we will listen, investigate quickly, communicate
+                  clearly, and keep improving.
+                </p>
+                <table
+                  role="presentation"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  <tr>
+                    <td style="border-left:3px solid #d6a84f;padding-left:14px">
+                      <div
+                        style="font-family:Georgia,'Times New Roman',serif;color:#172033;font-size:21px;font-style:italic;font-weight:700"
+                      >Aakash</div>
+                      <div
+                        style="color:#475467;font-size:13px;font-weight:700"
+                      >Founder &amp; CEO, Orivraa</div>
+                      <div style="color:#98a2b3;font-size:12px">Building better
+                        tools for jewellers</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="background:#0d1830;padding:22px 30px;text-align:center;color:#cbd2df;font-size:12px;line-height:1.6"
+              >
+                Need help? Reply directly to this email or contact
+                <a
+                  href="mailto:{{supportEmail}}"
+                  style="color:#e5c477;text-decoration:none"
+                >{{supportEmail}}</a>.
+                <br />
+                You received this account-recovery message because you created
+                an Orivraa shop account. Reply “unsubscribe” if you do not want
+                future recovery or product emails.
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 0;color:#9a8f79;font-size:11px">©
+            {{year}}
+            Orivraa. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

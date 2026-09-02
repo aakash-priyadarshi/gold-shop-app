@@ -220,7 +220,7 @@ export default function AiIntegrationPage() {
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400">
               <T>
-                Ask ChatGPT, Claude, Gemini, or Perplexity the same question we
+                Ask ChatGPT, Claude, Google AI, or Perplexity the same question we
                 publish on every frontpage: how is Orivraa for jewellery
                 business software?
               </T>

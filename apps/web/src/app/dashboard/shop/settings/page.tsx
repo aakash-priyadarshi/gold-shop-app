@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { SettingsSaveStatus } from "@/components/settings/SettingsSaveStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useQueuedAutoSave } from "@/hooks/use-auto-save";
 import { resolveShopCurrency } from "@gold-shop/shared";
 import api, { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import {
@@ -231,6 +233,7 @@ export default function ShopSettingsPage() {
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const autoSaveVersion = useRef(0);
   const initialTab = searchParams.get("tab") || "profile";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [tierDashboard, setTierDashboard] = useState<TierDashboard | null>(
@@ -371,6 +374,7 @@ export default function ShopSettingsPage() {
 
     setIsSaving(true);
     try {
+      await waitForPendingAutoSaves();
       const resolvedCurrency = resolveShopCurrency({
         country: shopData.country,
         currency: shopData.currency,
@@ -451,6 +455,53 @@ export default function ShopSettingsPage() {
     }
   };
 
+  const saveShopToggle = useCallback(
+    async (
+      patch: Partial<Pick<ShopData, "isActive" | "workshopMode" | "codEnabled">>,
+    ) => {
+      await shopsApi.updateSettings(patch);
+    },
+    [],
+  );
+
+  const {
+    status: autoSaveStatus,
+    enqueue: enqueueAutoSave,
+    waitForPending: waitForPendingAutoSaves,
+  } = useQueuedAutoSave(saveShopToggle);
+
+  const updateShopToggle = (
+    field: "isActive" | "workshopMode" | "codEnabled",
+    value: boolean,
+  ) => {
+    const previousValue = shopData?.[field];
+    if (previousValue === value) return;
+
+    updateShopData({ [field]: value });
+    const requestVersion = ++autoSaveVersion.current;
+    void enqueueAutoSave({ [field]: value })
+      .then(() => {
+        if (autoSaveVersion.current === requestVersion) {
+          // Keep the dashboard nav and supply-chain access in sync with the
+          // server-backed shop record after a toggle changes.
+          void refreshUser();
+        }
+      })
+      .catch((error: any) => {
+        if (autoSaveVersion.current !== requestVersion) return;
+
+        setShopData((current) =>
+          current ? { ...current, [field]: previousValue } : current,
+        );
+        toast({
+          variant: "destructive",
+          title: t("Could not save setting"),
+          description:
+            error?.response?.data?.message || t("Please try again."),
+        });
+      });
+  };
+
   const updateBankDetails = (
     updates: Partial<NonNullable<ShopData["bankAccountDetails"]>>,
   ) => {
@@ -510,6 +561,10 @@ export default function ShopSettingsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <SettingsSaveStatus
+                status={autoSaveStatus}
+                idleLabel="Toggle changes save automatically"
+              />
               {shopData.isVerified ? (
                 <a href="/dashboard/shop/kyc" title="View KYC Details">
                   <Badge variant="default" className="bg-green-500 cursor-pointer hover:bg-green-600 transition flex items-center gap-1">
@@ -913,8 +968,9 @@ export default function ShopSettingsPage() {
                     </div>
                     <Switch
                       checked={shopData.isActive ?? true}
+                      aria-label={t("Shop Active")}
                       onCheckedChange={(checked) =>
-                        updateShopData({ isActive: checked })
+                        updateShopToggle("isActive", checked)
                       }
                     />
                   </div>
@@ -982,6 +1038,7 @@ export default function ShopSettingsPage() {
                     </div>
                     <Switch
                       checked={!!shopData.workshopMode}
+                      aria-label={t("Workshop mode")}
                       disabled={
                         !shopData.workshopMode &&
                         (featuresLoading ||
@@ -989,7 +1046,7 @@ export default function ShopSettingsPage() {
                           !hasFeature("workshopManufacturing"))
                       }
                       onCheckedChange={(checked) =>
-                        updateShopData({ workshopMode: checked })
+                        updateShopToggle("workshopMode", checked)
                       }
                     />
                   </div>
@@ -1339,8 +1396,9 @@ export default function ShopSettingsPage() {
                     </div>
                     <Switch
                       checked={shopData.codEnabled ?? false}
+                      aria-label={t("Cash on Delivery / Pay at Shop")}
                       onCheckedChange={(checked) =>
-                        updateShopData({ codEnabled: checked })
+                        updateShopToggle("codEnabled", checked)
                       }
                     />
                   </div>

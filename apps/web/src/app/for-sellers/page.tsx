@@ -20,11 +20,12 @@ import {
 } from "lucide-react";
 import { Metadata } from "next";
 import Link from "next/link";
+import { absolutePageTitle } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
-  title: "Sell Jewellery on Orivraa | Free Shop Profile, Mobile POS & Buyer Leads",
+  title: absolutePageTitle("Sell Jewellery on Orivraa with Free Tools"),
   description:
-    "Jewellers in India, Nepal, UAE, UK, and USA can join Orivraa free. Create a digital shop profile, receive buyer leads, use mobile POS billing with local tax compliance (GST / VAT / sales tax), and manage orders from one dashboard. No commission until you sell.",
+    "Join Orivraa free. Create a shop profile, receive buyer leads, use mobile POS with GST/VAT, and manage orders from one dashboard.",
   alternates: { canonical: "https://www.orivraa.com/for-sellers" },
 };
 
