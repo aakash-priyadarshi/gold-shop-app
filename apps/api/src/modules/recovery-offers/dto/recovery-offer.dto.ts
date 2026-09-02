@@ -1,8 +1,10 @@
+import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsIn,
   IsInt,
   IsOptional,
@@ -11,11 +13,13 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from "class-validator";
 
 export const RECOVERY_OFFER_DELIVERY_TIMINGS = [
   "IMMEDIATE",
   "NEXT_LOCAL_10AM",
+  "CUSTOM",
 ] as const;
 
 export type RecoveryOfferDeliveryTiming =
@@ -57,6 +61,14 @@ export class PreviewRecoveryAudienceDto {
   campaignKey?: string;
 }
 
+export class RecoveryRecipientScheduleDto {
+  @IsString()
+  userId: string;
+
+  @IsDateString()
+  scheduledAt: string;
+}
+
 export class SendRecoveryAudienceDto extends PreviewRecoveryAudienceDto {
   @IsArray()
   @ArrayMinSize(1)
@@ -77,6 +89,16 @@ export class SendRecoveryAudienceDto extends PreviewRecoveryAudienceDto {
   @IsIn(RECOVERY_OFFER_DELIVERY_TIMINGS)
   @IsString()
   deliveryTiming?: RecoveryOfferDeliveryTiming;
+
+  @IsOptional()
+  @IsDateString()
+  scheduledFor?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RecoveryRecipientScheduleDto)
+  recipientSchedules?: RecoveryRecipientScheduleDto[];
 }
 
 export class RecoveryOfferTokenDto {

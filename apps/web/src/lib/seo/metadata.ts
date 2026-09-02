@@ -16,6 +16,38 @@ export const MCP_OG_IMAGE = {
   alt: "Orivraa seller AI keys and MCP integration for jewellery shops",
 } as const;
 
+/** Open Graph `language_TERRITORY` values aligned with the root layout. */
+export const OPEN_GRAPH_LOCALES = {
+  en: "en_US",
+  fr: "fr_FR",
+  de: "de_DE",
+  hi: "hi_IN",
+  es: "es_ES",
+  ar: "ar_AE",
+  ne: "ne_NP",
+  gu: "gu_IN",
+  mr: "mr_IN",
+  ta: "ta_IN",
+  te: "te_IN",
+  kn: "kn_IN",
+  si: "si_LK",
+  he: "he_IL",
+  yi: "yi_IL",
+} as const;
+
+export function openGraphLocaleForLang(lang: string): string {
+  if (Object.prototype.hasOwnProperty.call(OPEN_GRAPH_LOCALES, lang)) {
+    return OPEN_GRAPH_LOCALES[lang as keyof typeof OPEN_GRAPH_LOCALES];
+  }
+  return "en_US";
+}
+
+type MarketingOgVideo = {
+  url: string;
+  secureUrl?: string;
+  type?: string;
+};
+
 type MarketingMetadataInput = {
   title: string;
   description: string;
@@ -24,7 +56,8 @@ type MarketingMetadataInput = {
   ogTitle?: string;
   ogDescription?: string;
   ogImage?: { url: string; width: number; height: number; alt: string };
-  type?: "website" | "article";
+  type?: "website" | "article" | "video.other";
+  videos?: MarketingOgVideo[];
   languages?: Record<string, string>;
   locale?: string;
   robots?: Metadata["robots"];
@@ -61,6 +94,7 @@ export function buildMarketingMetadata(input: MarketingMetadataInput): Metadata 
   const ogImage = input.ogImage ?? DEFAULT_OG_IMAGE;
   const title = brandPageTitle(input.title);
   const ogTitle = brandPageTitle(input.ogTitle ?? input.title);
+  const hasVideos = Boolean(input.videos && input.videos.length > 0);
 
   return {
     title: { absolute: title },
@@ -74,10 +108,11 @@ export function buildMarketingMetadata(input: MarketingMetadataInput): Metadata 
       title: ogTitle,
       description: input.ogDescription ?? input.description,
       url: canonical,
-      type: input.type ?? "website",
+      type: input.type ?? (hasVideos ? "video.other" : "website"),
       siteName: "Orivraa",
       locale: input.locale ?? "en_US",
       images: [ogImage],
+      ...(hasVideos ? { videos: input.videos } : {}),
     },
     twitter: {
       card: "summary_large_image",

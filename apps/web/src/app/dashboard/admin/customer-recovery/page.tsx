@@ -71,6 +71,19 @@ function formatLastActive(value?: string | null) {
   return `Active ${days} days ago`;
 }
 
+function toDateTimeLocalValue(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function toIsoFromLocal(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
 export default function CustomerRecoveryPage() {
   const { toast } = useToast();
   const t = useT();
@@ -79,13 +92,20 @@ export default function CustomerRecoveryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState<
-    "IMMEDIATE" | "NEXT_LOCAL_10AM" | null
+    "IMMEDIATE" | "NEXT_LOCAL_10AM" | "CUSTOM" | null
   >(null);
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
   const [segment, setSegment] = useState("all");
   const [accountKind, setAccountKind] = useState("all");
   const [incidentOnly, setIncidentOnly] = useState(false);
+  const [deliveryMode, setDeliveryMode] = useState<
+    "NEXT_LOCAL_10AM" | "IMMEDIATE" | "CUSTOM"
+  >("NEXT_LOCAL_10AM");
+  const [customSendAt, setCustomSendAt] = useState("");
+  const [scheduleByUserId, setScheduleByUserId] = useState<
+    Record<string, string>
+  >({});
 
   const loadAudience = useCallback(async () => {
     setLoading(true);
@@ -96,9 +116,7 @@ export default function CustomerRecoveryPage() {
       ]);
       setPreview(previewResponse.data);
       setMetrics(metricsResponse.data);
-      setSelectedIds(
-        new Set(previewResponse.data.eligible.map((item) => item.userId)),
-      );
+      setSelectedIds(new Set());
     } catch (error) {
       console.error("Failed to load customer recovery audience:", error);
       toast({
@@ -139,6 +157,10 @@ export default function CustomerRecoveryPage() {
       if (accountKind === "unverified" && recipient.emailVerified) {
         return false;
       }
+      if (accountKind === "no-shop" && recipient.hasShop) return false;
+      if (accountKind === "pending" && recipient.accountStatus !== "PENDING_VERIFICATION") {
+        return false;
+      }
       if (accountKind === "paid" && !recipient.hasPaidPlan) return false;
       if (
         accountKind === "complimentary" &&
@@ -156,6 +178,13 @@ export default function CustomerRecoveryPage() {
     return {
       paid: eligible.filter((item) => item.hasPaidPlan).length,
       unverified: eligible.filter((item) => !item.emailVerified).length,
+      pending: eligible.filter(
+        (item) => item.accountStatus === "PENDING_VERIFICATION",
+      ).length,
+      noShop: eligible.filter((item) => !item.hasShop).length,
+      queued: eligible.filter(
+        (item) => item.offerStatus && item.offerStatus !== "CLAIMED",
+      ).length,
     };
   }, [preview?.eligible]);
 
@@ -210,16 +239,38 @@ export default function CustomerRecoveryPage() {
   };
 
   const handleSend = async (
-    deliveryTiming: "IMMEDIATE" | "NEXT_LOCAL_10AM",
+    deliveryTiming: "IMMEDIATE" | "NEXT_LOCAL_10AM" | "CUSTOM",
   ) => {
     if (!preview || selectedIds.size === 0) return;
+    const scheduledFor =
+      deliveryTiming === "CUSTOM" ? toIsoFromLocal(customSendAt) : undefined;
+    if (deliveryTiming === "CUSTOM" && !scheduledFor) {
+      toast({
+        title: t("Choose a send time"),
+        description: t("Set the custom schedule before sending."),
+        variant: "destructive",
+      });
+      return;
+    }
+    const recipientSchedules = [...selectedIds]
+      .map((userId) => {
+        const scheduledAt = scheduleByUserId[userId]
+          ? toIsoFromLocal(scheduleByUserId[userId])
+          : undefined;
+        return scheduledAt ? { userId, scheduledAt } : null;
+      })
+      .filter((item): item is { userId: string; scheduledAt: string } =>
+        Boolean(item),
+      );
     const action =
-      deliveryTiming === "NEXT_LOCAL_10AM"
-        ? "schedule these emails for the next local 10:00 AM"
-        : "send these emails now";
+      deliveryTiming === "CUSTOM"
+        ? "schedule these emails at the chosen time"
+        : deliveryTiming === "NEXT_LOCAL_10AM"
+          ? "schedule these emails for the next local 10:00 AM"
+          : "send these emails now";
     if (
       !window.confirm(
-        `You are about to ${action} for ${selectedIds.size} selected account(s), including current Pro shops and unverified emails. Continue?`,
+        `You are about to ${action} for ${selectedIds.size} selected account(s), including pending, unverified, no-shop, and already-queued recovery emails. Continue?`,
       )
     ) {
       return;
@@ -232,6 +283,9 @@ export default function CustomerRecoveryPage() {
         campaignKey: preview.campaignKey,
         expiresInDays: 30,
         deliveryTiming,
+        scheduledFor,
+        recipientSchedules:
+          recipientSchedules.length > 0 ? recipientSchedules : undefined,
       });
       toast({
         title:
@@ -350,6 +404,12 @@ export default function CustomerRecoveryPage() {
                     <p className="mt-1 text-2xl font-bold">{item.value}</p>
                     {item.label === "Eligible" && preview && (
                       <p className="mt-1 text-[11px] text-muted-foreground">
+                        {audienceBreakdown.pending} <T>pending</T>
+                        {" · "}
+                        {audienceBreakdown.noShop} <T>no shop</T>
+                        {" · "}
+                        {audienceBreakdown.queued} <T>queued offer</T>
+                        {" · "}
                         {audienceBreakdown.paid} <T>already on Pro</T>
                         {" · "}
                         {audienceBreakdown.unverified} <T>unverified</T>
@@ -374,10 +434,11 @@ export default function CustomerRecoveryPage() {
                   </p>
                   <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
                     <T>
-                      Current Pro shops and unverified emails can be selected.
-                      Claiming starts or extends Pro to 50 days from that day,
-                      unless more than 50 days already remain. Repeat campaign
-                      sends stay excluded.
+                      Every shopkeeper can be selected: pending verification,
+                      unverified email, no shop yet, inactive shops, and
+                      unclaimed recovery emails. Claimed offers stay excluded.
+                      Check accounts one by one, or use the header checkbox for
+                      the visible list.
                     </T>
                   </p>
                 </div>
@@ -641,6 +702,8 @@ export default function CustomerRecoveryPage() {
                       </option>
                       <option value="paid">{t("Already on Pro")}</option>
                       <option value="unverified">{t("Email not verified")}</option>
+                      <option value="pending">{t("Pending verification")}</option>
+                      <option value="no-shop">{t("No shop yet")}</option>
                     </select>
                     <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm">
                       <input
@@ -674,13 +737,15 @@ export default function CustomerRecoveryPage() {
                       <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-950/60">
                         <tr>
                           <th className="w-12 px-4 py-3">
-                            <input
-                              type="checkbox"
-                              aria-label={t("Select visible recipients")}
-                              checked={allFilteredSelected}
-                              onChange={toggleAllFiltered}
-                              className="h-4 w-4 accent-amber-600"
-                            />
+                            <label className="inline-flex cursor-pointer items-center">
+                              <input
+                                type="checkbox"
+                                aria-label={t("Select visible recipients")}
+                                checked={allFilteredSelected}
+                                onChange={toggleAllFiltered}
+                                className="h-4 w-4 accent-amber-600"
+                              />
+                            </label>
                           </th>
                           <th className="px-3 py-3">
                             <T>Account</T>
@@ -692,7 +757,7 @@ export default function CustomerRecoveryPage() {
                             <T>Activity</T>
                           </th>
                           <th className="px-3 py-3">
-                            <T>Recommended send</T>
+                            <T>Send at</T>
                           </th>
                         </tr>
                       </thead>
@@ -740,6 +805,23 @@ export default function CustomerRecoveryPage() {
                                     <T>Email not verified</T>
                                   </span>
                                 )}
+                                {!recipient.hasShop && (
+                                  <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                                    <T>No shop yet</T>
+                                  </span>
+                                )}
+                                {recipient.accountStatus ===
+                                  "PENDING_VERIFICATION" && (
+                                  <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-800 dark:bg-orange-950/50 dark:text-orange-200">
+                                    <T>Pending verification</T>
+                                  </span>
+                                )}
+                                {recipient.offerStatus &&
+                                  recipient.offerStatus !== "CLAIMED" && (
+                                    <span className="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
+                                      <T>Queued offer</T>
+                                    </span>
+                                  )}
                               </div>
                             </td>
                             <td className="px-3 py-3">
@@ -760,11 +842,26 @@ export default function CustomerRecoveryPage() {
                               </p>
                             </td>
                             <td className="px-3 py-3">
-                              <p className="font-medium">
-                                <T>Local 10:00 AM</T>
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDateTime(recipient.recommendedSendAt)}
+                              <input
+                                type="datetime-local"
+                                aria-label={`${t("Send time for")} ${recipient.email}`}
+                                value={
+                                  scheduleByUserId[recipient.userId] ||
+                                  toDateTimeLocalValue(
+                                    recipient.recommendedSendAt,
+                                  )
+                                }
+                                onChange={(event) =>
+                                  setScheduleByUserId((current) => ({
+                                    ...current,
+                                    [recipient.userId]: event.target.value,
+                                  }))
+                                }
+                                className="min-h-10 w-full min-w-[190px] rounded-md border bg-white px-2 text-xs dark:bg-gray-950"
+                              />
+                              <p className="mt-1 text-[11px] text-muted-foreground">
+                                {recipient.timeZone || "UTC"} ·{" "}
+                                <T>Edit to override the campaign time</T>
                               </p>
                             </td>
                           </tr>
@@ -778,13 +875,24 @@ export default function CustomerRecoveryPage() {
                     {filteredRecipients.length} <T>visible</T> ·{" "}
                     {selectedIds.size} <T>selected</T>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedIds(new Set())}
-                    className="font-semibold text-gray-700 hover:text-red-600 dark:text-gray-300"
-                  >
-                    <T>Clear selection</T>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!allFilteredSelected) toggleAllFiltered();
+                      }}
+                      className="font-semibold text-amber-800 hover:text-amber-950 dark:text-amber-200"
+                    >
+                      <T>Select all visible</T>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIds(new Set())}
+                      className="font-semibold text-gray-700 hover:text-red-600 dark:text-gray-300"
+                    >
+                      <T>Clear selection</T>
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -925,31 +1033,81 @@ export default function CustomerRecoveryPage() {
                 </div>
               </div>
 
+              <div className="rounded-xl border bg-white p-4 text-sm shadow-sm dark:bg-gray-900">
+                <p className="font-semibold">
+                  <T>Schedule</T>
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <T>
+                    Nothing is selected until you check accounts. Use the table
+                    checkbox for one email, or the header checkbox for every
+                    visible row.
+                  </T>
+                </p>
+                <div className="mt-3 space-y-2">
+                  {(
+                    [
+                      ["NEXT_LOCAL_10AM", "Next local 10:00 AM"],
+                      ["CUSTOM", "Custom date and time"],
+                      ["IMMEDIATE", "Send immediately"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label
+                      key={value}
+                      className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3"
+                    >
+                      <input
+                        type="radio"
+                        name="recovery-delivery-mode"
+                        checked={deliveryMode === value}
+                        onChange={() => setDeliveryMode(value)}
+                        className="accent-amber-600"
+                      />
+                      <T>{label}</T>
+                    </label>
+                  ))}
+                </div>
+                {deliveryMode === "CUSTOM" && (
+                  <label className="mt-3 block text-xs font-medium text-muted-foreground">
+                    <T>Custom send time</T>
+                    <input
+                      type="datetime-local"
+                      value={customSendAt}
+                      onChange={(event) => setCustomSendAt(event.target.value)}
+                      className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 text-sm text-gray-950 dark:bg-gray-950 dark:text-white"
+                    />
+                  </label>
+                )}
+              </div>
+
               <button
                 type="button"
-                onClick={() => void handleSend("NEXT_LOCAL_10AM")}
+                onClick={() =>
+                  void handleSend(
+                    deliveryMode === "IMMEDIATE"
+                      ? "IMMEDIATE"
+                      : deliveryMode === "CUSTOM"
+                        ? "CUSTOM"
+                        : "NEXT_LOCAL_10AM",
+                  )
+                }
                 disabled={selectedIds.size === 0 || Boolean(sending) || loading}
                 className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {sending === "NEXT_LOCAL_10AM" ? (
+                {sending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : deliveryMode === "IMMEDIATE" ? (
+                  <Send className="h-4 w-4" />
                 ) : (
                   <CalendarClock className="h-4 w-4" />
                 )}
-                <T>Schedule selected at local 10 AM</T>
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSend("IMMEDIATE")}
-                disabled={selectedIds.size === 0 || Boolean(sending) || loading}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:hover:bg-gray-800"
-              >
-                {sending === "IMMEDIATE" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {deliveryMode === "IMMEDIATE" ? (
+                  <T>Send selected now</T>
+                ) : deliveryMode === "CUSTOM" ? (
+                  <T>Schedule selected at custom time</T>
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <T>Schedule selected at local 10 AM</T>
                 )}
-                <T>Send selected now</T>
               </button>
               <p className="flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />

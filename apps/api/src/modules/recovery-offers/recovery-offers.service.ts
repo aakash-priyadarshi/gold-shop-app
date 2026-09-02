@@ -11,6 +11,7 @@ import {
   SubscriptionStatus,
   UserRole,
   UserStatus,
+  CurrencyCode,
 } from "@prisma/client";
 import { createHash, randomBytes } from "crypto";
 import { ConfigService } from "@nestjs/config";
@@ -57,6 +58,10 @@ type Candidate = {
   incidentAffected: boolean;
   emailVerified: boolean;
   hasPaidPlan: boolean;
+  accountStatus: UserStatus;
+  offerStatus: RecoveryOfferStatus | null;
+  phone: string | null;
+  preferredCurrency: string;
 };
 
 type RecoveryGrantOutcome = "activated" | "extended" | "already_covered";
@@ -101,6 +106,9 @@ export class RecoveryOffersService {
         reportCount: candidate.reportIds.length,
         emailVerified: candidate.emailVerified,
         hasPaidPlan: candidate.hasPaidPlan,
+        hasShop: Boolean(candidate.shopId),
+        accountStatus: candidate.accountStatus,
+        offerStatus: candidate.offerStatus,
       })),
       excluded,
     };
@@ -133,10 +141,13 @@ export class RecoveryOffersService {
           lastActiveAt: candidate.lastActiveAt,
           activitySegment: candidate.activitySegment,
           incidentAffected: candidate.incidentAffected,
-          timeZone: LOCAL_TEN_AM_TIME_ZONES[candidate.country],
+          timeZone: LOCAL_TEN_AM_TIME_ZONES[candidate.country] || "UTC",
           recommendedSendAt: delivery?.scheduledFor || null,
           emailVerified: candidate.emailVerified,
           hasPaidPlan: candidate.hasPaidPlan,
+          hasShop: Boolean(candidate.shopId),
+          accountStatus: candidate.accountStatus,
+          offerStatus: candidate.offerStatus,
         };
       }),
       excluded,
@@ -182,6 +193,8 @@ export class RecoveryOffersService {
     campaignKey?: string;
     expiresInDays?: number;
     deliveryTiming?: RecoveryOfferDeliveryTiming;
+    scheduledFor?: string;
+    recipientSchedules?: Array<{ userId: string; scheduledAt: string }>;
     confirmed: boolean;
     adminId: string;
   }) {
@@ -209,12 +222,26 @@ export class RecoveryOffersService {
       key,
     );
 
+    const scheduledFor = this.parseScheduleInstant(input.scheduledFor);
+    if (input.deliveryTiming === "CUSTOM" && !scheduledFor) {
+      throw new BadRequestException(
+        "Choose a send time when using a custom recovery schedule",
+      );
+    }
+    const scheduledForByUserId = new Map<string, Date>();
+    for (const item of input.recipientSchedules || []) {
+      const when = this.parseScheduleInstant(item.scheduledAt);
+      if (item.userId && when) scheduledForByUserId.set(item.userId, when);
+    }
+
     return this.queueCandidates({
       candidates,
       excluded,
       campaignKey: key,
       expiresInDays: input.expiresInDays ?? 30,
       deliveryTiming: input.deliveryTiming,
+      scheduledFor,
+      scheduledForByUserId,
       adminId: input.adminId,
     });
   }
@@ -225,6 +252,8 @@ export class RecoveryOffersService {
     campaignKey: string;
     expiresInDays: number;
     deliveryTiming?: RecoveryOfferDeliveryTiming;
+    scheduledFor?: Date | null;
+    scheduledForByUserId?: Map<string, Date>;
     adminId: string;
   }) {
     const { candidates, excluded } = input;
@@ -237,15 +266,17 @@ export class RecoveryOffersService {
     }> = [];
 
     for (const candidate of candidates) {
+      const ready = await this.ensureShopForOffer(candidate);
       const delivery = this.resolveDelivery(
-        candidate.country,
+        ready.country,
         input.deliveryTiming,
+        input.scheduledForByUserId?.get(ready.userId) || input.scheduledFor,
       );
       if (!delivery) {
         excluded.push({
-          userId: candidate.userId,
-          email: candidate.email,
-          reason: `A local 10:00 AM delivery time is not configured for ${candidate.country}`,
+          userId: ready.userId,
+          email: ready.email,
+          reason: `A local 10:00 AM delivery time is not configured for ${ready.country}`,
         });
         continue;
       }
@@ -260,43 +291,52 @@ export class RecoveryOffersService {
         where: {
           campaignKey_shopId: {
             campaignKey: input.campaignKey,
-            shopId: candidate.shopId,
+            shopId: ready.shopId,
           },
         },
         select: { id: true, status: true },
       });
 
+      const offerData = {
+        email: ready.email,
+        tokenHash,
+        sourceReportIds: ready.reportIds,
+        expiresAt,
+        scheduledFor: delivery.scheduledFor,
+        status: RecoveryOfferStatus.PREPARED,
+        failureReason: null,
+        days: RECOVERY_DAYS,
+        createdBy: input.adminId,
+      };
+
       if (existing) {
-        const prepared = await this.prisma.recoveryOffer.updateMany({
-          where: { id: existing.id, status: RecoveryOfferStatus.SEND_FAILED },
-          data: {
-            email: candidate.email,
-            tokenHash,
-            sourceReportIds: candidate.reportIds,
-            expiresAt,
-            scheduledFor: delivery.scheduledFor,
-            status: RecoveryOfferStatus.PREPARED,
-            failureReason: null,
-            days: RECOVERY_DAYS,
-            createdBy: input.adminId,
-          },
+        if (
+          existing.status === RecoveryOfferStatus.CLAIMED ||
+          existing.status === RecoveryOfferStatus.CLAIMING
+        ) {
+          excluded.push({
+            userId: ready.userId,
+            email: ready.email,
+            reason:
+              existing.status === RecoveryOfferStatus.CLAIMED
+                ? "Recovery offer was already claimed"
+                : "Recovery offer is already being claimed",
+          });
+          continue;
+        }
+        await this.prisma.recoveryOffer.update({
+          where: { id: existing.id },
+          data: offerData,
         });
-        if (prepared.count === 1) offerId = existing.id;
+        offerId = existing.id;
       } else {
         try {
           const created = await this.prisma.recoveryOffer.create({
             data: {
               campaignKey: input.campaignKey,
-              userId: candidate.userId,
-              shopId: candidate.shopId,
-              email: candidate.email,
-              tokenHash,
-              days: RECOVERY_DAYS,
-              status: RecoveryOfferStatus.PREPARED,
-              sourceReportIds: candidate.reportIds,
-              expiresAt,
-              scheduledFor: delivery.scheduledFor,
-              createdBy: input.adminId,
+              userId: ready.userId,
+              shopId: ready.shopId,
+              ...offerData,
             },
           });
           offerId = created.id;
@@ -312,8 +352,8 @@ export class RecoveryOffersService {
 
       if (!offerId) {
         excluded.push({
-          userId: candidate.userId,
-          email: candidate.email,
+          userId: ready.userId,
+          email: ready.email,
           reason: "Recovery offer is already being processed",
         });
         continue;
@@ -337,16 +377,16 @@ export class RecoveryOffersService {
           error instanceof Error ? error.message : "Queueing failed";
         await this.markDeliveryFailed(offerId, tokenHash, reason);
         results.push({
-          userId: candidate.userId,
-          email: candidate.email,
+          userId: ready.userId,
+          email: ready.email,
           status: "failed",
           reason,
         });
         continue;
       }
       results.push({
-        userId: candidate.userId,
-        email: candidate.email,
+        userId: ready.userId,
+        email: ready.email,
         status: delivery.delayMs > 0 ? "scheduled" : "queued",
         ...(delivery.delayMs > 0
           ? { scheduledFor: delivery.scheduledFor! }
@@ -670,8 +710,8 @@ export class RecoveryOffersService {
           select: { emailVerified: true, status: true },
         });
         if (
-          claimant?.status &&
-          claimant.status !== UserStatus.ACTIVE
+          claimant?.status === UserStatus.SUSPENDED ||
+          claimant?.status === UserStatus.DEACTIVATED
         ) {
           throw new ForbiddenException(
             "This account cannot claim the recovery offer",
@@ -681,6 +721,12 @@ export class RecoveryOffersService {
           throw new ForbiddenException(
             "Verify your email before activating this offer. Sign in to receive a verification code, then return to this page.",
           );
+        }
+        if (claimant?.status === UserStatus.PENDING_VERIFICATION) {
+          await tx.user.update({
+            where: { id: userId },
+            data: { status: UserStatus.ACTIVE },
+          });
         }
 
         const locked = await tx.recoveryOffer.updateMany({
@@ -960,7 +1006,6 @@ export class RecoveryOffersService {
           take: 1,
         },
         shops: {
-          where: { isActive: true },
           orderBy: { createdAt: "asc" },
           include: {
             subscriptions: {
@@ -1029,7 +1074,10 @@ export class RecoveryOffersService {
         });
         continue;
       }
-      if (user.status && user.status !== UserStatus.ACTIVE) {
+      if (
+        user.status === UserStatus.SUSPENDED ||
+        user.status === UserStatus.DEACTIVATED
+      ) {
         excluded.push({
           userId: user.id,
           email: user.email,
@@ -1041,21 +1089,23 @@ export class RecoveryOffersService {
       const shop =
         user.shops.find((candidate) => candidate.id === user.activeShopId) ||
         user.shops[0];
-      if (!shop) {
+      const country = this.marketFromUser(user, shop?.country);
+      if (!proCountries.has(country)) {
         excluded.push({
           userId: user.id,
           email: user.email,
-          reason: "No active shop is attached to this account",
+          reason: `No active PRO plan is configured for ${country}`,
         });
         continue;
       }
 
-      const existingOffer = user.recoveryOffers.find(
-        (offer) => offer.shopId === shop.id,
-      );
+      const existingOffer = shop
+        ? user.recoveryOffers.find((offer) => offer.shopId === shop.id)
+        : user.recoveryOffers[0];
       if (
         existingOffer &&
-        existingOffer.status !== RecoveryOfferStatus.SEND_FAILED
+        (existingOffer.status === RecoveryOfferStatus.CLAIMED ||
+          existingOffer.status === RecoveryOfferStatus.CLAIMING)
       ) {
         excluded.push({
           userId: user.id,
@@ -1063,28 +1113,16 @@ export class RecoveryOffersService {
           reason:
             existingOffer.status === RecoveryOfferStatus.CLAIMED
               ? "Recovery offer was already claimed"
-              : existingOffer.status === RecoveryOfferStatus.SENT
-                ? "Recovery offer was already sent"
-                : existingOffer.status === RecoveryOfferStatus.EXPIRED
-                  ? "Recovery offer expired unclaimed"
-                  : "Recovery offer is already being processed",
+              : "Recovery offer is already being claimed",
         });
         continue;
       }
 
-      const hasPaidPlan = shop.subscriptions.some(
-        (subscription) => subscription.plan.name !== "FREE",
+      const hasPaidPlan = Boolean(
+        shop?.subscriptions.some(
+          (subscription) => subscription.plan.name !== "FREE",
+        ),
       );
-
-      const country = shop.country as MarketRegion;
-      if (!proCountries.has(country)) {
-        excluded.push({
-          userId: user.id,
-          email: user.email,
-          reason: `No active PRO plan is configured for ${shop.country}`,
-        });
-        continue;
-      }
 
       const lastActiveAt =
         [user.webSessions?.[0]?.lastActive, user.lastLoginAt]
@@ -1103,10 +1141,10 @@ export class RecoveryOffersService {
 
       candidates.push({
         userId: user.id,
-        shopId: shop.id,
+        shopId: shop?.id || "",
         email: user.email,
         firstName: user.firstName || "there",
-        shopName: shop.shopName,
+        shopName: shop?.shopName || "No shop yet",
         country,
         reportIds: linkedReportIds,
         lastActiveAt,
@@ -1114,6 +1152,10 @@ export class RecoveryOffersService {
         incidentAffected: linkedReportIds.length > 0,
         emailVerified: Boolean(user.emailVerified),
         hasPaidPlan,
+        accountStatus: user.status || UserStatus.PENDING_VERIFICATION,
+        offerStatus: existingOffer?.status || null,
+        phone: user.phone || null,
+        preferredCurrency: user.preferredCurrency || "USD",
       });
     }
 
@@ -1138,9 +1180,15 @@ export class RecoveryOffersService {
     const now = new Date();
     const targetEnd = new Date(now.getTime() + offer.days * DAY_MS);
     const shop = await tx.shop.findFirst({
-      where: { id: offer.shopId, userId: offer.userId, isActive: true },
+      where: { id: offer.shopId, userId: offer.userId },
     });
     if (!shop) throw new BadRequestException("The linked shop is unavailable");
+    if (!shop.isActive) {
+      await tx.shop.update({
+        where: { id: shop.id },
+        data: { isActive: true },
+      });
+    }
 
     const currentSubscriptions = await tx.sellerSubscription.findMany({
       where: {
@@ -1237,7 +1285,15 @@ export class RecoveryOffersService {
   private resolveDelivery(
     country: MarketRegion,
     deliveryTiming: RecoveryOfferDeliveryTiming | undefined,
+    scheduledAt?: Date | null,
   ) {
+    if (scheduledAt) {
+      return {
+        scheduledFor: scheduledAt,
+        delayMs: Math.max(0, scheduledAt.getTime() - Date.now()),
+      };
+    }
+    if (deliveryTiming === "CUSTOM") return null;
     if (deliveryTiming !== "NEXT_LOCAL_10AM") {
       return { scheduledFor: null, delayMs: 0 };
     }
@@ -1252,6 +1308,68 @@ export class RecoveryOffersService {
       scheduledFor,
       delayMs: Math.max(0, scheduledFor.getTime() - Date.now()),
     };
+  }
+
+  private async ensureShopForOffer(candidate: Candidate): Promise<Candidate> {
+    if (candidate.shopId) return candidate;
+
+    const created = await this.prisma.shop.create({
+      data: {
+        userId: candidate.userId,
+        shopName:
+          candidate.shopName && candidate.shopName !== "No shop yet"
+            ? candidate.shopName
+            : `${candidate.firstName}'s shop`,
+        city: "Pending",
+        address: "Pending",
+        contactPhone: candidate.phone || "0000000000",
+        contactEmail: candidate.email,
+        country: candidate.country,
+        currency: this.currencyForMarket(candidate),
+      },
+    });
+    await this.prisma.user.update({
+      where: { id: candidate.userId },
+      data: { activeShopId: created.id },
+    });
+    return {
+      ...candidate,
+      shopId: created.id,
+      shopName: created.shopName,
+    };
+  }
+
+  private marketFromUser(
+    user: { preferredCountry?: string | null },
+    shopCountry?: string | null,
+  ): MarketRegion {
+    const raw = (shopCountry || user.preferredCountry || "US").toUpperCase();
+    if (raw in LOCAL_TEN_AM_TIME_ZONES) return raw as MarketRegion;
+    return "US";
+  }
+
+  private currencyForMarket(candidate: Candidate): CurrencyCode {
+    const raw = candidate.preferredCurrency as CurrencyCode;
+    if (Object.values(CurrencyCode).includes(raw)) return raw;
+    const byMarket: Record<MarketRegion, CurrencyCode> = {
+      IN: CurrencyCode.INR,
+      NP: CurrencyCode.NPR,
+      AE: CurrencyCode.AED,
+      UK: CurrencyCode.GBP,
+      EU: CurrencyCode.EUR,
+      US: CurrencyCode.USD,
+      LK: CurrencyCode.LKR,
+    };
+    return byMarket[candidate.country] ?? CurrencyCode.USD;
+  }
+
+  private parseScheduleInstant(value?: string | null): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException("Invalid recovery send time");
+    }
+    return parsed;
   }
 
   private hashToken(rawToken: string) {
