@@ -729,11 +729,45 @@ describe("OffersAdminPage", () => {
     const editEmailButton = screen.getByRole("button", {
       name: "Edit email content",
     });
-    expect(editEmailButton).toBeDisabled();
+    await waitFor(() => expect(editEmailButton).toBeDisabled());
 
     fireEvent.click(editEmailButton);
     expect(screen.queryByLabelText("Email subject")).not.toBeInTheDocument();
   });
+
+  it("locks an open email form when the lock time arrives", async () => {
+    const winbackCampaign = {
+      id: "campaign-winback",
+      key: "customer-winback-2026-09",
+      name: "Customer win-back",
+      kind: "RECOVERY",
+      complimentaryDays: 50,
+      discountPercent: 0,
+      startsAt: null,
+      endsAt: null,
+      emailSubject: "We’re sorry about the invoice issue",
+      emailHeading: "We’re sorry about the invoice issue.",
+      emailBody: "We fixed the issue and improved invoice reliability.",
+      imageUrl: null,
+      // Lock point (5 minutes before the send) is ~8s away so the form can
+      // be opened unlocked before the threshold passes.
+      nextScheduledFor: new Date(Date.now() + 5 * 60 * 1000 + 8000).toISOString(),
+      isActive: true,
+    };
+    mocks.listCampaigns.mockResolvedValue({ data: [winbackCampaign] });
+
+    await renderLoadedPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit email content" }));
+    expect(screen.getByLabelText("Email subject")).toBeEnabled();
+
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText("Email subject")).toBeDisabled();
+      },
+      { timeout: 15000 },
+    );
+  }, 20000);
 
   it("keeps festival creation disabled until campaigns finish loading", async () => {
     let resolveCampaigns!: (value: { data: unknown[] }) => void;

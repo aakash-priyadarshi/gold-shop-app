@@ -348,8 +348,21 @@ export default function OffersAdminPage() {
     ? new Date(selectedCampaign.nextScheduledFor).getTime() -
       5 * 60 * 1000
     : null;
-  const emailEditLocked =
-    emailLockAt !== null && Date.now() >= emailLockAt;
+  const [emailLockReached, setEmailLockReached] = useState(false);
+  useEffect(() => {
+    if (emailLockAt === null) {
+      setEmailLockReached(false);
+      return;
+    }
+    const delay = emailLockAt - Date.now();
+    if (delay <= 0) {
+      setEmailLockReached(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setEmailLockReached(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [emailLockAt]);
+  const emailEditLocked = emailLockAt !== null && emailLockReached;
 
   const saveFestivalCampaign = async () => {
     const startsAt = toIsoFromLocal(campaignDraft.startsAt);

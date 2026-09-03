@@ -196,10 +196,12 @@ export class MailService {
           .replace(/>/g, '&gt;');
       const html = String(text)
         .split(/\r?\n\s*\r?\n/)
+        .map((block) => block.trim())
+        .filter(Boolean)
         .map(
           (block) =>
             `<p style="margin:0 0 14px;font-size:16px;color:#344054">${escapeHtml(
-              block.trim(),
+              block,
             ).replace(/\r?\n/g, '<br />')}</p>`,
         )
         .join('');

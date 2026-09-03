@@ -147,6 +147,18 @@ describe("RecoveryOffersService", () => {
         emailSubject: "Updated subject",
       }),
     ).rejects.toThrow(/scheduled within 5 minutes/i);
+    expect(prisma.recoveryOffer.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          campaignKey: "festival-dashain-2026",
+          status: RecoveryOfferStatus.PREPARED,
+          OR: [
+            { scheduledFor: expect.anything() },
+            { scheduledFor: null },
+          ],
+        }),
+      }),
+    );
     expect(prisma.offerCampaign.update).not.toHaveBeenCalled();
   });
 

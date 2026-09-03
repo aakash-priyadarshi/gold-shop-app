@@ -176,9 +176,12 @@ export class RecoveryOffersService {
         where: {
           campaignKey: resolvedKey,
           status: RecoveryOfferStatus.PREPARED,
-          scheduledFor: {
-            lte: new Date(Date.now() + EMAIL_EDIT_LOCK_MS),
-          },
+          OR: [
+            { scheduledFor: { lte: new Date(Date.now() + EMAIL_EDIT_LOCK_MS) } },
+            // Immediate sends are queued without a schedule; their content
+            // renders at delivery time, so lock them too.
+            { scheduledFor: null },
+          ],
         },
         select: { id: true },
       });
