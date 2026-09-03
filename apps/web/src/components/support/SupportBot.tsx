@@ -177,35 +177,6 @@ function makeMobileWelcome(shopName?: string, firstName?: string, botName?: stri
   };
 }
 
-function makeUnverifiedWelcome(shopName?: string, daysLeft?: number, isWithinSandbox?: boolean, firstName?: string): Message {
-  const nameStr = firstName && shopName 
-    ? `${firstName} from ${shopName}` 
-    : firstName 
-    ? firstName 
-    : shopName 
-    ? shopName 
-    : "";
-  if (isWithinSandbox) {
-    return {
-      id: "welcome",
-      from: "bot",
-      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>Orivraa is running in KYC Sandbox Mode. You have ${daysLeft} ${daysLeft === 1 ? "day" : "days"} left to test POS billing and invoice creation. During this trial, printed invoices will carry a repeated diagonal watermark "DEMO BILL - NOT FOR COMMERCIAL SALE". Get verified now to enable production-ready billing, or enter a valid business Tax ID on POS forms to bypass the watermark!</T>`,
-      cta: [
-        { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
-      ],
-    };
-  } else {
-    return {
-      id: "welcome",
-      from: "bot",
-      text: `Hi ${nameStr ? nameStr + " 👋" : "👋"} <T>Your KYC Sandbox period has expired and invoicing is locked. Complete your KYC business verification immediately to resume POS counter checkouts!</T>`,
-      cta: [
-        { label: "Verify KYC Now", href: "/dashboard/shop/kyc" },
-      ],
-    };
-  }
-}
-
 const STORAGE_MSGS = "orivraa_chat_messages";
 const STORAGE_OPEN = "orivraa_chat_open";
 const STORAGE_SESSION_ID = "orivraa_chat_session_id";
@@ -325,24 +296,6 @@ export function SupportBot() {
   const isCustomerLoggedIn = user?.role === "CUSTOMER";
   const isMobile = pathname.startsWith("/m/") || pathname === "/m";
   const shopName = user?.shop?.shopName ?? (user as { shopName?: string } | null)?.shopName;
-  const isVerified = user?.shop?.isVerified ?? false;
-
-  const registrationAgeDays = useMemo(() => {
-    if (!user) return 0;
-    const createdDate = new Date(user.createdAt).getTime();
-    return (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-  }, [user]);
-
-  const daysLeft = useMemo(() => {
-    if (!user) return 0;
-    const createdDate = new Date(user.createdAt).getTime();
-    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-    return Math.max(0, Math.ceil(diffDays));
-  }, [user]);
-
-  const isWithinSandbox = useMemo(() => {
-    return registrationAgeDays <= 7;
-  }, [registrationAgeDays]);
 
   const [open, setOpen] = useState<boolean>(() => readSession(STORAGE_OPEN, false));
   const [input, setInput] = useState("");
@@ -609,14 +562,11 @@ export function SupportBot() {
     if (!isSellerLoggedIn) return;
     setMessages((prev) => {
       if (prev.length === 1 && prev[0].id === "welcome") {
-        if (!isVerified) {
-          return [makeUnverifiedWelcome(shopName, daysLeft, isWithinSandbox, user?.firstName)];
-        }
         return [isMobile ? makeMobileWelcome(shopName, user?.firstName, botName) : makeSellerWelcome(shopName, user?.firstName, botName)];
       }
       return prev;
     });
-  }, [isSellerLoggedIn, shopName, isMobile, isVerified, daysLeft, isWithinSandbox, user?.firstName, botName]);
+  }, [isSellerLoggedIn, shopName, isMobile, user?.firstName, botName]);
 
   // Personalise the public welcome with the assistant's chosen name + visitor name
   useEffect(() => {

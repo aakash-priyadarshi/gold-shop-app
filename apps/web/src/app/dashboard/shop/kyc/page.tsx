@@ -32,15 +32,7 @@ import {
   validateKycIdentifiers,
 } from "@/lib/kyc/market-requirements";
 import { useT } from "@/providers/translation-provider";
-import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Save,
-  Shield,
-  UploadCloud,
-  X,
-} from "lucide-react";
+import { Clock, Save, Shield, UploadCloud, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function ShopKycPage() {
@@ -51,7 +43,6 @@ export default function ShopKycPage() {
   const isSriLanka = shopCountry === "LK";
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isReminding, setIsReminding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeUploadField, setActiveUploadField] = useState<string | null>(
@@ -62,17 +53,13 @@ export default function ShopKycPage() {
     panNumber: string;
     vatNumber: string;
     bisLicenseNumber: string;
-    isVerified: boolean;
-    verificationDocuments: Record<string, string>;
-    verificationRequests?: any[];
+    verificationDocuments: Record<string, string | null>;
     vatRegistrationStatus?: string;
   }>({
     panNumber: "",
     vatNumber: "",
     bisLicenseNumber: "",
-    isVerified: false,
     verificationDocuments: {},
-    verificationRequests: [],
     vatRegistrationStatus: undefined,
   });
 
@@ -84,9 +71,7 @@ export default function ShopKycPage() {
         panNumber: response.data.panNumber || "",
         vatNumber: response.data.vatNumber || "",
         bisLicenseNumber: response.data.bisLicenseNumber || "",
-        isVerified: response.data.isVerified || false,
         verificationDocuments: response.data.verificationDocuments || {},
-        verificationRequests: response.data.verificationRequests || [],
         vatRegistrationStatus: response.data.vatRegistrationStatus,
       });
     } catch (error: unknown) {
@@ -102,10 +87,10 @@ export default function ShopKycPage() {
         typeof candidate === "string" && candidate.trim()
           ? candidate
           : "Please check your connection and try again.";
-      console.error("Failed to load KYC:", error);
+      console.error("Failed to load business details:", error);
       toast({
         variant: "destructive",
-        title: t("Could not load verification status"),
+        title: t("Could not load business details"),
         description: t(message),
       });
     } finally {
@@ -120,9 +105,7 @@ export default function ShopKycPage() {
         panNumber: "",
         vatNumber: "",
         bisLicenseNumber: "",
-        isVerified: false,
         verificationDocuments: {},
-        verificationRequests: [],
         vatRegistrationStatus: undefined,
       });
       setIsLoading(false);
@@ -150,42 +133,22 @@ export default function ShopKycPage() {
         verificationDocuments: kycData.verificationDocuments,
       });
       toast({
-        title: "Verification Details Saved",
-        description: "Your document details were stored successfully.",
+        title: t("Business details saved"),
+        description: t(
+          "Your business and tax details were stored successfully.",
+        ),
       });
-      loadKyc();
+      await loadKyc();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save Failed",
+        title: t("Save failed"),
         description:
-          error.response?.data?.message || "Could not save your KYC details.",
+          error.response?.data?.message ||
+          t("Could not save your business details."),
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleRemindAdmin = async () => {
-    setIsReminding(true);
-    try {
-      await shopsApi.remindAdminKyc();
-      toast({
-        title: "Admin Notified",
-        description: t(
-          "Your verification request has been resubmitted for fresh review.",
-        ),
-      });
-      loadKyc();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Action Failed",
-        description:
-          error.response?.data?.message || "Could not remind the admin.",
-      });
-    } finally {
-      setIsReminding(false);
     }
   };
 
@@ -240,14 +203,14 @@ export default function ShopKycPage() {
   };
 
   const removeDocument = (key: string) => {
-    setKycData((prev) => {
-      const newDocs = { ...prev.verificationDocuments };
-      delete newDocs[key];
-      return { ...prev, verificationDocuments: newDocs };
-    });
+    setKycData((prev) => ({
+      ...prev,
+      verificationDocuments: {
+        ...prev.verificationDocuments,
+        [key]: null,
+      },
+    }));
   };
-
-  const latestRequest = kycData.verificationRequests?.[0];
 
   return (
     <ShopGuard>
@@ -256,106 +219,34 @@ export default function ShopKycPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">
-                <T>Shop KYC & Verification</T>
+                <T>Business & Tax Details</T>
               </h1>
               <p className="text-muted-foreground mt-1">
                 <T>
-                  Provide legal registration documentation to unlock global
-                  platform features.
+                  Keep the business information printed on invoices and reports
+                  accurate.
                 </T>
               </p>
             </div>
           </div>
 
           {!isLoading && (
-            <>
-              {kycData.isVerified ? (
-                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 rounded-lg p-5 flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-green-800 dark:text-green-200">
-                      <T>Shop Fully Verified</T>
-                    </h3>
-                    <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                      <T>
-                        Congratulations! Your shop has passed KYC and is fully
-                        unrestricted.
-                      </T>
-                    </p>
-                  </div>
-                </div>
-              ) : latestRequest?.status === "PENDING" ? (
-                <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-5 flex items-start gap-3">
-                  <Clock className="h-6 w-6 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
-                      <T>Verification Pending Review</T>
-                    </h3>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      <T>
-                        Your submission has been received and our team is
-                        evaluating it. This typically takes 1-2 business days.
-                      </T>
-                    </p>
-                  </div>
-                </div>
-              ) : latestRequest?.status === "ACTION_REQUIRED" ? (
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-lg p-5">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-6 w-6 text-red-600 mt-0.5" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-red-800 dark:text-red-200">
-                        <T>Action Required for Verification</T>
-                      </h3>
-                      <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                        <T>Admin has requested changes to your KYC filing.</T>
-                      </p>
-                      {latestRequest.details?.adminNote && (
-                        <div className="mt-3 bg-white dark:bg-black/20 font-medium p-3 rounded text-sm text-red-900 dark:text-red-100 italic border border-red-100 dark:border-red-900 border-dashed">
-                          "{latestRequest.details.adminNote}"
-                        </div>
-                      )}
-                      <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800/30 flex items-center justify-between">
-                        <span className="text-sm text-red-600 dark:text-red-400">
-                          <T>
-                            After resolving the issue, completely save your
-                            changes and notify the admin below.
-                          </T>
-                        </span>
-                        <Button
-                          onClick={handleRemindAdmin}
-                          disabled={isReminding}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          {isReminding ? (
-                            <Clock className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          <T>Remind Admin for Re-Review</T>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg p-5 flex items-start gap-3">
                   <Shield className="h-6 w-6 text-blue-600 mt-0.5" />
                   <div>
                     <h3 className="font-semibold text-blue-800 dark:text-blue-200">
-                      <T>Protecting Buyers and Sellers</T>
+                  <T>Self-managed business profile</T>
                     </h3>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                       <T>
-                        Please begin your verification by adding your business
-                        credentials. We review these details to ensure
-                        authenticity.
+                    These details are saved immediately and can be edited at any
+                    time. Orivraa does not approve your shop before you can use
+                    billing or POS.
                       </T>
                     </p>
                   </div>
                 </div>
               )}
-            </>
-          )}
 
           <Card>
             <CardHeader>
@@ -364,8 +255,8 @@ export default function ShopKycPage() {
               </CardTitle>
               <CardDescription>
                 <T>
-                  Official tax and registration numbers required for regional
-                  compliance.
+                  Add the identifiers your business uses on invoices and tax
+                  reports.
                 </T>
               </CardDescription>
             </CardHeader>
@@ -384,9 +275,6 @@ export default function ShopKycPage() {
                   <Input
                     id="panNumber"
                     value={kycData.panNumber}
-                    disabled={
-                      latestRequest?.status === "PENDING" || kycData.isVerified
-                    }
                     onChange={(e) =>
                       setKycData({ ...kycData, panNumber: e.target.value })
                     }
@@ -402,9 +290,6 @@ export default function ShopKycPage() {
                   <Input
                     id="vatNumber"
                     value={kycData.vatNumber}
-                    disabled={
-                      latestRequest?.status === "PENDING" || kycData.isVerified
-                    }
                     onChange={(e) =>
                       setKycData({ ...kycData, vatNumber: e.target.value })
                     }
@@ -420,9 +305,6 @@ export default function ShopKycPage() {
                   <Input
                     id="bisLicenseNumber"
                     value={kycData.bisLicenseNumber}
-                    disabled={
-                      latestRequest?.status === "PENDING" || kycData.isVerified
-                    }
                     onChange={(e) =>
                       setKycData({
                         ...kycData,
@@ -437,7 +319,7 @@ export default function ShopKycPage() {
               {/* Photo Upload Section */}
               <div className="mt-8">
                 <h3 className="text-lg font-medium mb-4">
-                  <T>Supporting Documents</T>
+                  <T>Optional Supporting Documents</T>
                 </h3>
                 <input
                   type="file"
@@ -461,10 +343,6 @@ export default function ShopKycPage() {
                             <T>ID Type</T>
                           </Label>
                           <Select
-                            disabled={
-                              latestRequest?.status === "PENDING" ||
-                              kycData.isVerified
-                            }
                             value={
                               kycData.verificationDocuments.governmentIdType ||
                               ""
@@ -506,10 +384,6 @@ export default function ShopKycPage() {
                               kycData.verificationDocuments
                                 .governmentIdNumber || ""
                             }
-                            disabled={
-                              latestRequest?.status === "PENDING" ||
-                              kycData.isVerified
-                            }
                             onChange={(e) =>
                               setKycData((prev) => ({
                                 ...prev,
@@ -532,8 +406,6 @@ export default function ShopKycPage() {
                           >
                             {kycData.verificationDocuments["governmentId"]}
                           </a>
-                          {!kycData.isVerified &&
-                            latestRequest?.status !== "PENDING" && (
                               <div className="absolute top-1 right-1">
                                 <Button
                                   variant="destructive"
@@ -547,7 +419,6 @@ export default function ShopKycPage() {
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>
-                            )}
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic mb-4">
@@ -556,9 +427,7 @@ export default function ShopKycPage() {
                       )}
                     </div>
 
-                    {!kycData.isVerified &&
-                      latestRequest?.status !== "PENDING" &&
-                      !kycData.verificationDocuments["governmentId"] && (
+                    {!kycData.verificationDocuments["governmentId"] && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -569,8 +438,7 @@ export default function ShopKycPage() {
                             fileInputRef.current?.click();
                           }}
                         >
-                          {isUploading &&
-                          activeUploadField === "governmentId" ? (
+                        {isUploading && activeUploadField === "governmentId" ? (
                             <Clock className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
                             <UploadCloud className="h-4 w-4 mr-2" />
@@ -603,8 +471,6 @@ export default function ShopKycPage() {
                               ]
                             }
                           </a>
-                          {!kycData.isVerified &&
-                            latestRequest?.status !== "PENDING" && (
                               <div className="absolute top-1 right-1">
                                 <Button
                                   variant="destructive"
@@ -618,7 +484,6 @@ export default function ShopKycPage() {
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>
-                            )}
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic mt-4 mb-4">
@@ -627,11 +492,7 @@ export default function ShopKycPage() {
                       )}
                     </div>
 
-                    {!kycData.isVerified &&
-                      latestRequest?.status !== "PENDING" &&
-                      !kycData.verificationDocuments[
-                        "businessLicensePhoto"
-                      ] && (
+                    {!kycData.verificationDocuments["businessLicensePhoto"] && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -668,8 +529,6 @@ export default function ShopKycPage() {
                           >
                             {kycData.verificationDocuments["addressProof"]}
                           </a>
-                          {!kycData.isVerified &&
-                            latestRequest?.status !== "PENDING" && (
                               <div className="absolute top-1 right-1">
                                 <Button
                                   variant="destructive"
@@ -683,7 +542,6 @@ export default function ShopKycPage() {
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>
-                            )}
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic mt-4 mb-4">
@@ -692,9 +550,7 @@ export default function ShopKycPage() {
                       )}
                     </div>
 
-                    {!kycData.isVerified &&
-                      latestRequest?.status !== "PENDING" &&
-                      !kycData.verificationDocuments["addressProof"] && (
+                    {!kycData.verificationDocuments["addressProof"] && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -705,8 +561,7 @@ export default function ShopKycPage() {
                             fileInputRef.current?.click();
                           }}
                         >
-                          {isUploading &&
-                          activeUploadField === "addressProof" ? (
+                        {isUploading && activeUploadField === "addressProof" ? (
                             <Clock className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
                             <UploadCloud className="h-4 w-4 mr-2" />
@@ -718,7 +573,6 @@ export default function ShopKycPage() {
                 </div>
               </div>
 
-              {!kycData.isVerified && latestRequest?.status !== "PENDING" && (
                 <div className="flex justify-end pt-4">
                   <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? (
@@ -726,10 +580,9 @@ export default function ShopKycPage() {
                     ) : (
                       <Save className="h-4 w-4 mr-2" />
                     )}
-                    <T>Submit Verification Credentials</T>
+                  <T>Save Business Details</T>
                   </Button>
                 </div>
-              )}
             </CardContent>
           </Card>
         </div>

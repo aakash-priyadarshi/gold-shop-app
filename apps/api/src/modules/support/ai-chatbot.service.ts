@@ -96,8 +96,6 @@ interface SellerSnapshot {
   lowStockCount: number;
   nepalAuditRequired: boolean;
   nepalAuditThresholdUsedPct: number;
-  isVerified?: boolean;
-  userCreatedAt?: string;
   planName: string;
   planTier?: string | null;
   workshopMode: boolean;
@@ -129,7 +127,6 @@ interface AdminSnapshot {
     pendingVerification: number;
   };
   shops: { total: number; verified: number; onHold: number };
-  verificationQueue: number;
   tickets: { open: number; urgent: number };
   emails: { outboundToday: number; outbound24h: number; inbound24h: number };
   bot: { sessions24h: number; escalated24h: number };
@@ -1003,7 +1000,7 @@ VIEWER CONTEXT — PLATFORM ADMINISTRATOR (CRITICAL — OVERRIDES ALL SALES BEHA
 - Drop the salesperson tone. Be a concise, competent internal OPERATIONS CO-PILOT for running the platform.
 - You help them operate and navigate the Admin Dashboard. Areas you can guide them to:
   · User management & moderation — /dashboard/admin/users (live "Online Now" stats, risk scores, suspend/activate, role changes, per-user audit log, active sessions & token revoke, direct messaging)
-  · Shop / seller verification & KYC queue, seller CRM, put-on-hold / release, seller tier changes
+  · Shop / seller CRM, put-on-hold / release, seller tier changes
   · Customer CRM — registered & walk-in customers across all shops
   · Email management — templates, triggers, SMTP test, and reviewing what was sent
   · System notifications & broadcasts
@@ -1182,12 +1179,11 @@ ${formatTutorialVideoPromptLines()}
 - When a user asks "how do I do X", reply briefly AND link the tutorial chapter, e.g. "POS is shown at 5:45 in our tutorial — https://orivraa.com/tutorial".
 - Prefer the 30-second demo for first-time visitors who say "show me what it looks like" or "give me an overview"; prefer the full tutorial for "how do I…" or feature-specific questions.
 
-7-DAY KYC SANDBOX & PRINT-ONLY WATERMARK RULES:
-1. Unverified shops enjoy a 7-day sandbox grace period from account creation (userCreatedAt) to test POS and invoice checkout fully.
-2. During the 7-day sandbox, printed receipts carry a repeated diagonal "DEMO BILL - NOT FOR COMMERCIAL SALE" watermark to prevent commercial misuse.
-3. TAX ID BYPASS: Shopkeepers can bypass the print watermark immediately by filling a valid business tax ID (GSTIN, VAT, PAN, or TRN) on the POS invoice before checkout.
-4. Beyond 7 days, POS checkout blocks completely until KYC details are submitted.
-5. In pre-sales or support chats, encourage unverified/sandboxed shops to [Complete KYC Verification](/dashboard/shop/kyc) to remove watermarks and enable production billing!
+BUSINESS AND TAX DETAILS:
+1. Shopkeepers can use POS, invoices, and printed bills without platform KYC approval or watermarks.
+2. Business and tax identifiers are self-managed at [Business & Tax Details](/dashboard/shop/kyc) and remain editable.
+3. Never claim that missing business details block billing, trigger a sandbox, or make an invoice a demo bill.
+4. Sri Lankan VAT registration review is a separate tax-compliance workflow and must not be described as general shop KYC.
 
 ADMIN FEATURES (For Admin Users Only):
 - Admin users have access to /dashboard/admin/users for user management.
@@ -1542,17 +1538,6 @@ AVAILABLE TOOLS:
           : `IRD audit is not currently required. Threshold usage is ${snapshot.nepalAuditThresholdUsedPct}% of the NPR 1 crore limit.`
         : "Nepal IRD audit is not applicable for this shop country.";
 
-    const createdTime = snapshot.userCreatedAt
-      ? new Date(snapshot.userCreatedAt).getTime()
-      : Date.now();
-    const diffDays = (Date.now() - createdTime) / (1000 * 60 * 60 * 24);
-    const sandboxDaysLeft = Math.max(0, Math.ceil(7 - diffDays));
-    const kycStatus = snapshot.isVerified
-      ? "Fully Verified and Approved."
-      : diffDays <= 7
-        ? `Sandbox Grace Period Mode. Active unverified. ${sandboxDaysLeft} days left to test before block.`
-        : "Sandbox Grace Period Expired. Invoicing blocks until KYC completed.";
-
     return `
 SELLER PRIVATE CONTEXT (FOR THIS LOGGED-IN SELLER ONLY):
 PRIVACY: This snapshot is ONLY this shop. Never discuss, invent, or look up any other shop, seller, or user. Last-sale / top-customer names below are this shop's own buyers — do not list a full customer directory unless asked about those specific figures.
@@ -1582,7 +1567,7 @@ Top customer year-to-date: ${snapshot.topCustomer && snapshot.topCustomer.total 
 Products in catalogue: ${snapshot.productCount}
 Items running low (<=1 in stock): ${snapshot.lowStockCount}
 Tax audit status: ${auditStatus}
-Shop KYC Verification Status: ${kycStatus}
+Business and tax details are self-managed and do not restrict ERP billing.
 
 ${formatLiveWorkshopAccess(this.workshopAccessFromSnapshot(snapshot))}
 
@@ -2108,7 +2093,6 @@ SELLER RESPONSE RULES:
           lastName: true,
           email: true,
           preferredLanguage: true,
-          createdAt: true,
         },
       }),
       this.prisma.shop.findUnique({
@@ -2116,7 +2100,6 @@ SELLER RESPONSE RULES:
         select: {
           shopName: true,
           country: true,
-          isVerified: true,
           workshopMode: true,
         },
       }),
@@ -2335,8 +2318,6 @@ SELLER RESPONSE RULES:
       nepalAuditRequired,
       nepalAuditThresholdUsedPct,
       dashboardMode,
-      isVerified: shop?.isVerified ?? false,
-      userCreatedAt: user?.createdAt ? user.createdAt.toISOString() : undefined,
       planName: activeFeatures?.planName ?? "Free Plan",
       planTier: activeFeatures?.planTier ?? null,
       workshopMode: shop?.workshopMode === true,
@@ -2654,7 +2635,6 @@ SELLER RESPONSE RULES:
       shopsTotalResult,
       shopsVerifiedResult,
       shopsOnHoldResult,
-      verificationQueueResult,
       openTicketsResult,
       urgentTicketsResult,
       emailOutTodayResult,
@@ -2689,7 +2669,6 @@ SELLER RESPONSE RULES:
       this.prisma.shop.count(),
       this.prisma.shop.count({ where: { isVerified: true } }),
       this.prisma.shop.count({ where: { isOnHold: true } }),
-      this.prisma.verificationRequest.count({ where: { status: "PENDING" } }),
       this.prisma.supportTicket.count({
         where: {
           status: { in: ["OPEN", "CLAIMED", "IN_PROGRESS", "WAITING_USER"] },
@@ -2794,9 +2773,6 @@ SELLER RESPONSE RULES:
           this.pickSettledValue(shopsVerifiedResult, "shops verified") ?? 0,
         onHold: this.pickSettledValue(shopsOnHoldResult, "shops on hold") ?? 0,
       },
-      verificationQueue:
-        this.pickSettledValue(verificationQueueResult, "verification queue") ??
-        0,
       tickets: {
         open: this.pickSettledValue(openTicketsResult, "open tickets") ?? 0,
         urgent:
@@ -2887,11 +2863,10 @@ USERS:
 - Online now (active in last 5 min): ${snapshot.users.onlineNow}
 - New signups today: ${snapshot.users.newToday}; last 7 days: ${snapshot.users.new7d}
 - Suspended accounts: ${snapshot.users.suspended}
-- Users pending verification: ${snapshot.users.pendingVerification}
+- Users with PENDING_VERIFICATION status: ${snapshot.users.pendingVerification}
 
 SHOPS / SELLERS:
 - Total shops: ${snapshot.shops.total} (Verified ${snapshot.shops.verified}, On hold ${snapshot.shops.onHold})
-- Pending verification requests in queue: ${snapshot.verificationQueue}
 
 SUPPORT:
 - Open tickets: ${snapshot.tickets.open} (Urgent: ${snapshot.tickets.urgent})
@@ -2914,7 +2889,7 @@ ${recentActions}
 
 ADMIN NAVIGATION MAP:
 - User management & moderation: /dashboard/admin/users (online-now stats, risk scores, suspend/activate, role change, per-user audit log, active sessions + token revoke, per-user page analytics, direct messaging)
-- Seller verification / KYC queue & seller CRM: /dashboard/admin (verification + sellers tabs)
+- Seller CRM: /dashboard/admin (sellers tab)
 - Customer CRM: /dashboard/admin/customers
 - Email management (templates, triggers, SMTP test, sent log): /dashboard/admin/emails
 - System health & monitoring: /dashboard/admin/health
@@ -2938,7 +2913,7 @@ ADMIN RESPONSE RULES:
   ): AiChatResponse {
     return {
       reply: snapshot
-        ? `I couldn't generate a full AI reply right now, but here's a quick read: ${snapshot.users.onlineNow} user(s) online now, system status "${snapshot.health.status}", ${snapshot.tickets.open} open ticket(s), and ${snapshot.verificationQueue} verification request(s) in queue. You can also check /dashboard/admin/health and /dashboard/admin/users directly.`
+        ? `I couldn't generate a full AI reply right now, but here's a quick read: ${snapshot.users.onlineNow} user(s) online now, system status "${snapshot.health.status}", and ${snapshot.tickets.open} open ticket(s). You can also check /dashboard/admin/health and /dashboard/admin/users directly.`
         : "I couldn't reach the platform telemetry right now. Please check /dashboard/admin/health directly.",
       shouldEscalate: false,
       confidence: 0.5,

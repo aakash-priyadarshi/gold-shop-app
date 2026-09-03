@@ -137,19 +137,6 @@ export class SupportService {
     });
   }
 
-  // ─── KYC verifications pending ───
-  async getPendingVerifications() {
-    return this.prisma.verificationRequest.findMany({
-      where: { status: "PENDING", type: "KYC" },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-      },
-    });
-  }
-
   // ─── Recent activity log ───
   async getRecentActivity(limit = 50) {
     return this.prisma.auditLog.findMany({

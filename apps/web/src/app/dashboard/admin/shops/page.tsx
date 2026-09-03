@@ -41,7 +41,6 @@ import api, { adminApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
   Calendar,
-  CheckCircle,
   Eye,
   Loader2,
   Pencil,
@@ -77,7 +76,6 @@ interface Shop {
   contactPhone?: string;
   contactEmail?: string;
   currency: string;
-  isVerified: boolean;
   isActive: boolean;
   createdAt: string;
   supportedJewelleryTypes?: string[];
@@ -393,8 +391,8 @@ export default function AdminShopsPage() {
     return <span>🌍</span>;
   };
 
-  const verifiedCount = shops.filter((s) => s.isVerified).length;
   const activeCount = shops.filter((s) => s.isActive).length;
+  const inactiveCount = shops.length - activeCount;
   const avgRating =
     shops.length > 0
       ? (
@@ -442,9 +440,9 @@ export default function AdminShopsPage() {
                 </Card>
                 <Card>
                   <CardContent className="p-4">
-                    <p className="text-sm text-muted-foreground">Verified</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {verifiedCount}
+                    <p className="text-sm text-muted-foreground">Inactive</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {inactiveCount}
                     </p>
                   </CardContent>
                 </Card>
@@ -849,27 +847,15 @@ export default function AdminShopsPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1">
-                                {shop.isVerified ? (
-                                  <Badge className="bg-green-100 text-green-700 w-fit">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Verified
-                                  </Badge>
-                                ) : (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-amber-100 text-amber-700 w-fit"
-                                  >
-                                    Pending
-                                  </Badge>
-                                )}
-                                {!shop.isActive && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-red-100 text-red-700 w-fit text-xs"
-                                  >
-                                    Inactive
-                                  </Badge>
-                                )}
+                                <Badge
+                                  variant="secondary"
+                                  className={shop.isActive
+                                    ? "bg-green-100 text-green-700 w-fit"
+                                    : "bg-red-100 text-red-700 w-fit"
+                                  }
+                                >
+                                  {shop.isActive ? "Active" : "Inactive"}
+                                </Badge>
                                 {shop.country.toUpperCase() === "LK" && (
                                   <Badge
                                     variant="outline"
@@ -959,15 +945,6 @@ export default function AdminShopsPage() {
                       Status
                     </Label>
                     <div className="flex gap-2 mt-1">
-                      {selectedShop.isVerified ? (
-                        <Badge className="bg-green-100 text-green-700">
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-amber-100 text-amber-700">
-                          Pending
-                        </Badge>
-                      )}
                       {selectedShop.isActive ? (
                         <Badge variant="outline" className="text-green-700">
                           Active

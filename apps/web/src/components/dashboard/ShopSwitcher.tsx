@@ -26,7 +26,6 @@ import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
-  AlertCircle,
   Building2,
   Check,
   ChevronDown,
@@ -42,7 +41,6 @@ interface Shop {
   name: string;
   slug: string;
   status: string;
-  isVerified: boolean;
 }
 
 interface ShopSwitcherProps {
@@ -166,7 +164,7 @@ export function ShopSwitcher({
       await loadShops();
       toast({
         title: t("Shop Created"),
-        description: t("Your new shop is pending verification"),
+        description: t("Your new shop is ready to use"),
       });
       // Switch to the new shop
       switchShop(response.data);
@@ -206,13 +204,6 @@ export function ShopSwitcher({
   }
 
   const getStatusBadge = (shop: Shop) => {
-    if (!shop.isVerified) {
-      return (
-        <Badge variant="outline" className="text-amber-600 border-amber-300">
-          <T>Pending</T>
-        </Badge>
-      );
-    }
     if (shop.status === "ACTIVE") {
       return (
         <Badge variant="default" className="bg-green-600">
@@ -297,8 +288,8 @@ export function ShopSwitcher({
             </DialogTitle>
             <DialogDescription>
               <T>
-                Add another shop to your account. It will require verification
-                before going live.
+                Add another business location to your account. It will be ready
+                to use immediately.
               </T>
             </DialogDescription>
           </DialogHeader>
@@ -415,12 +406,12 @@ export function ShopSwitcher({
               </div>
             </div>
 
-            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800 dark:text-amber-200">
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg">
+              <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800 dark:text-blue-200">
                 <T>
-                  New shops require admin verification before they can accept
-                  orders or appear in search results.
+                  Business and tax details can be added later from each shop's
+                  settings.
                 </T>
               </p>
             </div>

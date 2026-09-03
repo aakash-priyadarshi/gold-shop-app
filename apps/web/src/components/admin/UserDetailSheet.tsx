@@ -1019,9 +1019,6 @@ export function UserDetailSheet({
                             <div>
                               <p className="font-semibold text-sm">{shop.shopName}</p>
                               <div className="flex gap-1 mt-0.5">
-                                {shop.isVerified
-                                  ? <Badge className="bg-green-100 text-green-700 text-xs">Verified</Badge>
-                                  : <Badge className="bg-amber-100 text-amber-700 text-xs">Pending</Badge>}
                                 {shop.isActive
                                   ? <Badge className="bg-blue-100 text-blue-700 text-xs">Active</Badge>
                                   : <Badge variant="destructive" className="text-xs">Inactive</Badge>}
@@ -1231,7 +1228,7 @@ export function UserDetailSheet({
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="e.g. Welcome them and ask about KYC…"
+                        placeholder="e.g. Welcome them and offer setup help…"
                         value={aiIntent}
                         onChange={(e) => setAiIntent(e.target.value)}
                         className="flex-1 border rounded-md px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-ring"

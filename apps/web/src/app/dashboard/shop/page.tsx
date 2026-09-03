@@ -155,9 +155,8 @@ export default function ShopDashboard() {
   // ── Onboarding Quests & Confetti ──
   const quests: Array<{ id: string, label: string, reward: string, done: boolean, href: string, cta: string }> = useMemo(() => {
     const hasActiveSub = currentSubscription && currentSubscription.status !== "FREE" && currentSubscription.id !== null;
-    if (!user || (user.shop?.isVerified && hasActiveSub && recentOrders.length > 0 && stats.length > 0)) return [];
+    if (!user || (hasActiveSub && recentOrders.length > 0 && stats.length > 0)) return [];
     return [
-      { id: "verify", label: t("Verify Your Shop"), reward: "+5 AI Credits", done: !!user?.shop?.isVerified, href: "/dashboard/shop/kyc", cta: t("Complete KYC") },
       { id: "plan", label: t("Choose a Subscription Plan"), reward: "+5 AI Credits", done: !!hasActiveSub, href: "/dashboard/shop/billing", cta: t("View Plans") },
       { id: "product", label: t("Add Your First Gold Product"), reward: "+10 AI Credits", done: lowStockItems.length > 0 || stats.length > 0, href: "/dashboard/shop/products", cta: t("Add Product") },
       { id: "invoice", label: t("Create Your First Invoice"), reward: "+20 AI Credits", done: recentOrders.length > 0, href: "/dashboard/shop/pos", cta: t("Try Counter POS") },
@@ -308,14 +307,14 @@ export default function ShopDashboard() {
             },
             {
               title: t("Shop Status"),
-              value: user?.shop?.isVerified ? t("Verified") : t("Pending"),
-              change: user?.shop?.isVerified ? "✓" : "!",
-              changeType: user?.shop?.isVerified ? "positive" : "negative",
+              value: user?.shop?.isActive === false ? t("Inactive") : t("Active"),
+              change: user?.shop?.isActive === false ? "!" : "✓",
+              changeType: user?.shop?.isActive === false ? "negative" : "positive",
               icon: Package,
-              description: user?.shop?.isVerified
-                ? t("Shop is verified")
-                : t("Awaiting verification"),
-              href: "/dashboard/shop/kyc",
+              description: user?.shop?.isActive === false
+                ? t("Shop is currently inactive")
+                : t("Shop is ready for business"),
+              href: "/dashboard/shop/settings",
             },
         ]);
 
@@ -456,13 +455,13 @@ export default function ShopDashboard() {
           <AdminMessageBanner />
 
           {/* ═══ Onboarding Hub & Live Market Rates ═══ */}
-          {((quests.length > 0 && doneCount < quests.length) || ((!stats || stats.length === 0) && recentOrders.length === 0) || (user?.shop && !user.shop.isVerified)) ? (
+          {((quests.length > 0 && doneCount < quests.length) || ((!stats || stats.length === 0) && recentOrders.length === 0)) ? (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               
               {/* Left Column: Onboarding Actions */}
               <div className="xl:col-span-2 space-y-6">
                 
-                {/* 1. Gamified Quests (Takes priority over standalone KYC alert) */}
+                {/* 1. Gamified setup quests */}
                 {quests.length > 0 && doneCount < quests.length ? (
                   <Card data-tour="dash-quests" className="border-amber-300 dark:border-amber-700/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 relative group">
                     <div className="absolute top-0 right-0 p-32 bg-amber-400/5 blur-3xl rounded-full pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
@@ -505,41 +504,7 @@ export default function ShopDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                ) : (
-                  /* 2. Standalone KYC Banner (Shown ONLY if Quests are done but still unverified) */
-                  user?.shop && !user.shop.isVerified && (
-                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-amber-900 dark:text-amber-200 text-base">
-                            <T>
-                              {!user.shop.verificationRequests?.length
-                                ? "Action Required: Verify Your Shop"
-                                : "Verification Pending"}
-                            </T>
-                          </h3>
-                          <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">
-                            <T>
-                              {!user.shop.verificationRequests?.length
-                                ? "Complete your KYC verification to unlock all marketplace and POS features securely."
-                                : "Your shop is currently under review by our compliance team. Full features will unlock soon."}
-                            </T>
-                          </p>
-                        </div>
-                      </div>
-                      {!user.shop.verificationRequests?.length && (
-                        <Button asChild className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white shadow-md transition-transform hover:scale-105 w-full sm:w-auto">
-                          <Link href="/dashboard/shop/kyc">
-                            <T>Start Verification</T>
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  )
-                )}
+                ) : null}
 
                 {/* 3. Demo Hydrator & Free Trial */}
                 {(!stats || stats.length === 0) && recentOrders.length === 0 && (

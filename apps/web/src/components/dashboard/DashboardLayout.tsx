@@ -335,14 +335,6 @@ const navItems: NavItem[] = [
     badgeKey: "pendingOrders",
   },
   {
-    label: "KYC & Verification",
-    href: "/dashboard/admin/verifications",
-    icon: Shield,
-    roles: ["ADMIN"],
-    badge: "dynamic",
-    badgeKey: "pendingVerifications",
-  },
-  {
     label: "Reports",
     href: "/dashboard/admin/reports",
     icon: FileText,
@@ -903,11 +895,6 @@ function SidebarContent({
               <T>Active Shop</T>
             </p>
             <ShopSwitcher currentShopId={user.shop.id} />
-            {!user.shop.isVerified && (
-              <span className="inline-flex items-center mt-2 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
-                <T>Pending verification</T>
-              </span>
-            )}
           </div>
         )}
       </div>
@@ -1100,7 +1087,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         .getStats()
         .then((res) => {
           setBadgeCounts({
-            pendingVerifications: res.data.pendingVerifications || 0,
             openReports: res.data.openReports || 0,
           });
         })

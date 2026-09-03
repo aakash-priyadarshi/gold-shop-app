@@ -37,7 +37,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface ShopData {
   id: string; shopName: string; city: string; address: string;
   country: string; contactPhone: string; contactEmail: string;
-  isVerified: boolean; isActive: boolean; createdAt: string; updatedAt: string;
+  isActive: boolean; createdAt: string; updatedAt: string;
   supportedMaterials?: string[]; supportedJewelleryTypes?: string[];
   supportedMethods?: string[]; codMaxValueNpr?: number;
 }
@@ -135,7 +135,7 @@ export default function AdminUsersPage() {
   const [addingShop, setAddingShop] = useState(false);
   const [newShopForm, setNewShopForm] = useState({
     shopName: "", city: "", address: "", contactPhone: "", contactEmail: "",
-    country: "NP", state: "", pincode: "", isVerified: true,
+    country: "NP", state: "", pincode: "",
   });
   const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
   const [deletingShop, setDeletingShop] = useState(false);
@@ -380,7 +380,7 @@ export default function AdminUsersPage() {
       if (res.data?.success) {
         toast({ title: "Shop Created" });
         setAddShopDialogOpen(false);
-        setNewShopForm({ shopName: "", city: "", address: "", contactPhone: "", contactEmail: "", country: "NP", state: "", pincode: "", isVerified: true });
+        setNewShopForm({ shopName: "", city: "", address: "", contactPhone: "", contactEmail: "", country: "NP", state: "", pincode: "" });
         handleViewUser(selectedUser);
         loadUsers();
       } else throw new Error(res.data?.error || "Failed");
@@ -942,10 +942,6 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Contact Phone *</Label><Input value={newShopForm.contactPhone} onChange={(e) => setNewShopForm({ ...newShopForm, contactPhone: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Contact Email</Label><Input type="email" value={newShopForm.contactEmail} onChange={(e) => setNewShopForm({ ...newShopForm, contactEmail: e.target.value })} /></div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox id="shop-verified" checked={newShopForm.isVerified} onCheckedChange={(c) => setNewShopForm({ ...newShopForm, isVerified: !!c })} />
-                <Label htmlFor="shop-verified">Mark as Verified</Label>
               </div>
             </div>
             <DialogFooter>

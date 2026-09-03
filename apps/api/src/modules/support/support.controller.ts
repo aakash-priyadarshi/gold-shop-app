@@ -47,12 +47,6 @@ export class SupportController {
     return this.supportService.getFlaggedConversations();
   }
 
-  @Get('pending-verifications')
-  @ApiOperation({ summary: 'Get pending KYC verifications' })
-  async getPendingVerifications() {
-    return this.supportService.getPendingVerifications();
-  }
-
   @Get('activity')
   @ApiOperation({ summary: 'Get recent audit activity' })
   async getRecentActivity(

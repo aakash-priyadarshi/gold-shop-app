@@ -129,7 +129,7 @@ const TYPE_LABELS: Record<string, string> = {
   BUYER_COMPLAINT: "Buyer Complaint",
   PLATFORM_BUG: "Bug Report",
   FEATURE_REQUEST: "Feature Request",
-  KYC_VERIFICATION: "KYC Help",
+  KYC_VERIFICATION: "Business Details Help",
   OTHER: "Other",
 };
 

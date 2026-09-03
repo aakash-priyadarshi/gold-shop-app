@@ -571,7 +571,7 @@ export default function CreateInvoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const linkedOrderId = searchParams.get("orderId");
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const {
     symbol: currencySymbol,
     country: shopCountry,
@@ -669,40 +669,6 @@ export default function CreateInvoicePage() {
       cancelled = true;
     };
   }, []);
-
-  // Refresh user data on mount to get the latest KYC approval status from the server.
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
-
-  // Unverified shops can still create invoices (KYC is never a hard blocker) —
-  // their bills simply print with a watermark unless a Customer Tax ID is given.
-  const isShopUnverified = useMemo(
-    () => Boolean(user?.shop && !user.shop.isVerified),
-    [user?.shop],
-  );
-
-  const isSandboxMode = useMemo(() => {
-    if (!user || !user.shop || user.shop.isVerified) return false;
-    const createdDate = new Date(user.createdAt).getTime();
-    const diffDays = (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-    return diffDays <= 7;
-  }, [user]);
-
-  const daysLeft = useMemo(() => {
-    if (!user) return 0;
-    const createdDate = new Date(user.createdAt).getTime();
-    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-    return Math.max(0, Math.ceil(diffDays));
-  }, [user]);
-
-  // Handle Nepalese / standard days left calculation variable cleanly
-  const daysLeftVal = useMemo(() => {
-    if (!user) return 0;
-    const createdDate = new Date(user.createdAt).getTime();
-    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-    return Math.max(0, Math.ceil(diffDays));
-  }, [user]);
 
   // ── Country (tax jurisdiction) — defaults to shop country, user can override ──
   const invoiceCountryTouched = useRef(false);
@@ -2193,7 +2159,7 @@ export default function CreateInvoicePage() {
         toast({
           variant: "destructive",
           title: t("Seller TIN required"),
-          description: t("Add a valid 9-digit IRD TIN/VAT registration in KYC or invoice settings."),
+          description: t("Add a valid 9-digit IRD TIN/VAT registration in Business & Tax Details or invoice settings."),
         });
         return;
       }
@@ -2367,38 +2333,6 @@ export default function CreateInvoicePage() {
               Import from Quote
             </Button>
           </div>
-
-          {/* Sandbox / unverified warning banner — non-blocking */}
-          {isShopUnverified && (
-            <div className="p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300/40 dark:border-amber-700/30 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in shadow-sm">
-              <div className="flex items-start gap-3">
-                <span className="text-xl">⚠️</span>
-                <div>
-                  <h4 className="font-bold text-sm text-amber-800 dark:text-amber-300">
-                    {isSandboxMode
-                      ? `KYC Sandbox Mode — ${daysLeftVal} ${daysLeftVal === 1 ? 'day' : 'days'} left`
-                      : 'Verify your shop to remove the bill watermark'}
-                  </h4>
-                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                    You can keep creating invoices freely. Generated bills will print with a bold watermark <span className="font-semibold text-red-500">DEMO BILL - NOT FOR COMMERCIAL SALE</span> until your shop's business verification is completed.
-                    <span className="block mt-1 font-medium text-amber-900 dark:text-amber-200">
-                      💡 Tax ID Bypass: Providing a valid Customer Tax ID (GST/VAT/PAN) below will automatically suppress the watermark on prints.
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-amber-400 text-amber-800 dark:text-amber-300 hover:bg-amber-100/40 h-8 text-xs font-semibold whitespace-nowrap"
-                  onClick={() => router.push("/dashboard/shop/kyc")}
-                >
-                  Complete KYC Now
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Quote Import Modal */}
           {showQuoteImport && (
@@ -2707,8 +2641,8 @@ export default function CreateInvoicePage() {
                     {!sellerHasValidLkTin && (
                       <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
                         <T>
-                          Add a valid 9-digit seller IRD TIN/VAT registration in KYC
-                          or invoice settings to enable TAX INVOICE.
+                          Add a valid 9-digit seller IRD TIN/VAT registration in
+                          Business & Tax Details or invoice settings to enable TAX INVOICE.
                         </T>
                       </p>
                     )}

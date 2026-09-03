@@ -570,13 +570,7 @@ export default function CreateRfqPage() {
   const isAdmin = mounted && user?.role === "ADMIN";
   // Admins are exempt from phone verification requirement
   const isPhoneVerified = mounted && (isAdmin || !!user?.phoneVerifiedAt);
-  const isSeller =
-    mounted && (user?.role === "SHOPKEEPER" || user?.role === "ADMIN");
-  const isShopVerified = mounted && !!user?.shop?.isVerified;
-
-  // For sellers: need phone verification only — KYC (shop verification) is NOT
-  // a hard blocker, it's surfaced as a soft warning so new sellers can try the
-  // feature. For customers: need phone only. Admins can always submit.
+  // Sellers and customers need phone verification only. Admins can always submit.
   const canSubmitOrder = mounted && isLoggedIn && (isAdmin || isPhoneVerified);
 
   // Determine why submit is blocked (for tooltip)
@@ -2898,7 +2892,7 @@ export default function CreateRfqPage() {
     }
   };
 
-  // Form validation - pages 1-2 just need form data, page 3 needs auth + verification
+  // Form validation - pages 1-2 need form data; page 3 needs auth and phone verification
   // For Method A: check metalType, For Method B: check alloyConfig.baseMetal, For Method C: check methodCConfig.baseMetal
   const hasValidMetalSelection = () => {
     if (!formData.buildMethod) return false;
@@ -5728,7 +5722,7 @@ export default function CreateRfqPage() {
                                 ? t("Sign in to Submit")
                                 : !isPhoneVerified
                                   ? t("Phone Verification Required")
-                                  : t("KYC Verification Required")}
+                                  : t("Unable to Submit")}
                             </p>
                             <p
                               className={`text-sm mt-1 ${
@@ -5755,47 +5749,10 @@ export default function CreateRfqPage() {
                                 <T>Verify phone in profile</T>
                                 <ArrowRight className="h-4 w-4" />
                               </Link>
-                            ) : isSeller && !isShopVerified ? (
-                              <Link
-                                href="/dashboard/shop/verification"
-                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
-                              >
-                                <T>Complete KYC verification</T>
-                                <ArrowRight className="h-4 w-4" />
-                              </Link>
                             ) : null}
                           </div>
                         </div>
                       )}
-
-                      {/* Soft, non-blocking KYC reminder for unverified sellers —
-                          they can still submit; verification just unlocks full
-                          seller features and removes trial limitations. */}
-                      {step === 3 &&
-                        canSubmitOrder &&
-                        isSeller &&
-                        !isShopVerified && (
-                          <div className="border rounded-lg p-4 flex gap-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50">
-                            <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="font-medium text-sm text-amber-800 dark:text-amber-200">
-                                {t("Shop verification recommended")}
-                              </p>
-                              <p className="text-sm mt-1 text-amber-700 dark:text-amber-300">
-                                {t(
-                                  "You can submit this request now. Completing your shop's KYC verification (ID card & tax details) builds buyer trust and unlocks the full seller experience.",
-                                )}
-                              </p>
-                              <Link
-                                href="/dashboard/shop/verification"
-                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
-                              >
-                                <T>Complete KYC verification</T>
-                                <ArrowRight className="h-4 w-4" />
-                              </Link>
-                            </div>
-                          </div>
-                        )}
 
                       {error && (
                         <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-transparent dark:border-red-800/50">

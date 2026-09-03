@@ -457,14 +457,14 @@ export class ShopsController {
     return this.shopsService.updateShopComponentPricing(shopId, userId, dto);
   }
 
-  // ── KYC & Verification Endpoints ────────────────────
+  // ── Business and tax details endpoints ──────────────
   // NOTE: These must be above @Get(":id") to avoid route shadowing
 
   @Get("my-shop/kyc")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get KYC/verification documents for current shop" })
+  @ApiOperation({ summary: "Get business and tax details for current shop" })
   async getMyShopKyc(@CurrentUser("id") userId: string) {
     return this.shopsService.getShopKyc(userId);
   }
@@ -473,7 +473,7 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Update KYC/verification documents" })
+  @ApiOperation({ summary: "Update business and tax details" })
   async updateMyShopKyc(
     @CurrentUser("id") userId: string,
     @Body()
@@ -485,15 +485,6 @@ export class ShopsController {
     },
   ) {
     return this.shopsService.updateShopKyc(userId, body);
-  }
-
-  @Post("my-shop/kyc/remind-admin")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SHOPKEEPER)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Remind admin to review shop verification" })
-  async remindAdminKyc(@CurrentUser("id") userId: string) {
-    return this.shopsService.remindAdminKyc(userId);
   }
 
   // ── Shop Profile Endpoints ──────────────────────────
@@ -636,44 +627,6 @@ export class ShopsController {
     @Body() dto: UpdateMetalRatesDto,
   ) {
     return this.shopsService.updateMetalRates(id, userId, dto);
-  }
-
-  @Patch(":id/verify")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Verify a shop (Admin only)" })
-  async verify(@Param("id") id: string, @CurrentUser("id") adminId: string) {
-    return this.shopsService.verifyShop(id, adminId);
-  }
-
-  @Get(":id/kyc")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: "Get KYC/verification documents for a shop (Admin)",
-  })
-  async getShopKycAdmin(@Param("id") id: string) {
-    return this.shopsService.getShopKycByShopId(id);
-  }
-
-  @Patch(":id/kyc-status")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Approve or reject shop KYC verification (Admin)" })
-  async updateShopKycStatus(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() body: { action: "approve" | "reject"; reason?: string },
-  ) {
-    return this.shopsService.updateShopKycStatus(
-      id,
-      adminId,
-      body.action,
-      body.reason,
-    );
   }
 
   @Patch(":id/admin")
