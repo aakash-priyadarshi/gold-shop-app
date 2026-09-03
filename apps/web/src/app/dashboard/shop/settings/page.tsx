@@ -565,7 +565,10 @@ export default function ShopSettingsPage() {
                 status={autoSaveStatus}
                 idleLabel="Toggle changes save automatically"
               />
-              <a href="/dashboard/shop/kyc" title="Manage Business & Tax Details">
+              <a
+                href="/dashboard/shop/kyc"
+                title={t("Manage Business & Tax Details")}
+              >
                 <Badge variant="secondary" className="cursor-pointer transition flex items-center gap-1 hover:bg-muted">
                   <Shield className="h-3 w-3 mb-[1px]" />
                   <T>Business & Tax Details</T>

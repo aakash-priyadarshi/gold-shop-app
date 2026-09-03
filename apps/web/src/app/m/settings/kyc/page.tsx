@@ -134,7 +134,7 @@ export default function MobileKycPage() {
         ),
       });
       await refreshUser();
-      loadKyc();
+      await loadKyc();
     } catch (error: any) {
       toast({
         variant: "destructive",

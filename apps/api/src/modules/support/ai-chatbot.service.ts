@@ -2863,7 +2863,7 @@ USERS:
 - Online now (active in last 5 min): ${snapshot.users.onlineNow}
 - New signups today: ${snapshot.users.newToday}; last 7 days: ${snapshot.users.new7d}
 - Suspended accounts: ${snapshot.users.suspended}
-- Users pending account activation: ${snapshot.users.pendingVerification}
+- Users with PENDING_VERIFICATION status: ${snapshot.users.pendingVerification}
 
 SHOPS / SELLERS:
 - Total shops: ${snapshot.shops.total} (Verified ${snapshot.shops.verified}, On hold ${snapshot.shops.onHold})

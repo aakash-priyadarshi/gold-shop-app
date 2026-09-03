@@ -39,10 +39,10 @@ describe("buildBillHtml templates", () => {
     const html = buildBillHtml({
       invoiceNumber: "INV-1",
       totalAmount: 100,
-      supplierName: "Original Jeweller",
-      supplierAddress: "Original Address",
-      supplierPhone: "1111111111",
-      sellerTaxId: "ORIGINAL-TAX-ID",
+      supplierName: "  Original Jeweller  ",
+      supplierAddress: "  Original Address  ",
+      supplierPhone: "  1111111111  ",
+      sellerTaxId: "  ORIGINAL-TAX-ID  ",
       settings: {
         shopNameOnBill: "Renamed Jeweller",
         shopAddress: "New Address",
@@ -55,6 +55,8 @@ describe("buildBillHtml templates", () => {
     expect(html).toContain("Original Address");
     expect(html).toContain("1111111111");
     expect(html).toContain("ORIGINAL-TAX-ID");
+    expect(html).not.toContain("  Original Jeweller  ");
+    expect(html).not.toContain("  Original Address  ");
     expect(html).not.toContain("Renamed Jeweller");
     expect(html).not.toContain("NEW-TAX-ID");
   });

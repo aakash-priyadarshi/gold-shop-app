@@ -21,6 +21,10 @@ type EmailTemplateInput = {
   isSystem?: boolean;
 };
 
+const RETIRED_SYSTEM_TEMPLATE_KEYS = new Set([
+  'shop_verification_status',
+]);
+
 @Injectable()
 export class EmailTemplateService {
   private readonly templatesDir = path.join(__dirname, 'templates');
@@ -358,6 +362,14 @@ export class EmailTemplateService {
   }
 
   private async ensureDefaultTemplates() {
+    await this.templateModel.updateMany({
+      where: {
+        key: { in: [...RETIRED_SYSTEM_TEMPLATE_KEYS] },
+        isActive: true,
+      },
+      data: { isActive: false },
+    });
+
     const existing = await this.templateModel.findMany({ select: { key: true } });
     const existingKeys = new Set(existing.map((t: any) => t.key));
 
@@ -389,6 +401,7 @@ export class EmailTemplateService {
   async listTemplates() {
     await this.ensureDefaultTemplates();
     return this.templateModel.findMany({
+      where: { key: { notIn: [...RETIRED_SYSTEM_TEMPLATE_KEYS] } },
       orderBy: [{ isSystem: 'desc' }, { key: 'asc' }],
     });
   }
@@ -399,7 +412,9 @@ export class EmailTemplateService {
       where: { id },
       include: { versions: { orderBy: { version: 'desc' }, take: 10 } },
     });
-    if (!template) throw new NotFoundException('Email template not found');
+    if (!template || RETIRED_SYSTEM_TEMPLATE_KEYS.has(template.key)) {
+      throw new NotFoundException('Email template not found');
+    }
     return template;
   }
 

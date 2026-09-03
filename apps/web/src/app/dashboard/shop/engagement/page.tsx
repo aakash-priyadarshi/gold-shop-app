@@ -2385,9 +2385,11 @@ export default function ShopEngagementPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileCheck className="h-5 w-5" />
-                    {kycConfig.title}
+                    {t(kycConfig.title)}
                   </CardTitle>
-                  <CardDescription>{kycConfig.description}</CardDescription>
+                  <CardDescription>
+                    {t(kycConfig.description)}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {kycConfig.fields.map((field) => {

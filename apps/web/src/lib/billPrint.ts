@@ -227,11 +227,19 @@ export function buildBillHtml(payload: BillPrintPayload): string {
   const effectiveSettings: BillSettings = {
     ...(payload.settings || {}),
     shopNameOnBill:
-      payload.supplierName || payload.settings?.shopNameOnBill || null,
+      payload.supplierName?.trim() ||
+      payload.settings?.shopNameOnBill?.trim() ||
+      null,
     shopAddress:
-      payload.supplierAddress || payload.settings?.shopAddress || null,
-    shopPhone: payload.supplierPhone || payload.settings?.shopPhone || null,
-    gstin: payload.sellerTaxId || payload.settings?.gstin || null,
+      payload.supplierAddress?.trim() ||
+      payload.settings?.shopAddress?.trim() ||
+      null,
+    shopPhone:
+      payload.supplierPhone?.trim() ||
+      payload.settings?.shopPhone?.trim() ||
+      null,
+    gstin:
+      payload.sellerTaxId?.trim() || payload.settings?.gstin?.trim() || null,
   };
   const sellerTin = String(effectiveSettings.gstin || "").trim();
   const purchaserTin = String(payload.customerTaxId || "").trim();
@@ -287,18 +295,9 @@ export function buildBillHtml(payload: BillPrintPayload): string {
     .join("");
 
   const supplierName =
-    payload.supplierName ||
-    payload.settings?.shopNameOnBill?.trim() ||
-    payload.fallbackShopName ||
-    "";
-  const supplierAddress =
-    payload.supplierAddress ||
-    payload.settings?.shopAddress?.trim() ||
-    "";
-  const supplierPhone =
-    payload.supplierPhone ||
-    payload.settings?.shopPhone?.trim() ||
-    "";
+    effectiveSettings.shopNameOnBill || payload.fallbackShopName?.trim() || "";
+  const supplierAddress = effectiveSettings.shopAddress || "";
+  const supplierPhone = effectiveSettings.shopPhone || "";
 
   const paymentModeLabel =
     (payload.paymentSummary || "").trim() ||

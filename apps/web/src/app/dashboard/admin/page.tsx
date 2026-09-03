@@ -165,7 +165,7 @@ export default function AdminDashboard() {
               description: `${t.users.periodNew} new this period`,
             },
             {
-              title: "Active Shops",
+              title: "Total Shops",
               value: t.shops.value,
               change: formatChangePct(t.shops.changePct),
               changeType: t.shops.changeType,
