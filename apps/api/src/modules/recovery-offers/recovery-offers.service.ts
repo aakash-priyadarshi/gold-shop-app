@@ -1031,33 +1031,39 @@ export class RecoveryOffersService {
   }
 
   async getCampaignMetrics(campaignKey?: string) {
-    const key = this.normalizeCampaignKey(
-      campaignKey,
-      DEFAULT_AUDIENCE_CAMPAIGN_KEY,
-    );
-    const offers = await this.prisma.recoveryOffer.findMany({
-      where: { campaignKey: key },
-      include: {
-        user: {
-          select: {
-            lastLoginAt: true,
-            marketingUnsubscribedAt: true,
-            webSessions: {
-              select: { startedAt: true },
-              orderBy: { startedAt: "desc" },
-              take: 1,
-            },
-            desktopSessions: {
-              select: { startedAt: true },
-              orderBy: { startedAt: "desc" },
-              take: 1,
+    const key = campaignKey?.trim()
+      ? this.normalizeCampaignKey(campaignKey, campaignKey)
+      : null;
+    const [offers, campaignDefinitions] = await Promise.all([
+      this.prisma.recoveryOffer.findMany({
+        ...(key ? { where: { campaignKey: key } } : {}),
+        include: {
+          user: {
+            select: {
+              lastLoginAt: true,
+              marketingUnsubscribedAt: true,
+              webSessions: {
+                select: { startedAt: true },
+                orderBy: { startedAt: "desc" },
+                take: 1,
+              },
+              desktopSessions: {
+                select: { startedAt: true },
+                orderBy: { startedAt: "desc" },
+                take: 1,
+              },
             },
           },
+          shop: { select: { country: true } },
         },
-        shop: { select: { country: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+        orderBy: { createdAt: "asc" },
+      }),
+      this.prisma.offerCampaign.findMany({
+        ...(key ? { where: { key } } : {}),
+        select: { key: true, name: true, kind: true },
+        orderBy: { startsAt: "desc" },
+      }),
+    ]);
 
     const withReturnStatus = offers.map((offer) => {
       const activityCandidates = [
@@ -1076,39 +1082,52 @@ export class RecoveryOffersService {
       return { ...offer, rejoinedAt };
     });
 
-    const count = (
-      predicate: (offer: (typeof withReturnStatus)[number]) => boolean,
-      values = withReturnStatus,
-    ) => values.filter(predicate).length;
     const rate = (numerator: number, denominator: number) =>
       denominator > 0 ? Math.round((numerator / denominator) * 1000) / 10 : 0;
-    const totals = {
-      targeted: offers.length,
-      scheduled: count(
-        (offer) =>
-          offer.status === RecoveryOfferStatus.PREPARED &&
-          Boolean(offer.scheduledFor),
-      ),
-      sent: count((offer) => Boolean(offer.sentAt)),
-      delivered: count((offer) => Boolean(offer.deliveredAt)),
-      opened: count((offer) => Boolean(offer.firstOpenedAt)),
-      totalOpens: offers.reduce((sum, offer) => sum + offer.openCount, 0),
-      clicked: count((offer) => Boolean(offer.firstClickedAt)),
-      totalClicks: offers.reduce((sum, offer) => sum + offer.clickCount, 0),
-      claimed: count((offer) => Boolean(offer.claimedAt)),
-      rejoined: count((offer) => Boolean(offer.rejoinedAt)),
-      bounced: count((offer) => Boolean(offer.bouncedAt)),
-      complained: count((offer) => Boolean(offer.complainedAt)),
-      unsubscribed: count((offer) =>
-        Boolean(offer.user.marketingUnsubscribedAt),
-      ),
-      failed: count(
-        (offer) =>
-          offer.status === RecoveryOfferStatus.SEND_FAILED ||
-          Boolean(offer.failedAt) ||
-          Boolean(offer.suppressedAt),
-      ),
+    const summarize = (values: typeof withReturnStatus) => {
+      const count = (
+        predicate: (offer: (typeof withReturnStatus)[number]) => boolean,
+      ) => values.filter(predicate).length;
+      const totals = {
+        targeted: values.length,
+        scheduled: count(
+          (offer) =>
+            offer.status === RecoveryOfferStatus.PREPARED &&
+            Boolean(offer.scheduledFor),
+        ),
+        sent: count((offer) => Boolean(offer.sentAt)),
+        delivered: count((offer) => Boolean(offer.deliveredAt)),
+        opened: count((offer) => Boolean(offer.firstOpenedAt)),
+        totalOpens: values.reduce((sum, offer) => sum + offer.openCount, 0),
+        clicked: count((offer) => Boolean(offer.firstClickedAt)),
+        totalClicks: values.reduce((sum, offer) => sum + offer.clickCount, 0),
+        claimed: count((offer) => Boolean(offer.claimedAt)),
+        rejoined: count((offer) => Boolean(offer.rejoinedAt)),
+        bounced: count((offer) => Boolean(offer.bouncedAt)),
+        complained: count((offer) => Boolean(offer.complainedAt)),
+        unsubscribed: count((offer) =>
+          Boolean(offer.user.marketingUnsubscribedAt),
+        ),
+        failed: count(
+          (offer) =>
+            offer.status === RecoveryOfferStatus.SEND_FAILED ||
+            Boolean(offer.failedAt) ||
+            Boolean(offer.suppressedAt),
+        ),
+      };
+      return {
+        totals,
+        rates: {
+          delivery: rate(totals.delivered, totals.sent),
+          open: rate(totals.opened, totals.delivered),
+          click: rate(totals.clicked, totals.delivered),
+          claim: rate(totals.claimed, totals.delivered),
+          rejoin: rate(totals.rejoined, totals.sent),
+        },
+      };
     };
+
+    const { totals, rates } = summarize(withReturnStatus);
 
     const countryCodes = [
       ...new Set(withReturnStatus.map((offer) => offer.shop.country)),
@@ -1118,33 +1137,60 @@ export class RecoveryOffersService {
         const countryOffers = withReturnStatus.filter(
           (offer) => offer.shop.country === country,
         );
-        const countryCount = (
-          predicate: (offer: (typeof withReturnStatus)[number]) => boolean,
-        ) => count(predicate, countryOffers);
+        const countryTotals = summarize(countryOffers).totals;
         return {
           country,
-          targeted: countryOffers.length,
-          sent: countryCount((offer) => Boolean(offer.sentAt)),
-          delivered: countryCount((offer) => Boolean(offer.deliveredAt)),
-          opened: countryCount((offer) => Boolean(offer.firstOpenedAt)),
-          clicked: countryCount((offer) => Boolean(offer.firstClickedAt)),
-          claimed: countryCount((offer) => Boolean(offer.claimedAt)),
-          rejoined: countryCount((offer) => Boolean(offer.rejoinedAt)),
+          targeted: countryTotals.targeted,
+          sent: countryTotals.sent,
+          delivered: countryTotals.delivered,
+          opened: countryTotals.opened,
+          clicked: countryTotals.clicked,
+          claimed: countryTotals.claimed,
+          rejoined: countryTotals.rejoined,
         };
       })
       .sort((a, b) => b.targeted - a.targeted);
 
+    const definitionByKey = new Map(
+      campaignDefinitions.map((campaign) => [campaign.key, campaign]),
+    );
+    const observedCampaignKeys = withReturnStatus.map(
+      (offer) => offer.campaignKey || DEFAULT_AUDIENCE_CAMPAIGN_KEY,
+    );
+    const campaignKeys = [
+      ...new Set([
+        ...campaignDefinitions.map((campaign) => campaign.key),
+        ...observedCampaignKeys,
+        ...(key ? [key] : [DEFAULT_AUDIENCE_CAMPAIGN_KEY]),
+      ]),
+    ];
+    const byCampaign = campaignKeys.map((resolvedCampaignKey) => {
+      const definition = definitionByKey.get(resolvedCampaignKey);
+      const values = withReturnStatus.filter(
+        (offer) =>
+          (offer.campaignKey || DEFAULT_AUDIENCE_CAMPAIGN_KEY) ===
+          resolvedCampaignKey,
+      );
+      return {
+        campaignKey: resolvedCampaignKey,
+        name:
+          definition?.name ||
+          (resolvedCampaignKey === DEFAULT_AUDIENCE_CAMPAIGN_KEY ||
+          resolvedCampaignKey === DEFAULT_INCIDENT_CAMPAIGN_KEY
+            ? "Customer win-back"
+            : resolvedCampaignKey),
+        kind: definition?.kind || OfferCampaignKind.RECOVERY,
+        ...summarize(values),
+      };
+    });
+
     return {
+      scope: key ? "CAMPAIGN" : "ALL",
       campaignKey: key,
       totals,
-      rates: {
-        delivery: rate(totals.delivered, totals.sent),
-        open: rate(totals.opened, totals.delivered),
-        click: rate(totals.clicked, totals.delivered),
-        claim: rate(totals.claimed, totals.delivered),
-        rejoin: rate(totals.rejoined, totals.sent),
-      },
+      rates,
       byCountry,
+      byCampaign,
       webhookConfigured: Boolean(
         this.config.get<string>("RESEND_WEBHOOK_SECRET"),
       ),

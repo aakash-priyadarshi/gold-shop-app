@@ -240,6 +240,7 @@ const preview = {
 };
 
 const metrics = {
+  scope: "CAMPAIGN",
   campaignKey: "customer-winback-2026-09",
   totals: {
     targeted: 10,
@@ -276,9 +277,25 @@ const metrics = {
       rejoined: 3,
     },
   ],
+  byCampaign: [],
   webhookConfigured: true,
   resendApiConfigured: true,
   updatedAt: "2026-09-01T12:00:00.000Z",
+};
+
+const overallMetrics = {
+  ...metrics,
+  scope: "ALL",
+  campaignKey: null,
+  byCampaign: [
+    {
+      campaignKey: "customer-winback-2026-09",
+      name: "Customer win-back",
+      kind: "RECOVERY",
+      totals: metrics.totals,
+      rates: metrics.rates,
+    },
+  ],
 };
 
 function dateKey(date: Date) {
@@ -314,6 +331,15 @@ const festivalCalendar = {
       dateAccuracy: "CALCULATED",
       source: "PANCHANGAM",
     },
+    {
+      id: `hindu-janmashtami-${dateKey(calendarFestivalDate)}`,
+      name: "Janmashtami",
+      religion: "HINDU",
+      date: dateKey(calendarFestivalDate),
+      countries: ["IN", "NP"],
+      dateAccuracy: "CALCULATED",
+      source: "PANCHANGAM",
+    },
   ],
   notices: ["Islamic dates may move by one day."],
 };
@@ -327,7 +353,9 @@ describe("OffersAdminPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.previewAudience.mockResolvedValue({ data: preview });
-    mocks.metrics.mockResolvedValue({ data: metrics });
+    mocks.metrics.mockImplementation((campaignKey?: string) =>
+      Promise.resolve({ data: campaignKey ? metrics : overallMetrics }),
+    );
     mocks.recent.mockResolvedValue({ data: [] });
     mocks.sendAudience.mockResolvedValue({
       data: { queued: 0, scheduled: 1, failed: 0, excluded: [] },
@@ -360,9 +388,13 @@ describe("OffersAdminPage", () => {
     expect(screen.getAllByText("Activated").length).toBeGreaterThan(0);
     expect(screen.getByText("Repeat Gold")).toBeInTheDocument();
     expect(screen.getByText("0 account(s) selected")).toBeInTheDocument();
-    expect(screen.getByText("Offer campaign funnel")).toBeInTheDocument();
-    expect(screen.getAllByText("Rejoined")).toHaveLength(2);
+    expect(screen.getByText("All offers performance")).toBeInTheDocument();
+    expect(screen.getByText("Offer-wise performance")).toBeInTheDocument();
+    expect(screen.getAllByText("Rejoined").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("37.5% of sent")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Offer-wise stats" }));
+    expect(screen.getByText("Offer campaign funnel")).toBeInTheDocument();
   });
 
   it("lets an admin select one email, then schedule the visible list", async () => {
@@ -548,5 +580,74 @@ describe("OffersAdminPage", () => {
         }),
       );
     });
+    expect(mocks.createCampaign.mock.calls[0][0]).not.toHaveProperty(
+      "isActive",
+    );
+  });
+
+  it("creates a campaign for tomorrow's Janmashtami date", async () => {
+    await renderLoadedPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Create Janmashtami offer",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save festival campaign" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.createCampaign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: `festival-janmashtami-${calendarFestivalDate.getFullYear()}`,
+          startsAt: new Date(`${dateKey(new Date())}T00:00`).toISOString(),
+          endsAt: new Date(
+            `${dateKey(calendarFestivalDate)}T23:59`,
+          ).toISOString(),
+        }),
+      );
+    });
+    expect(mocks.createCampaign.mock.calls[0][0]).not.toHaveProperty(
+      "isActive",
+    );
+  });
+
+  it("opens an existing festival campaign for editing instead of duplicating its key", async () => {
+    const key = `festival-janmashtami-${calendarFestivalDate.getFullYear()}`;
+    const existingCampaign = {
+      id: "campaign-janmashtami",
+      key,
+      name: `Janmashtami ${calendarFestivalDate.getFullYear()}`,
+      kind: "FESTIVAL",
+      complimentaryDays: 21,
+      discountPercent: 15,
+      startsAt: new Date(`${dateKey(new Date())}T00:00`).toISOString(),
+      endsAt: new Date(`${dateKey(calendarFestivalDate)}T23:59`).toISOString(),
+      emailSubject: "Janmashtami offer",
+      emailHeading: "Celebrate Janmashtami",
+      emailBody: "A saved Janmashtami campaign.",
+      isActive: true,
+    };
+    mocks.listCampaigns.mockResolvedValue({ data: [existingCampaign] });
+    mocks.updateCampaign.mockResolvedValue({ data: existingCampaign });
+
+    await renderLoadedPage();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Create Janmashtami offer",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update festival campaign" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.updateCampaign).toHaveBeenCalledWith(
+        key,
+        expect.objectContaining({ name: existingCampaign.name }),
+      );
+    });
+    expect(mocks.createCampaign).not.toHaveBeenCalled();
   });
 });
