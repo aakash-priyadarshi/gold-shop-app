@@ -19,8 +19,10 @@ import { useFeatures } from "@/hooks/useFeatures";
 import {
     aiCreditsApi,
     paymentGatewayApi,
+    planQuotesApi,
     sellerSubscriptionsApi,
     subscriptionPlansApi,
+    type PlanQuoteForShop,
 } from "@/lib/api";
 import { formatAiCredits, toCreditNumber } from "@gold-shop/shared";
 import { useT } from "@/providers/translation-provider";
@@ -1154,6 +1156,7 @@ function AvailablePlansTab() {
   const t = useT();
   const searchParams = useSearchParams();
   const offerCampaignKey = searchParams.get("offer") || undefined;
+  const quoteToken = searchParams.get("quote") || undefined;
   const { user } = useAuth();
   const shopCountry = user?.shop?.country || "";
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -1162,6 +1165,13 @@ function AvailablePlansTab() {
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [gateways, setGateways] = useState<PreferredGateways | null>(null);
   const [showAltGateways, setShowAltGateways] = useState(false);
+  const [quote, setQuote] = useState<PlanQuoteForShop | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [acceptingCycle, setAcceptingCycle] = useState<string | null>(null);
+  const [inquiryPlan, setInquiryPlan] = useState<Plan | null>(null);
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [sendingInquiry, setSendingInquiry] = useState(false);
+  const [inquiryPanelOpen, setInquiryPanelOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -1209,6 +1219,91 @@ function AvailablePlansTab() {
     fetchGateways();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopCountry]);
+
+  // Resolve a custom sales quote from ?quote=<token>
+  useEffect(() => {
+    if (!quoteToken) {
+      setQuote(null);
+      setQuoteError(null);
+      return;
+    }
+    let cancelled = false;
+    planQuotesApi
+      .getQuote(quoteToken)
+      .then((res) => {
+        if (!cancelled) setQuote(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQuoteError(
+            "This quote link is invalid, expired, or was issued to a different account.",
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [quoteToken]);
+
+  const acceptQuote = async (cycle: "monthly" | "annual") => {
+    if (!quote) return;
+    setAcceptingCycle(cycle);
+    try {
+      const res = await sellerSubscriptionsApi.subscribe({
+        shopId: "", // server reads from JWT
+        planId: quote.plan.id,
+        country: quote.plan.country,
+        billingCycle: cycle,
+        planQuoteToken: quote.token,
+      });
+      if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+        return;
+      }
+      toast({
+        title: t("Success"),
+        description: t("Subscription activated!"),
+      });
+    } catch (err: any) {
+      toast({
+        title: t("Error"),
+        description:
+          err?.response?.data?.message || t("Failed to subscribe to plan"),
+        variant: "destructive",
+      });
+    } finally {
+      setAcceptingCycle(null);
+    }
+  };
+
+  const submitInquiry = async () => {
+    if (!inquiryPlan) return;
+    setSendingInquiry(true);
+    try {
+      await planQuotesApi.createInquiry({
+        planName: inquiryPlan.name,
+        message: inquiryMessage.trim() || undefined,
+      });
+      setInquiryPanelOpen(false);
+      setInquiryPlan(null);
+      setInquiryMessage("");
+      toast({
+        title: t("Request sent"),
+        description: t(
+          "Our sales team will email you a custom quote shortly.",
+        ),
+      });
+    } catch (err: any) {
+      toast({
+        title: t("Error"),
+        description:
+          err?.response?.data?.message || t("Could not send your request"),
+        variant: "destructive",
+      });
+    } finally {
+      setSendingInquiry(false);
+    }
+  };
 
   const handleSubscribe = async (plan: Plan) => {
     try {
@@ -1269,6 +1364,152 @@ function AvailablePlansTab() {
       <p className="text-sm text-muted-foreground">
         <T>Pick a plan that suits your business. Upgrade anytime.</T>
       </p>
+
+      {/* ── Custom sales quote ─────────────────────────────── */}
+      {quoteError && (
+        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+          <CardContent className="py-4 text-sm font-medium text-orange-950 dark:text-orange-100">
+            <T>{quoteError}</T>
+          </CardContent>
+        </Card>
+      )}
+      {quote && !quoteError && (
+        <Card className="border-violet-300 bg-violet-50 dark:bg-violet-950/20">
+          <CardContent className="flex flex-col gap-3 py-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Sparkles className="h-4 w-4 text-violet-600" />
+              <span className="font-semibold text-violet-950 dark:text-violet-100">
+                <T>Your custom quote</T>: {quote.plan.displayName}
+              </span>
+              <Badge variant="secondary">{quote.plan.country}</Badge>
+              {quote.expired && (
+                <Badge variant="destructive">
+                  <T>Expired</T>
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-6 text-sm">
+              {quote.monthlyPrice != null && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    <T>Monthly</T>
+                  </div>
+                  <div className="text-lg font-bold text-violet-950 dark:text-violet-100">
+                    {quote.plan.currency} {quote.monthlyPrice}
+                  </div>
+                  {quote.plan.monthlyPrice > quote.monthlyPrice && (
+                    <div className="text-xs line-through text-muted-foreground">
+                      {quote.plan.currency} {quote.plan.monthlyPrice}
+                    </div>
+                  )}
+                </div>
+              )}
+              {quote.annualPrice != null && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    <T>Annual</T>
+                  </div>
+                  <div className="text-lg font-bold text-violet-950 dark:text-violet-100">
+                    {quote.plan.currency} {quote.annualPrice}
+                  </div>
+                </div>
+              )}
+              <div>
+                <div className="text-xs text-muted-foreground">
+                  <T>Valid until</T>
+                </div>
+                <div className="text-sm font-semibold text-violet-950 dark:text-violet-100">
+                  {new Date(quote.validUntil).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+            {quote.notes && (
+              <p className="whitespace-pre-line text-sm text-muted-foreground">
+                {quote.notes}
+              </p>
+            )}
+            {!quote.expired && (
+              <div className="flex flex-wrap gap-2">
+                {quote.monthlyPrice != null && (
+                  <Button
+                    onClick={() => acceptQuote("monthly")}
+                    disabled={acceptingCycle !== null}
+                  >
+                    {acceptingCycle === "monthly" ? (
+                      t("Processing...")
+                    ) : (
+                      <>
+                        <T>Accept quote — Monthly</T>
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+                {quote.annualPrice != null && (
+                  <Button
+                    variant="outline"
+                    onClick={() => acceptQuote("annual")}
+                    disabled={acceptingCycle !== null}
+                  >
+                    {acceptingCycle === "annual" ? (
+                      t("Processing...")
+                    ) : (
+                      <>
+                        <T>Accept quote — Annual</T>
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Contact sales panel ────────────────────────────── */}
+      {inquiryPanelOpen && inquiryPlan && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-col gap-3 py-5">
+            <div className="font-semibold">
+              <T>Talk to sales about</T> {inquiryPlan.displayName}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              <T>
+                Tell us about your business (number of shops, staff, invoice
+                volume) and we will email you a custom quote.
+              </T>
+            </p>
+            <textarea
+              value={inquiryMessage}
+              onChange={(event) => setInquiryMessage(event.target.value)}
+              rows={3}
+              className="w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-950"
+              placeholder={t(
+                "e.g. We run 3 branches in Kathmandu and need multi-branch billing.",
+              )}
+            />
+            <div className="flex gap-2">
+              <Button onClick={submitInquiry} disabled={sendingInquiry}>
+                {sendingInquiry ? (
+                  t("Sending...")
+                ) : (
+                  <T>Send request to sales</T>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setInquiryPanelOpen(false);
+                  setInquiryPlan(null);
+                }}
+              >
+                <T>Cancel</T>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Preferred payment method for this region ───────── */}
       {gateways?.preferred && (
@@ -1461,6 +1702,21 @@ function AvailablePlansTab() {
                       </>
                     )}
                   </Button>
+                  {(plan.name === "PRO_PLUS" || plan.name === "ENTERPRISE") &&
+                    !isCurrentPlan && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInquiryPlan(plan);
+                          setInquiryPanelOpen(true);
+                        }}
+                        className="mt-2 w-full text-center text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                      >
+                        <T>
+                          Need custom pricing for a larger team? Contact sales
+                        </T>
+                      </button>
+                    )}
                 </CardContent>
               </Card>
             );

@@ -34,6 +34,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   aiCreditsApi,
   paymentGatewayApi,
+  planQuotesApi,
   sellerSubscriptionsApi,
   subscriptionPlansApi,
 } from "@/lib/api";
@@ -141,6 +142,7 @@ export default function AdminBillingPage() {
             <TabsList>
               <TabsTrigger value="plans">Plans</TabsTrigger>
               <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+              <TabsTrigger value="quotes">Plan Requests</TabsTrigger>
               <TabsTrigger value="credits">AI Credits</TabsTrigger>
               <TabsTrigger value="gateways">Payment Gateways</TabsTrigger>
             </TabsList>
@@ -150,6 +152,9 @@ export default function AdminBillingPage() {
             </TabsContent>
             <TabsContent value="subscriptions">
               <SubscriptionsTab />
+            </TabsContent>
+            <TabsContent value="quotes">
+              <PlanRequestsTab />
             </TabsContent>
             <TabsContent value="credits">
               <CreditsTab />
@@ -3425,6 +3430,417 @@ function StripeSandboxSection() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// PLAN REQUESTS TAB (sales inquiries + custom quotes)
+// ═══════════════════════════════════════════════════
+
+type PlanInquiryRow = {
+  id: string;
+  planName: string;
+  message: string | null;
+  status: "NEW" | "QUOTED" | "CLOSED";
+  createdAt: string;
+  shop: { id: string; shopName: string; country: string };
+  user: { email: string; firstName: string | null };
+  quote: { id: string; token: string; status: string } | null;
+};
+
+type PlanQuoteRow = {
+  id: string;
+  token: string;
+  status: "SENT" | "REDEEMED" | "REVOKED";
+  monthlyPrice: number | null;
+  annualPrice: number | null;
+  validUntil: string;
+  notes: string | null;
+  createdAt: string;
+  shop: { shopName: string; country: string };
+  plan: { displayName: string; currency: string; name: string };
+};
+
+function PlanRequestsTab() {
+  const [inquiries, setInquiries] = useState<PlanInquiryRow[]>([]);
+  const [quotes, setQuotes] = useState<PlanQuoteRow[]>([]);
+  const [plans, setPlans] = useState<
+    { id: string; displayName: string; currency: string; monthlyPrice: number }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [quotingInquiry, setQuotingInquiry] = useState<PlanInquiryRow | null>(
+    null,
+  );
+  const [form, setForm] = useState({
+    planId: "",
+    monthlyPrice: "",
+    annualPrice: "",
+    validityDays: "30",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [inqRes, quoteRes, plansRes] = await Promise.all([
+        planQuotesApi.adminListInquiries(),
+        planQuotesApi.adminListQuotes(),
+        subscriptionPlansApi.list({}),
+      ]);
+      setInquiries(Array.isArray(inqRes.data) ? inqRes.data : []);
+      setQuotes(Array.isArray(quoteRes.data) ? quoteRes.data : []);
+      setPlans(
+        Array.isArray(plansRes.data)
+          ? plansRes.data
+          : (plansRes.data?.data ?? []),
+      );
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load plan requests",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openQuoteDialog = (inquiry: PlanInquiryRow) => {
+    const matchingPlan = plans.find(
+      (plan) => plan.displayName === inquiry.planName,
+    );
+    setForm({
+      planId: matchingPlan?.id ?? "",
+      monthlyPrice: matchingPlan ? String(matchingPlan.monthlyPrice) : "",
+      annualPrice: "",
+      validityDays: "30",
+      notes: "",
+    });
+    setQuotingInquiry(inquiry);
+  };
+
+  const submitQuote = async () => {
+    if (!quotingInquiry) return;
+    if (!form.planId) {
+      toast({
+        title: "Select a plan",
+        description: "Choose the plan this quote customises.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const monthlyPrice = form.monthlyPrice ? Number(form.monthlyPrice) : 0;
+    const annualPrice = form.annualPrice ? Number(form.annualPrice) : 0;
+    if (!monthlyPrice && !annualPrice) {
+      toast({
+        title: "Price required",
+        description: "Enter a monthly or annual price for the quote.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
+    try {
+      await planQuotesApi.adminCreateQuote({
+        shopId: quotingInquiry.shop.id,
+        planId: form.planId,
+        inquiryId: quotingInquiry.id,
+        monthlyPrice: monthlyPrice || undefined,
+        annualPrice: annualPrice || undefined,
+        validityDays: Number(form.validityDays) || 30,
+        notes: form.notes.trim() || undefined,
+      });
+      toast({
+        title: "Quote sent",
+        description: `Emailed a custom quote to ${quotingInquiry.user.email}.`,
+      });
+      setQuotingInquiry(null);
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.message || "Could not create the quote",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const closeInquiry = async (id: string) => {
+    try {
+      await planQuotesApi.adminUpdateInquiry(id, "CLOSED");
+      fetchData();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Could not update the inquiry",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const revokeQuote = async (id: string) => {
+    try {
+      await planQuotesApi.adminRevokeQuote(id);
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.message || "Could not revoke the quote",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-muted-foreground">
+        Loading plan requests...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Sales inquiries</CardTitle>
+          <CardDescription>
+            Shops that asked for custom pricing. Prepare a quote and it is
+            emailed to the shop owner with a private accept link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {inquiries.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No inquiries yet. They appear when a shop clicks “Contact sales”.
+            </p>
+          ) : (
+            inquiries.map((inquiry) => (
+              <div key={inquiry.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">
+                      {inquiry.shop.shopName}
+                    </span>
+                    <Badge variant="outline">{inquiry.shop.country}</Badge>
+                    <Badge variant="secondary">{inquiry.planName}</Badge>
+                    <Badge
+                      variant={
+                        inquiry.status === "NEW" ? "destructive" : "outline"
+                      }
+                    >
+                      {inquiry.status}
+                    </Badge>
+                    {inquiry.quote && <Badge variant="outline">quoted</Badge>}
+                  </div>
+                  <div className="flex gap-2">
+                    {!inquiry.quote && inquiry.status !== "CLOSED" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openQuoteDialog(inquiry)}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        Create quote
+                      </Button>
+                    )}
+                    {inquiry.status !== "CLOSED" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => closeInquiry(inquiry.id)}
+                      >
+                        Close
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {inquiry.user.firstName} · {inquiry.user.email} ·{" "}
+                  {new Date(inquiry.createdAt).toLocaleDateString()}
+                </div>
+                {inquiry.message && (
+                  <p className="mt-2 whitespace-pre-line text-sm">
+                    {inquiry.message}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sent quotes</CardTitle>
+          <CardDescription>
+            A quote is redeemed when the shop completes Stripe checkout with
+            its private link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {quotes.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No quotes sent yet.
+            </p>
+          ) : (
+            quotes.map((quote) => (
+              <div
+                key={quote.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"
+              >
+                <div>
+                  <div className="font-semibold">
+                    {quote.shop.shopName} — {quote.plan.displayName}
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {quote.monthlyPrice != null && (
+                      <>
+                        {quote.plan.currency} {quote.monthlyPrice}/mo{" "}
+                      </>
+                    )}
+                    {quote.annualPrice != null && (
+                      <>
+                        · {quote.plan.currency} {quote.annualPrice}/yr{" "}
+                      </>
+                    )}
+                    · valid until{" "}
+                    {new Date(quote.validUntil).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      quote.status === "REDEEMED"
+                        ? "default"
+                        : quote.status === "REVOKED"
+                          ? "destructive"
+                          : "secondary"
+                    }
+                  >
+                    {quote.status}
+                  </Badge>
+                  {quote.status === "SENT" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => revokeQuote(quote.id)}
+                    >
+                      Revoke
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={quotingInquiry !== null}
+        onOpenChange={(open) => {
+          if (!open) setQuotingInquiry(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Custom quote for {quotingInquiry?.shop.shopName}
+            </DialogTitle>
+            <DialogDescription>
+              Leave a field empty to omit that billing cycle. The shop receives
+              an email with a private accept link and pays through Stripe
+              Checkout.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Label>Plan</Label>
+            <Select
+              value={form.planId}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, planId: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {plans.map((plan) => (
+                  <SelectItem key={plan.id} value={plan.id}>
+                    {plan.displayName} ({plan.currency} {plan.monthlyPrice}/mo)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Monthly price</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.monthlyPrice}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, monthlyPrice: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <Label>Annual price</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.annualPrice}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, annualPrice: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Valid for (days)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={180}
+                value={form.validityDays}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, validityDays: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label>Notes (included in the email)</Label>
+              <textarea
+                value={form.notes}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, notes: e.target.value }))
+                }
+                rows={3}
+                className="w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-950"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setQuotingInquiry(null)}>
+              Cancel
+            </Button>
+            <Button onClick={submitQuote} disabled={saving}>
+              {saving ? "Sending..." : "Send quote"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
