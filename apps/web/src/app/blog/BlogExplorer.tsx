@@ -2,6 +2,7 @@
 
 import { T } from "@/components/ui/T";
 import type { BlogPost } from "@/data/blog-posts";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
   Calendar,
@@ -120,7 +121,14 @@ interface BlogExplorerProps {
   posts: BlogPost[];
 }
 
+/**
+ * Interactive client-side explorer for browsing, searching, and filtering jewellery blog guides.
+ *
+ * @param props - Component props containing the list of all blog posts.
+ * @returns The explorer component with search bar, topic filters, curated pillar sections, and grid views.
+ */
 export function BlogExplorer({ posts }: BlogExplorerProps) {
+  const t = useT();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"pillars" | "grid">("pillars");
@@ -174,7 +182,7 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search guides by keyword, topic, tax law, software..."
+              placeholder={t("Search guides by keyword, topic, tax law, software...")}
               className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/70 dark:bg-stone-800/70 py-3 pl-11 pr-10 text-sm text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-stone-500 transition focus:border-amber-500 focus:bg-white dark:focus:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
             {searchQuery && (
@@ -182,7 +190,7 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
                 type="button"
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-stone-700 dark:hover:text-stone-200"
-                aria-label="Clear search"
+                aria-label={t("Clear search")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -268,7 +276,7 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
               }}
               className="rounded-md border border-stone-200 dark:border-stone-700/80 bg-white dark:bg-stone-800 px-2 py-0.5 text-[11px] text-stone-600 dark:text-stone-300 transition hover:border-amber-400 hover:text-amber-700 dark:hover:text-amber-400"
             >
-              {term}
+              {t(term)}
             </button>
           ))}
           {isFiltered && (
@@ -290,15 +298,22 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
       {isFiltered && (
         <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4">
           <p className="text-sm text-stone-600 dark:text-stone-400">
-            Showing <strong className="text-stone-900 dark:text-white">{filteredPosts.length}</strong> {filteredPosts.length === 1 ? "article" : "articles"}
+            {t("Showing")}{" "}
+            <strong className="text-stone-900 dark:text-white">
+              {filteredPosts.length}
+            </strong>{" "}
+            {filteredPosts.length === 1 ? t("article") : t("articles")}
             {searchQuery && (
               <>
-                {" "}for &ldquo;<span className="text-stone-900 dark:text-white">{searchQuery}</span>&rdquo;
+                {" "}{t("for")} &ldquo;<span className="text-stone-900 dark:text-white">{searchQuery}</span>&rdquo;
               </>
             )}
             {selectedCategory !== "all" && (
               <>
-                {" "}in <span className="font-semibold text-stone-900 dark:text-white">{selectedCategory}</span>
+                {" "}{t("in")}{" "}
+                <span className="font-semibold text-stone-900 dark:text-white">
+                  <T>{selectedCategory}</T>
+                </span>
               </>
             )}
           </p>
@@ -332,7 +347,9 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
         <div className="space-y-16">
           {PILLARS.map((pillar) => {
             const Icon = pillar.icon;
-            const pillarPosts = posts.filter((p) => pillar.slugs.includes(p.slug));
+            const pillarPosts = posts.filter(
+              (p) => !p.featured && pillar.slugs.includes(p.slug)
+            );
             if (pillarPosts.length === 0) return null;
 
             return (
@@ -356,7 +373,8 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
                     </div>
                   </div>
                   <span className="self-start sm:self-center text-xs font-semibold text-stone-500 dark:text-stone-400">
-                    {pillarPosts.length} <T>guides</T>
+                    {pillarPosts.length}{" "}
+                    {pillarPosts.length === 1 ? t("guide") : t("guides")}
                   </span>
                 </div>
 
@@ -388,11 +406,19 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
 /*  ARTICLE CARD COMPONENT (IMPECCABLE CRAFT)                      */
 /* ────────────────────────────────────────────────────────────── */
 
+/**
+ * Individual article preview card built according to Impeccable design standards.
+ *
+ * @param props - Component props containing the individual blog post.
+ * @returns An article card element with tags, date, read time, and direct article link.
+ */
 function ArticleCard({ post }: { post: BlogPost }) {
+  const t = useT();
   const formattedDate = new Date(post.date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 
   return (
@@ -430,7 +456,7 @@ function ArticleCard({ post }: { post: BlogPost }) {
                 key={tag}
                 className="rounded border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-850 px-1.5 py-0.5 text-[10px] text-stone-500 dark:text-stone-400"
               >
-                {tag}
+                {t(tag)}
               </span>
             ))}
           </div>

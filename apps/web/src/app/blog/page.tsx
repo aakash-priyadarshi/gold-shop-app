@@ -23,9 +23,14 @@ import { BlogExplorer } from "./BlogExplorer";
 /*  SERVER COMPONENT: BLOG INDEX HUB                              */
 /* ────────────────────────────────────────────────────────────── */
 
+/**
+ * Server-rendered blog hub page for jewellery software guides, tax blueprints, and benchmarks.
+ * Emits complete Schema.org knowledge graph JSON-LD and renders the featured editorial spotlight.
+ *
+ * @returns The rendered server component for the /blog hub.
+ */
 export default function BlogPage() {
   const featured = BLOG_POSTS.find((p) => p.featured) || BLOG_POSTS[0];
-  const rest = BLOG_POSTS.filter((p) => p.slug !== featured?.slug);
 
   /* Comprehensive Schema.org JSON-LD Knowledge Graph for SEO & AI */
   const structuredData = {
@@ -102,6 +107,7 @@ export default function BlogPage() {
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: "UTC",
     }
   );
 
@@ -283,7 +289,7 @@ export default function BlogPage() {
           )}
 
           {/* ── Client Island: Search, Topic Filters & Curated Pillars ─ */}
-          <BlogExplorer posts={rest} />
+          <BlogExplorer posts={BLOG_POSTS} />
 
           {/* ── Commercial Cross-Linking Solutions Bar ──────────── */}
           <section className="mt-20 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-8">

@@ -23,6 +23,13 @@ export const metadata: Metadata = buildMarketingMetadata({
   ],
 });
 
+/**
+ * Layout component for the public Jewellery Business Blog and Software Guides.
+ * Provides high-level marketing metadata, canonical alternate tags, and search engine directives.
+ *
+ * @param props - Component props containing child route elements.
+ * @returns The rendered layout wrapping blog page routes.
+ */
 export default function BlogLayout({
   children,
 }: {

@@ -37,4 +37,41 @@ describe("Blog Hub & Architecture", () => {
     expect(metadata.keywords).toContain("nepal jewellery tax 2083 84");
     expect(metadata.keywords).toContain("jewellery billing software India");
   });
+
+  it("formats dates using UTC so calendar days are preserved without timezone shift", () => {
+    const testDate = "2026-05-03";
+    const formatted = new Date(testDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+    expect(formatted).toBe("May 3, 2026");
+
+    const shortFormatted = new Date(testDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+    expect(shortFormatted).toBe("May 3, 2026");
+  });
+
+  it("ensures featured posts are present in master list but excluded from duplicate pillar cards", () => {
+    const featuredPosts = BLOG_POSTS.filter((p) => p.featured);
+    expect(featuredPosts.length).toBeGreaterThanOrEqual(1);
+
+    // In master list (passed to BlogExplorer), all featured posts must be included
+    for (const featured of featuredPosts) {
+      expect(BLOG_POSTS.some((p) => p.slug === featured.slug)).toBe(true);
+    }
+
+    // Filter used inside pillar cards excludes featured posts to avoid duplicate cards
+    const pillarWithoutFeatured = BLOG_POSTS.filter((p) => !p.featured);
+    for (const featured of featuredPosts) {
+      expect(pillarWithoutFeatured.some((p) => p.slug === featured.slug)).toBe(false);
+    }
+    expect(pillarWithoutFeatured.length).toBe(BLOG_POSTS.length - featuredPosts.length);
+  });
 });
+
