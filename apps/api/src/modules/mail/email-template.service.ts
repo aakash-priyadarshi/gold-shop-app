@@ -65,7 +65,7 @@ export class EmailTemplateService {
   }
 
   private extractVariables(...sources: Array<string | null | undefined>) {
-    const helpers = new Set(['formatDate', 'formatDateTime', 'formatCurrency', 'eq', 'uppercase', 'lowercase']);
+    const helpers = new Set(['formatDate', 'formatDateTime', 'formatCurrency', 'eq', 'uppercase', 'lowercase', 'paragraphs']);
     const variables = new Set<string>();
 
     for (const source of sources) {

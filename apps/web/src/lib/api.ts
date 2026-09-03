@@ -2361,6 +2361,8 @@ export interface OfferCampaign {
   emailSubject: string;
   emailHeading: string;
   emailBody: string;
+  imageUrl?: string | null;
+  nextScheduledFor?: string | null;
   isActive?: boolean;
 }
 
@@ -2447,7 +2449,7 @@ export const recoveryOffersApi = {
     api.get<OfferCampaign[]>("/recovery-offers/admin/campaigns"),
   createCampaign: (data: Omit<OfferCampaign, "id">) =>
     api.post<OfferCampaign>("/recovery-offers/admin/campaigns", data),
-  updateCampaign: (key: string, data: Omit<OfferCampaign, "id" | "key">) =>
+  updateCampaign: (key: string, data: Partial<Omit<OfferCampaign, "id" | "key">>) =>
     api.patch<OfferCampaign>(
       `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}`,
       data,

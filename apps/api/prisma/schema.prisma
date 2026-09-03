@@ -3526,6 +3526,7 @@ model OfferCampaign {
   emailSubject      String
   emailHeading      String
   emailBody         String                    @db.Text
+  imageUrl          String?
   isActive          Boolean                   @default(true)
   createdBy         String?
   createdAt         DateTime                  @default(now())

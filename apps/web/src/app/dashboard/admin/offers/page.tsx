@@ -215,6 +215,9 @@ export default function OffersAdminPage() {
   const [editingCampaignKey, setEditingCampaignKey] = useState<string | null>(
     null,
   );
+  const [campaignFormMode, setCampaignFormMode] = useState<
+    "create" | "edit" | "email"
+  >("create");
   const [savingCampaign, setSavingCampaign] = useState(false);
   const [campaignDraft, setCampaignDraft] = useState({
     key: "",
@@ -226,6 +229,7 @@ export default function OffersAdminPage() {
     emailSubject: "",
     emailHeading: "",
     emailBody: "",
+    imageUrl: "",
   });
   const [calendarStartYear] = useState(() => new Date().getFullYear());
   const [festivalCalendar, setFestivalCalendar] =
@@ -334,55 +338,98 @@ export default function OffersAdminPage() {
     void loadAudience();
   }, [loadAudience]);
 
+  const selectedCampaign = campaigns.find(
+    (item) => item.key === selectedCampaignKey,
+  );
+  // Email copy and artwork lock 5 minutes before the campaign's earliest
+  // scheduled send so queued emails render the same content they were
+  // previewed with.
+  const emailLockAt = selectedCampaign?.nextScheduledFor
+    ? new Date(selectedCampaign.nextScheduledFor).getTime() -
+      5 * 60 * 1000
+    : null;
+  const emailEditLocked =
+    emailLockAt !== null && Date.now() >= emailLockAt;
+
   const saveFestivalCampaign = async () => {
     const startsAt = toIsoFromLocal(campaignDraft.startsAt);
     const endsAt = toIsoFromLocal(campaignDraft.endsAt);
-    if (!startsAt || !endsAt) {
-      toast({
-        title: t("Choose the festival sale window"),
-        variant: "destructive",
-      });
-      return;
-    }
-    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
-      toast({
-        title: t("The sale must end after it starts"),
-        variant: "destructive",
-      });
-      return;
+    if (campaignFormMode !== "email") {
+      if (!startsAt || !endsAt) {
+        toast({
+          title: t("Choose the festival sale window"),
+          variant: "destructive",
+        });
+        return;
+      }
+      if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+        toast({
+          title: t("The sale must end after it starts"),
+          variant: "destructive",
+        });
+        return;
+      }
     }
     setSavingCampaign(true);
     try {
-      const payload = {
-        name: campaignDraft.name,
-        kind: "FESTIVAL" as const,
-        complimentaryDays: campaignDraft.complimentaryDays,
-        discountPercent: campaignDraft.discountPercent,
-        startsAt,
-        endsAt,
+      // Email copy and artwork lock 5 minutes before a scheduled send; they
+      // are simply omitted from the payload while locked.
+      const emailContent = {
         emailSubject: campaignDraft.emailSubject,
         emailHeading: campaignDraft.emailHeading,
         emailBody: campaignDraft.emailBody,
+        imageUrl: campaignDraft.imageUrl,
       };
-      const response = editingCampaignKey
-        ? await recoveryOffersApi.updateCampaign(editingCampaignKey, payload)
-        : await recoveryOffersApi.createCampaign({
-            ...payload,
-            key: campaignDraft.key,
-          });
+      let response: { data: { key: string } };
+      if (campaignFormMode === "email" && editingCampaignKey) {
+        response = await recoveryOffersApi.updateCampaign(
+          editingCampaignKey,
+          emailContent,
+        );
+      } else if (editingCampaignKey) {
+        // Email content is omitted from the payload while locked; the API
+        // only guards the fields that are actually sent.
+        response = await recoveryOffersApi.updateCampaign(editingCampaignKey, {
+          name: campaignDraft.name,
+          kind: "FESTIVAL",
+          complimentaryDays: campaignDraft.complimentaryDays,
+          discountPercent: campaignDraft.discountPercent,
+          startsAt: startsAt as string,
+          endsAt: endsAt as string,
+          ...(emailEditLocked ? {} : emailContent),
+        });
+      } else {
+        response = await recoveryOffersApi.createCampaign({
+          name: campaignDraft.name,
+          kind: "FESTIVAL",
+          complimentaryDays: campaignDraft.complimentaryDays,
+          discountPercent: campaignDraft.discountPercent,
+          startsAt: startsAt as string,
+          endsAt: endsAt as string,
+          ...emailContent,
+          key: campaignDraft.key,
+        });
+      }
       await loadCampaigns();
       setSelectedCampaignKey(response.data.key);
       setShowCampaignForm(false);
       setEditingCampaignKey(null);
+      setCampaignFormMode("create");
       toast({
-        title: editingCampaignKey
-          ? t("Festival campaign updated")
-          : t("Festival campaign created"),
+        title:
+          campaignFormMode === "email"
+            ? t("Festival email updated")
+            : editingCampaignKey
+              ? t("Festival campaign updated")
+              : t("Festival campaign created"),
       });
     } catch (error: unknown) {
       console.error("Failed to create festival campaign:", error);
       toast({
-        title: t("Festival campaign was not created"),
+        title:
+          campaignFormMode === "email"
+            ? t("Festival email was not updated")
+            : t("Festival campaign was not created"),
         description: t(
           apiErrorMessage(
             error,
@@ -411,8 +458,32 @@ export default function OffersAdminPage() {
       emailSubject: campaign.emailSubject,
       emailHeading: campaign.emailHeading,
       emailBody: campaign.emailBody,
+      imageUrl: campaign.imageUrl || "",
     });
     setEditingCampaignKey(campaign.key);
+    setCampaignFormMode("edit");
+    setShowCampaignForm(true);
+  };
+
+  const editSelectedCampaignEmail = () => {
+    const campaign = campaigns.find(
+      (item) => item.key === selectedCampaignKey,
+    );
+    if (!campaign) return;
+    setCampaignDraft({
+      key: campaign.key,
+      name: campaign.name,
+      complimentaryDays: campaign.complimentaryDays,
+      discountPercent: campaign.discountPercent,
+      startsAt: toDateTimeLocalValue(campaign.startsAt),
+      endsAt: toDateTimeLocalValue(campaign.endsAt),
+      emailSubject: campaign.emailSubject,
+      emailHeading: campaign.emailHeading,
+      emailBody: campaign.emailBody,
+      imageUrl: campaign.imageUrl || "",
+    });
+    setEditingCampaignKey(campaign.key);
+    setCampaignFormMode("email");
     setShowCampaignForm(true);
   };
 
@@ -432,8 +503,10 @@ export default function OffersAdminPage() {
         emailSubject: existingCampaign.emailSubject,
         emailHeading: existingCampaign.emailHeading,
         emailBody: existingCampaign.emailBody,
+        imageUrl: existingCampaign.imageUrl || "",
       });
       setEditingCampaignKey(existingCampaign.key);
+      setCampaignFormMode("edit");
       setShowCampaignForm(true);
       return;
     }
@@ -455,11 +528,13 @@ export default function OffersAdminPage() {
       discountPercent,
       startsAt: toLocalDateTimeInput(saleStart, 0, 0),
       endsAt: toLocalDateTimeInput(festivalDate, 23, 59),
-      emailSubject: `Celebrate ${event.name}: ${complimentaryDays} days Pro and ${discountPercent}% off`,
+      emailSubject: `Celebrate ${event.name}: ${complimentaryDays} days Pro free, then ${discountPercent}% off`,
       emailHeading: `A ${event.name} offer for your jewellery business`,
-      emailBody: `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro and save ${discountPercent}% on your first paid plan during this festival offer.`,
+      emailBody: `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro — no card, no automatic renewal.\n\nOnce the complimentary days end, the Pro plan you buy starts with ${discountPercent}% off your first payment. Claim your free days now, then upgrade with the festival discount.`,
+      imageUrl: "",
     });
     setEditingCampaignKey(null);
+    setCampaignFormMode("create");
     setShowCampaignForm(true);
   };
 
@@ -745,7 +820,7 @@ export default function OffersAdminPage() {
           "",
           preview.campaign.emailBody,
           "",
-          `Claim ${days} days of complimentary Pro and save ${preview.campaign.discountPercent}% on any paid plan during ${preview.campaign.name}.`,
+          `Claim ${days} days of complimentary Pro, then get ${preview.campaign.discountPercent}% off the paid plan you choose — the discount starts when the complimentary days end. Offer valid during ${preview.campaign.name}.`,
           "",
           "— Team Orivraa",
         ].join("\n"),
@@ -1039,6 +1114,23 @@ export default function OffersAdminPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {selectedCampaign && (
+                  <button
+                    type="button"
+                    onClick={editSelectedCampaignEmail}
+                    disabled={emailEditLocked}
+                    title={
+                      emailEditLocked
+                        ? t(
+                            "Email content locks 5 minutes before a scheduled send",
+                          )
+                        : undefined
+                    }
+                    className="inline-flex min-h-10 items-center rounded-lg border px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <T>Edit email content</T>
+                  </button>
+                )}
                 {selectedCampaignKey !== "customer-winback-2026-09" && (
                   <button
                     type="button"
@@ -1052,6 +1144,7 @@ export default function OffersAdminPage() {
                   type="button"
                   onClick={() => {
                     setEditingCampaignKey(null);
+                    setCampaignFormMode("create");
                     setShowCampaignForm((value) => !value);
                   }}
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-amber-700"
@@ -1094,96 +1187,107 @@ export default function OffersAdminPage() {
 
             {showCampaignForm && (
               <div className="mt-4 grid gap-3 rounded-xl border bg-gray-50 p-4 dark:bg-gray-950/40 md:grid-cols-2">
-                <label className="text-xs font-medium">
-                  <T>Campaign name</T>
-                  <input
-                    value={campaignDraft.name}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
-                    placeholder={t("Dashain 2026")}
-                  />
-                </label>
-                <label className="text-xs font-medium">
-                  <T>Campaign key</T>
-                  <input
-                    value={campaignDraft.key}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        key: event.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z0-9_-]/g, "-"),
-                      }))
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
-                    placeholder="festival-dashain-2026"
-                  />
-                </label>
-                <label className="text-xs font-medium">
-                  <T>Sale starts</T>
-                  <input
-                    type="datetime-local"
-                    value={campaignDraft.startsAt}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        startsAt: event.target.value,
-                      }))
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
-                  />
-                </label>
-                <label className="text-xs font-medium">
-                  <T>Sale ends</T>
-                  <input
-                    type="datetime-local"
-                    value={campaignDraft.endsAt}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        endsAt: event.target.value,
-                      }))
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
-                  />
-                </label>
-                <label className="text-xs font-medium">
-                  <T>Complimentary Pro days</T>
-                  <input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={campaignDraft.complimentaryDays}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        complimentaryDays: Number(event.target.value),
-                      }))
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
-                  />
-                </label>
-                <label className="text-xs font-medium">
-                  <T>Plan discount percent</T>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={campaignDraft.discountPercent}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        discountPercent: Number(event.target.value),
-                      }))
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
-                  />
-                </label>
+                {campaignFormMode === "email" ? (
+                  <p className="text-xs text-muted-foreground md:col-span-2">
+                    <T>
+                      Editing email content only. Use “Edit selected festival”
+                      to change the sale window or offer values.
+                    </T>
+                  </p>
+                ) : (
+                  <>
+                    <label className="text-xs font-medium">
+                      <T>Campaign name</T>
+                      <input
+                        value={campaignDraft.name}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
+                        }
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                        placeholder={t("Dashain 2026")}
+                      />
+                    </label>
+                    <label className="text-xs font-medium">
+                      <T>Campaign key</T>
+                      <input
+                        value={campaignDraft.key}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            key: event.target.value
+                              .toLowerCase()
+                              .replace(/[^a-z0-9_-]/g, "-"),
+                          }))
+                        }
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                        placeholder="festival-dashain-2026"
+                      />
+                    </label>
+                    <label className="text-xs font-medium">
+                      <T>Sale starts</T>
+                      <input
+                        type="datetime-local"
+                        value={campaignDraft.startsAt}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            startsAt: event.target.value,
+                          }))
+                        }
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                      />
+                    </label>
+                    <label className="text-xs font-medium">
+                      <T>Sale ends</T>
+                      <input
+                        type="datetime-local"
+                        value={campaignDraft.endsAt}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            endsAt: event.target.value,
+                          }))
+                        }
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                      />
+                    </label>
+                    <label className="text-xs font-medium">
+                      <T>Complimentary Pro days</T>
+                      <input
+                        type="number"
+                        min={1}
+                        max={90}
+                        value={campaignDraft.complimentaryDays}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            complimentaryDays: Number(event.target.value),
+                          }))
+                        }
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                      />
+                    </label>
+                    <label className="text-xs font-medium">
+                      <T>Plan discount percent</T>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={campaignDraft.discountPercent}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            discountPercent: Number(event.target.value),
+                          }))
+                        }
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                      />
+                    </label>
+                  </>
+                )}
                 <label className="text-xs font-medium md:col-span-2">
                   <T>Email subject</T>
                   <input
@@ -1194,7 +1298,8 @@ export default function OffersAdminPage() {
                         emailSubject: event.target.value,
                       }))
                     }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                    disabled={emailEditLocked}
+                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
                     placeholder={t("Celebrate with 14 days Pro and 10% off")}
                   />
                 </label>
@@ -1208,34 +1313,74 @@ export default function OffersAdminPage() {
                         emailHeading: event.target.value,
                       }))
                     }
-                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
+                    disabled={emailEditLocked}
+                    className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
                     placeholder={t("A festival offer for your jewellery business")}
                   />
                 </label>
-                <label className="text-xs font-medium md:col-span-2">
-                  <T>Email message</T>
-                  <textarea
-                    value={campaignDraft.emailBody}
-                    onChange={(event) =>
-                      setCampaignDraft((current) => ({
-                        ...current,
-                        emailBody: event.target.value,
-                      }))
-                    }
-                    rows={4}
-                    className="mt-1 w-full rounded-lg border bg-white px-3 py-2 dark:bg-gray-950"
-                  />
-                </label>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium">
+                    <T>Email message</T>
+                    <textarea
+                      value={campaignDraft.emailBody}
+                      onChange={(event) =>
+                        setCampaignDraft((current) => ({
+                          ...current,
+                          emailBody: event.target.value,
+                        }))
+                      }
+                      disabled={emailEditLocked}
+                      rows={6}
+                      className="mt-1 w-full rounded-lg border bg-white px-3 py-2 disabled:opacity-60 dark:bg-gray-950"
+                    />
+                  </label>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">
+                    <T>Blank lines start a new paragraph; line breaks are kept.</T>
+                  </span>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium">
+                    <T>Email image URL</T>
+                    <input
+                      value={campaignDraft.imageUrl}
+                      onChange={(event) =>
+                        setCampaignDraft((current) => ({
+                          ...current,
+                          imageUrl: event.target.value,
+                        }))
+                      }
+                      disabled={emailEditLocked}
+                      className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
+                      placeholder={t("https://www.orivraa.com/luxury-gold-globe.png")}
+                    />
+                  </label>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">
+                    <T>
+                      Leave empty to use the default Orivraa artwork. Locked 5
+                      minutes before a scheduled send.
+                    </T>
+                  </span>
+                </div>
+                {emailEditLocked && (
+                  <p className="text-xs font-medium text-orange-700 dark:text-orange-300 md:col-span-2">
+                    <T>
+                      Email content is locked: an offer email for this campaign
+                      is scheduled within 5 minutes.
+                    </T>
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => void saveFestivalCampaign()}
-                  disabled={savingCampaign}
+                  disabled={savingCampaign || (campaignFormMode === "email" && emailEditLocked)}
                   className="inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-700 px-4 font-semibold text-white disabled:opacity-50 md:col-span-2"
                 >
                   {savingCampaign ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  {editingCampaignKey ? (
+                  {campaignFormMode === "email" ? (
+                    <T>Update email content</T>
+                  ) : editingCampaignKey ? (
                     <T>Update festival campaign</T>
                   ) : (
                     <T>Save festival campaign</T>

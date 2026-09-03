@@ -546,20 +546,24 @@ describe("OffersAdminPage", () => {
     expect(screen.getByLabelText("Complimentary Pro days")).toHaveValue(14);
     expect(screen.getByLabelText("Plan discount percent")).toHaveValue(10);
     expect(screen.getByLabelText("Email subject")).toHaveValue(
-      "Celebrate Diwali: 14 days Pro and 10% off",
+      "Celebrate Diwali: 14 days Pro free, then 10% off",
     );
     expect(screen.getByLabelText("Email heading")).toHaveValue(
       "A Diwali offer for your jewellery business",
     );
     expect(screen.getByLabelText("Email message")).toHaveValue(
-      "Celebrate Diwali with Orivraa. Claim 14 complimentary days of Pro and save 10% on your first paid plan during this festival offer.",
+      "Celebrate Diwali with Orivraa. Claim 14 complimentary days of Pro — no card, no automatic renewal.\n\nOnce the complimentary days end, the Pro plan you buy starts with 10% off your first payment. Claim your free days now, then upgrade with the festival discount.",
     );
+    expect(screen.getByLabelText("Email image URL")).toHaveValue("");
 
     fireEvent.change(screen.getByLabelText("Complimentary Pro days"), {
       target: { value: "21" },
     });
     fireEvent.change(screen.getByLabelText("Plan discount percent"), {
       target: { value: "15" },
+    });
+    fireEvent.change(screen.getByLabelText("Email image URL"), {
+      target: { value: "https://images.orivraa.com/diwali-hero.png" },
     });
     fireEvent.click(
       screen.getByRole("button", { name: "Save festival campaign" }),
@@ -573,10 +577,11 @@ describe("OffersAdminPage", () => {
           complimentaryDays: 21,
           discountPercent: 15,
           kind: "FESTIVAL",
-          emailSubject: "Celebrate Diwali: 14 days Pro and 10% off",
+          emailSubject: "Celebrate Diwali: 14 days Pro free, then 10% off",
           emailHeading: "A Diwali offer for your jewellery business",
           emailBody:
-            "Celebrate Diwali with Orivraa. Claim 14 complimentary days of Pro and save 10% on your first paid plan during this festival offer.",
+            "Celebrate Diwali with Orivraa. Claim 14 complimentary days of Pro — no card, no automatic renewal.\n\nOnce the complimentary days end, the Pro plan you buy starts with 10% off your first payment. Claim your free days now, then upgrade with the festival discount.",
+          imageUrl: "https://images.orivraa.com/diwali-hero.png",
         }),
       );
     });
@@ -649,6 +654,85 @@ describe("OffersAdminPage", () => {
       );
     });
     expect(mocks.createCampaign).not.toHaveBeenCalled();
+  });
+
+  it("edits only the email content from the email editor", async () => {
+    const winbackCampaign = {
+      id: "campaign-winback",
+      key: "customer-winback-2026-09",
+      name: "Customer win-back",
+      kind: "RECOVERY",
+      complimentaryDays: 50,
+      discountPercent: 0,
+      startsAt: null,
+      endsAt: null,
+      emailSubject: "We’re sorry about the invoice issue",
+      emailHeading: "We’re sorry about the invoice issue.",
+      emailBody: "We fixed the issue and improved invoice reliability.",
+      imageUrl: null,
+      nextScheduledFor: null,
+      isActive: true,
+    };
+    mocks.listCampaigns.mockResolvedValue({ data: [winbackCampaign] });
+    mocks.updateCampaign.mockResolvedValue({ data: winbackCampaign });
+
+    await renderLoadedPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit email content" }));
+    expect(screen.queryByLabelText("Campaign name")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Email subject"), {
+      target: { value: "Updated win-back subject" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update email content" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.updateCampaign).toHaveBeenCalledWith(
+        "customer-winback-2026-09",
+        {
+          emailSubject: "Updated win-back subject",
+          emailHeading: winbackCampaign.emailHeading,
+          emailBody: winbackCampaign.emailBody,
+          imageUrl: "",
+        },
+      );
+    });
+  });
+
+  it("locks email content editing 5 minutes before a scheduled send", async () => {
+    const soon = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+    mocks.listCampaigns.mockResolvedValue({
+      data: [
+        {
+          id: "campaign-winback",
+          key: "customer-winback-2026-09",
+          name: "Customer win-back",
+          kind: "RECOVERY",
+          complimentaryDays: 50,
+          discountPercent: 0,
+          startsAt: null,
+          endsAt: null,
+          emailSubject: "We’re sorry about the invoice issue",
+          emailHeading: "We’re sorry about the invoice issue.",
+          emailBody: "We fixed the issue and improved invoice reliability.",
+          imageUrl: null,
+          nextScheduledFor: soon,
+          isActive: true,
+        },
+      ],
+    });
+
+    await renderLoadedPage();
+
+    const editEmailButton = screen.getByRole("button", {
+      name: "Edit email content",
+    });
+    expect(editEmailButton).toBeDisabled();
+
+    fireEvent.click(editEmailButton);
+    expect(screen.queryByLabelText("Email subject")).not.toBeInTheDocument();
   });
 
   it("keeps festival creation disabled until campaigns finish loading", async () => {

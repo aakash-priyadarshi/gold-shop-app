@@ -86,8 +86,11 @@ describe("MailService template rendering", () => {
     );
 
     expect(html).toContain("14 days Pro free");
-    expect(html).toContain("10% off every paid plan");
-    expect(html).toContain("Buy a plan and save 10%");
+    expect(html).toContain("then 10% off the paid plan you choose");
+    expect(html).toContain("Buy a plan with 10% off");
+    expect(html).toContain(
+      "<p style=\"margin:0 0 14px;font-size:16px;color:#344054\">A seasonal offer for your shop.</p>",
+    );
     expect(html).toContain("/offers/unsubscribe?token");
     expect(html).toContain("Unsubscribe from future offers");
     expect(html).not.toContain("Reply “unsubscribe”");

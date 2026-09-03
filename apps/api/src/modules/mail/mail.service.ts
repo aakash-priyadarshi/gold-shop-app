@@ -184,6 +184,27 @@ export class MailService {
 
     // Lowercase
     handlebars.registerHelper('lowercase', (str: string) => str?.toLowerCase());
+
+    // Admin-written email body: blank lines start a new paragraph, single
+    // newlines become <br />. Content is HTML-escaped before wrapping.
+    handlebars.registerHelper('paragraphs', (text: string) => {
+      if (!text) return '';
+      const escapeHtml = (value: string) =>
+        value
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      const html = String(text)
+        .split(/\r?\n\s*\r?\n/)
+        .map(
+          (block) =>
+            `<p style="margin:0 0 14px;font-size:16px;color:#344054">${escapeHtml(
+              block.trim(),
+            ).replace(/\r?\n/g, '<br />')}</p>`,
+        )
+        .join('');
+      return new handlebars.SafeString(html);
+    });
   }
 
   private async loadTemplate(templateName: string): Promise<handlebars.TemplateDelegate> {

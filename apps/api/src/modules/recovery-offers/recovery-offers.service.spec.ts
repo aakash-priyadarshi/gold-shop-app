@@ -24,6 +24,7 @@ describe("RecoveryOffersService", () => {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      groupBy: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
       create: jest.fn(),
@@ -59,6 +60,7 @@ describe("RecoveryOffersService", () => {
     prisma.offerCampaign.findUnique.mockResolvedValue(null);
     prisma.offerCampaign.findMany.mockResolvedValue([]);
     prisma.recoveryOffer.count = jest.fn().mockResolvedValue(0);
+    prisma.recoveryOffer.groupBy = jest.fn().mockResolvedValue([]);
     prisma.$transaction.mockImplementation((input: any) =>
       typeof input === "function" ? input(prisma) : Promise.all(input),
     );
@@ -122,6 +124,96 @@ describe("RecoveryOffersService", () => {
       where: { key: "festival-dashain-2026" },
       data: { isActive: false },
     });
+  });
+
+  it("locks email content edits when a send is scheduled within 5 minutes", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      name: "Dashain 2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date("2026-09-20T00:00:00.000Z"),
+      endsAt: new Date("2026-10-05T00:00:00.000Z"),
+      emailSubject: "Celebrate with Orivraa",
+      emailHeading: "A festival offer for your shop",
+      emailBody: "Claim complimentary Pro and save on a paid plan.",
+      isActive: true,
+    });
+    prisma.recoveryOffer.findFirst.mockResolvedValue({ id: "offer-1" });
+
+    await expect(
+      service.updateCampaign("festival-dashain-2026", {
+        emailSubject: "Updated subject",
+      }),
+    ).rejects.toThrow(/scheduled within 5 minutes/i);
+    expect(prisma.offerCampaign.update).not.toHaveBeenCalled();
+  });
+
+  it("updates email content and normalizes the image URL when sends are not imminent", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      name: "Dashain 2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date("2026-09-20T00:00:00.000Z"),
+      endsAt: new Date("2026-10-05T00:00:00.000Z"),
+      emailSubject: "Celebrate with Orivraa",
+      emailHeading: "A festival offer for your shop",
+      emailBody: "Claim complimentary Pro and save on a paid plan.",
+      isActive: true,
+    });
+    prisma.recoveryOffer.findFirst.mockResolvedValue(null);
+    prisma.offerCampaign.update.mockResolvedValue({ key: "festival-1" });
+
+    await service.updateCampaign("festival-dashain-2026", {
+      emailSubject: "Updated subject",
+      imageUrl: "  ",
+    });
+
+    expect(prisma.recoveryOffer.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          campaignKey: "festival-dashain-2026",
+          status: RecoveryOfferStatus.PREPARED,
+        }),
+      }),
+    );
+    expect(prisma.offerCampaign.update).toHaveBeenCalledWith({
+      where: { key: "festival-dashain-2026" },
+      data: expect.objectContaining({
+        emailSubject: "Updated subject",
+        imageUrl: null,
+      }),
+    });
+  });
+
+  it("reports the next scheduled send per campaign", async () => {
+    const scheduledFor = new Date("2026-09-05T04:30:00.000Z");
+    prisma.offerCampaign.findMany.mockResolvedValue([
+      { key: "festival-dashain-2026", name: "Dashain 2026" },
+      { key: "customer-winback-2026-09", name: "Customer win-back" },
+    ]);
+    prisma.recoveryOffer.groupBy.mockResolvedValue([
+      {
+        campaignKey: "festival-dashain-2026",
+        _min: { scheduledFor },
+      },
+    ]);
+
+    const result = await service.listCampaigns();
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        key: "festival-dashain-2026",
+        nextScheduledFor: scheduledFor,
+      }),
+      expect.objectContaining({
+        key: "customer-winback-2026-09",
+        nextScheduledFor: null,
+      }),
+    ]);
   });
 
   it("adds festival days after an existing Pro end date", async () => {
@@ -814,6 +906,7 @@ describe("RecoveryOffersService", () => {
         },
         context: expect.objectContaining({
           unsubscribeUrl: expect.stringContaining("/offers/unsubscribe?token="),
+          heroImageUrl: "https://www.orivraa.com/luxury-gold-globe.png",
         }),
       }),
     );
@@ -826,6 +919,55 @@ describe("RecoveryOffersService", () => {
       }),
     );
     expect(prisma.emailLog.create).toHaveBeenCalled();
+  });
+
+  it("renders the campaign hero image into festival offer emails", async () => {
+    const rawToken = "festival-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-2",
+      campaignKey: "festival-dashain-2026",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 14,
+      status: RecoveryOfferStatus.PREPARED,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: "admin-1",
+      user: { firstName: "Owner", marketingUnsubscribedAt: null },
+      shop: { shopName: "Owner Gold" },
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      name: "Dashain 2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date("2026-09-20T00:00:00.000Z"),
+      endsAt: new Date("2026-10-05T00:00:00.000Z"),
+      emailSubject: "Celebrate Dashain with Orivraa",
+      emailHeading: "A Dashain offer",
+      emailBody: "Claim complimentary Pro.",
+      imageUrl: "https://images.orivraa.com/dashain-hero.png",
+      isActive: true,
+    });
+    mail.send.mockResolvedValue({ success: true, messageId: "message-2" });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emailLog.create.mockResolvedValue({ id: "log-2" });
+
+    await service.deliverQueuedOffer({
+      offerId: "offer-2",
+      rawToken,
+    });
+
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "Celebrate Dashain with Orivraa",
+        context: expect.objectContaining({
+          heroImageUrl: "https://images.orivraa.com/dashain-hero.png",
+        }),
+      }),
+    );
   });
 
   it("records Resend clicks once without storing the secure destination", async () => {

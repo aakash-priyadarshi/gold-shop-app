@@ -32,6 +32,9 @@ const DEFAULT_INCIDENT_CAMPAIGN_KEY = "incident-recovery-2026-08";
 const DEFAULT_AUDIENCE_CAMPAIGN_KEY = "customer-winback-2026-09";
 const RECOVERY_DAYS = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Email copy and artwork are locked this close to a scheduled send so the
+// rendered emails cannot change while sends are already going out.
+const EMAIL_EDIT_LOCK_MS = 5 * 60 * 1000;
 const ALREADY_CONTACTED_STATUSES: RecoveryOfferStatus[] = [
   RecoveryOfferStatus.PREPARED,
   RecoveryOfferStatus.SENT,
@@ -97,6 +100,7 @@ type CampaignDefinition = {
   emailSubject: string;
   emailHeading: string;
   emailBody: string;
+  imageUrl?: string | null;
 };
 
 type Exclusion = {
@@ -115,10 +119,27 @@ export class RecoveryOffersService {
     private readonly queue: Queue<RecoveryOfferDeliveryJob>,
   ) {}
 
-  listCampaigns() {
-    return this.prisma.offerCampaign.findMany({
-      orderBy: [{ isActive: "desc" }, { startsAt: "desc" }],
-    });
+  async listCampaigns() {
+    const [campaigns, scheduled] = await Promise.all([
+      this.prisma.offerCampaign.findMany({
+        orderBy: [{ isActive: "desc" }, { startsAt: "desc" }],
+      }),
+      this.prisma.recoveryOffer.groupBy({
+        by: ["campaignKey"],
+        _min: { scheduledFor: true },
+        where: {
+          status: RecoveryOfferStatus.PREPARED,
+          scheduledFor: { not: null },
+        },
+      }),
+    ]);
+    const nextScheduledByKey = new Map(
+      scheduled.map((row) => [row.campaignKey, row._min.scheduledFor]),
+    );
+    return campaigns.map((campaign) => ({
+      ...campaign,
+      nextScheduledFor: nextScheduledByKey.get(campaign.key) ?? null,
+    }));
   }
 
   async createCampaign(input: CreateOfferCampaignDto, adminId: string) {
@@ -130,6 +151,7 @@ export class RecoveryOffersService {
         kind: input.kind as OfferCampaignKind,
         startsAt: new Date(input.startsAt),
         endsAt: new Date(input.endsAt),
+        imageUrl: input.imageUrl?.trim() || null,
         createdBy: adminId,
       },
     });
@@ -142,6 +164,29 @@ export class RecoveryOffersService {
     });
     if (!existing) {
       throw new NotFoundException("Offer campaign not found");
+    }
+
+    const emailContentTouched =
+      input.emailSubject !== undefined ||
+      input.emailHeading !== undefined ||
+      input.emailBody !== undefined ||
+      input.imageUrl !== undefined;
+    if (emailContentTouched) {
+      const imminentSend = await this.prisma.recoveryOffer.findFirst({
+        where: {
+          campaignKey: resolvedKey,
+          status: RecoveryOfferStatus.PREPARED,
+          scheduledFor: {
+            lte: new Date(Date.now() + EMAIL_EDIT_LOCK_MS),
+          },
+        },
+        select: { id: true },
+      });
+      if (imminentSend) {
+        throw new BadRequestException(
+          "Email content is locked because an offer email for this campaign is scheduled within 5 minutes",
+        );
+      }
     }
 
     this.validateCampaignWindow({
@@ -177,6 +222,9 @@ export class RecoveryOffersService {
           ? { emailHeading: input.emailHeading }
           : {}),
         ...(input.emailBody !== undefined ? { emailBody: input.emailBody } : {}),
+        ...(input.imageUrl !== undefined
+          ? { imageUrl: input.imageUrl?.trim() || null }
+          : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       },
     });
@@ -665,7 +713,8 @@ export class RecoveryOffersService {
         saleEndsAt: campaign.endsAt,
         pricingUrl: `${appUrl}/dashboard/shop/billing?tab=upgrade&offer=${encodeURIComponent(offer.campaignKey)}`,
         brandIconUrl: `${appUrl}/favicon/android-chrome-192x192.png`,
-        heroImageUrl: `${appUrl}/luxury-gold-globe.png`,
+        heroImageUrl:
+          campaign.imageUrl || `${appUrl}/luxury-gold-globe.png`,
       },
     });
     if (!delivery.success) {
@@ -1747,6 +1796,7 @@ export class RecoveryOffersService {
         discountPercent: 0,
         startsAt: null,
         endsAt: null,
+        imageUrl: null,
         emailSubject: `We’re sorry about the invoice issue — ${RECOVERY_DAYS} days of Orivraa Pro on us`,
         emailHeading: "We’re sorry about the invoice issue.",
         emailBody:
