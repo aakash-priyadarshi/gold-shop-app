@@ -15,9 +15,11 @@
 
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
+import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { compactGoldRates, parseMarketRatesPayload } from "@/lib/market-rates";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import {
   ArrowRight,
   ChevronDown,
@@ -52,6 +54,7 @@ const KARAT_OPTIONS = [
 type KaratKey = (typeof KARAT_OPTIONS)[number]["karat"];
 
 export default function PurityPage() {
+  const { user } = useAuth();
   const haptic = useHaptics();
 
   const [rates, setRates] = useState<LiveRates | null>(null);
@@ -66,22 +69,25 @@ export default function PurityPage() {
   const [copied, setCopied] = useState(false);
 
   const fetchRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     setLoading(true);
     try {
-      const res = await materialsApi.getMarketRates(getMobileMarketParams());
-      const r = res.data;
+      const res = await materialsApi.getMarketRates(params);
+      const parsed = parseMarketRatesPayload(res.data);
+      const compact = parsed ? compactGoldRates(parsed) : null;
       setRates({
-        rate24k: r.rate24k ?? r.goldRate24k ?? 9500,
-        currency: r.currency ?? "NPR",
+        rate24k: compact?.rate24k ?? 0,
+        currency: compact?.currency ?? params.currency,
       });
-      setSilverRate(r.silver ?? r.silverRate ?? 115);
+      setSilverRate(compact?.silver ?? 0);
     } catch {
-      setRates({ rate24k: 9500, currency: "NPR" });
-      setSilverRate(115);
+      setRates({ rate24k: 0, currency: params.currency });
+      setSilverRate(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.shop]);
 
   useEffect(() => {
     fetchRates();

@@ -2,7 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { LiveRatesWidget, type LiveRateData } from "@/components/pricing/LiveRatesWidget";
+import { LiveRatesWidget } from "@/components/pricing/LiveRatesWidget";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useShopMarketRates } from "@/hooks/useShopMarketRates";
 import {
   CURRENCY_SYMBOLS,
   convertCurrencyAmount,
@@ -42,7 +43,7 @@ import {
   mobileInvoiceDetailPath,
   resolveCreatedInvoice,
 } from "@/lib/mobileInvoice";
-import { getApiUrl, inventoryApi, invoicesApi, ordersApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
+import { inventoryApi, invoicesApi, ordersApi, pricingApi, shopQuotesApi, shopsApi } from "@/lib/api";
 import {
   formatBankAccountDetails,
   getCounterPaymentMethods,
@@ -581,9 +582,12 @@ export default function CreateInvoicePage() {
   const [loading, setLoading] = useState(false);
   const [isMockInsured, setIsMockInsured] = useState(false);
 
-  // ── Market rates for live metal pricing ──
-  const [marketRates, setMarketRates] = useState<LiveRateData | null>(null);
-  const [marketRatesLoading, setMarketRatesLoading] = useState(false);
+  // ── Market rates for live metal pricing (shop country/currency only) ──
+  const {
+    rates: marketRates,
+    loading: marketRatesLoading,
+    refresh: fetchMarketRates,
+  } = useShopMarketRates();
   // Shop rates from Pricing Setup (Inventory) — preferred over live market
   const [shopPrices, setShopPrices] = useState<{
     baseMetalPrices?: Record<string, number>;
@@ -625,30 +629,6 @@ export default function CreateInvoicePage() {
     },
     [selectedWeightUnit],
   );
-
-  // Fetch market rates (used on mount and via refresh button)
-  // Passes the selected currency from the header currency changer
-  const fetchMarketRates = useCallback(async () => {
-    setMarketRatesLoading(true);
-    try {
-      const res = await fetch(
-        `${getApiUrl()}/market-rates?country=${shopCountry}&currency=${shopCurrencyCode}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setMarketRates(data);
-      }
-    } catch {
-      // Silent fail — live rates are optional
-    } finally {
-      setMarketRatesLoading(false);
-    }
-  }, [shopCountry, shopCurrencyCode]);
-
-  // Fetch market rates on mount and when country/currency changes
-  useEffect(() => {
-    fetchMarketRates();
-  }, [fetchMarketRates]);
 
   // Load shop component pricing (same source as walk-in quotes / inventory page)
   useEffect(() => {
@@ -805,6 +785,14 @@ export default function CreateInvoicePage() {
   const [customerCountry, setCustomerCountry] = useState(
     COUNTRIES.find((c) => c.code === shopCountry)?.name || "India",
   );
+
+  useEffect(() => {
+    if (customerPhone.trim()) return;
+    const match = COUNTRIES.find((c) => c.code === shopCountry);
+    if (!match) return;
+    setPhoneCountryCode(match.phone);
+    setCustomerCountry(match.name);
+  }, [shopCountry, customerPhone]);
 
   // ── Customer live search ──
   const [isSearching, setIsSearching] = useState(false);
@@ -2312,7 +2300,7 @@ export default function CreateInvoicePage() {
           <div className="space-y-6 flex-1 min-w-0 max-w-4xl">
           {/* Header */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/shop/invoices")}>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
             <div className="flex-1">
@@ -4106,7 +4094,7 @@ export default function CreateInvoicePage() {
               </p>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => router.back()}>
+              <Button variant="outline" onClick={() => router.push("/dashboard/shop/invoices")}>
                 Cancel
               </Button>
               <Button

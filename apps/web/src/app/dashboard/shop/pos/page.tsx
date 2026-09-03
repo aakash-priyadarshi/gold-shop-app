@@ -62,6 +62,7 @@ import {
   SellerProductDetailDialog,
   type SellerProductDetail,
 } from "@/components/shop/SellerProductDetailDialog";
+import { ShopRatesStrip } from "@/components/pricing/ShopRatesStrip";
 import { printAuthoritativeBill, printBill, type BillSettings } from "@/lib/billPrint";
 import { unwrapInvoiceSettingsResponse } from "@/lib/invoiceBranding";
 import { roundMoney2 } from "@/lib/invoice/calculateLineTotals";
@@ -945,11 +946,12 @@ function PosPageInner() {
     <ShopGuard>
       <DashboardLayout>
         <div className="space-y-6">
+          <ShopRatesStrip />
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <ScanLine className="h-6 w-6" /> <T>POS Terminal</T>
+                <ScanLine className="h-6 w-6" /> <T>Counter POS</T>
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
                 <T>{isCounterMode ? "Fast counter checkout mode" : "Advanced ERP mode with stock locking"}</T>

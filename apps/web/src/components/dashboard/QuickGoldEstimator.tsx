@@ -16,7 +16,8 @@ import {
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
+import { readMetalRate } from "@/lib/market-rates";
 import { T } from "@/components/ui/T";
 import { usePreferencesStore } from "@/store/preferences";
 import { useT } from "@/providers/translation-provider";
@@ -45,22 +46,10 @@ export function QuickGoldEstimator() {
   useEffect(() => {
     async function fetchRates() {
       try {
-        const params = getMobileMarketParams(user?.shop ?? null);
+        const params = getShopMarketParams(user?.shop ?? null);
+        if (!params) return;
         const res = await materialsApi.getMarketRates(params);
-        const data = res.data;
-        const metals = data?.metals;
-
-        let rate24k = 0;
-        if (Array.isArray(metals)) {
-          const m24 = metals.find((m: any) =>
-            ["GOLD_24K", "XAU", "GOLD"].includes(m.code),
-          );
-          rate24k = Number(m24?.ratePerGram ?? m24?.rate ?? 0);
-        } else if (metals && typeof metals === "object") {
-          rate24k = Number(
-            metals["GOLD_24K"]?.ratePerGram ?? metals["GOLD_24K"]?.rate ?? 0,
-          );
-        }
+        const rate24k = readMetalRate(res.data, ["GOLD_24K", "XAU", "GOLD"]);
 
         if (rate24k) {
           setGoldRates({

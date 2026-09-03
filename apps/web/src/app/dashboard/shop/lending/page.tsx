@@ -25,7 +25,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { materialsApi, goldLoansApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import { Loader2, Coins, Plus, Scale, Trash2, CheckCircle2, AlertTriangle, Calendar, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
@@ -148,10 +148,11 @@ function GirviLendingContent() {
   };
 
   const fetchRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     if (ratesRef.current) return;
     ratesRef.current = true;
     try {
-      const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
       const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]) || 7250;

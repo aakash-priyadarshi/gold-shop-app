@@ -29,7 +29,7 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { toast } from "@/hooks/use-toast";
 import { inventoryApi, materialsApi } from "@/lib/api";
 import { type JewelleryTagItem } from "@/lib/jewelleryTagPrint";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowRightLeft,
@@ -121,10 +121,11 @@ function StockLedgerContent() {
   };
 
   const fetchRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     if (ratesRef.current) return;
     ratesRef.current = true;
     try {
-      const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
       const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]) || 7250;

@@ -13,7 +13,7 @@ import {
   fetchFreeFxRates,
   type SupportedCurrencyCode,
 } from "@/lib/currency";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import {
   Calculator,
   Gem,
@@ -153,8 +153,7 @@ function numberFromInput(value: string) {
 
 export default function QuotesPage() {
   const { user } = useAuth();
-  const initialParams = getMobileMarketParams(user?.shop ?? null);
-  const [currency, setCurrency] = useState(initialParams.currency);
+  const [currency, setCurrency] = useState("INR");
   const [isGemstoneDrawerOpen, setIsGemstoneDrawerOpen] = useState(false);
   const [ratesLoading, setRatesLoading] = useState(true);
   const [goldRate, setGoldRate] = useState(0);
@@ -266,7 +265,11 @@ export default function QuotesPage() {
   const loadRates = useCallback(async () => {
     try {
       setRatesLoading(true);
-      const params = getMobileMarketParams(user?.shop ?? null);
+      const params = getShopMarketParams(user?.shop ?? null);
+      if (!params) {
+        setRatesLoading(false);
+        return;
+      }
       const [res, shopMaterialsRes, gemstoneRes, componentRes] = await Promise.all([
         materialsApi.getMarketRates(params),
         shopsApi.getMaterials().catch(() => ({ data: { materials: [] } })),
@@ -403,7 +406,8 @@ export default function QuotesPage() {
     setCustomerCity((prev: string) => prev || (user?.shop as any)?.city || "");
     setCustomerCountry((prev: string) => prev || (user?.shop as any)?.country || "");
     if (user?.shop) {
-      setCurrency(toSupportedCurrency(getMobileMarketParams(user.shop).currency));
+      const params = getShopMarketParams(user.shop);
+      if (params) setCurrency(toSupportedCurrency(params.currency));
       const phoneCodes: Record<string, string> = {
         NP: "+977",
         IN: "+91",

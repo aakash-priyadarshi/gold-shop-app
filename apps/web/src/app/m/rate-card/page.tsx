@@ -5,7 +5,8 @@ import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { materialsApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { compactGoldRates, parseMarketRatesPayload } from "@/lib/market-rates";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import { ImageIcon, Loader2, MessageCircle, RefreshCw, Share2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -30,14 +31,15 @@ export default function RateCardPage() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     setLoading(true);
     try {
-      const res = await materialsApi.getMarketRates(getMobileMarketParams());
-      const d = res.data;
-      const gold = d?.metals?.find?.((m: any) => m.code === "XAU" || m.code === "GOLD");
-      const silver = d?.metals?.find?.((m: any) => m.code === "XAG" || m.code === "SILVER");
-      const g = gold?.ratePerGram ?? gold?.rate ?? 0;
-      const s = silver?.ratePerGram ?? silver?.rate ?? 0;
+      const res = await materialsApi.getMarketRates(params);
+      const parsed = parseMarketRatesPayload(res.data);
+      const compact = parsed ? compactGoldRates(parsed) : null;
+      const g = compact?.rate24k ?? 0;
+      const s = compact?.silver ?? 0;
       const today = new Date().toLocaleDateString("en-IN", {
         weekday: "long",
         year: "numeric",
@@ -45,12 +47,12 @@ export default function RateCardPage() {
         day: "numeric",
       });
       setRates({
-        gold24k: Math.round(g),
-        gold22k: Math.round(g * (22 / 24)),
-        gold18k: Math.round(g * (18 / 24)),
-        gold14k: Math.round(g * (14 / 24)),
-        silver: Math.round(s),
-        currency: d?.currency ?? "NPR",
+        gold24k: g,
+        gold22k: compact?.rate22k ?? g * (22 / 24),
+        gold18k: compact?.rate18k ?? g * (18 / 24),
+        gold14k: g * (14 / 24),
+        silver: s,
+        currency: compact?.currency ?? params.currency,
         date: today,
       });
     } catch {
@@ -58,7 +60,7 @@ export default function RateCardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.shop]);
 
   useEffect(() => {
     load();

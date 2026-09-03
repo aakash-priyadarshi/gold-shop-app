@@ -37,7 +37,7 @@ import { KarigarJobGoldCard } from "@/components/shop/karigar/KarigarJobGoldCard
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { materialsApi, karigarApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import {
   parseWorkshopView,
   supplyChainHref,
@@ -501,10 +501,11 @@ function KarigarSupplyChainLedger() {
   };
 
   const fetchRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     if (ratesRef.current) return;
     ratesRef.current = true;
     try {
-      const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
       const live24 = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]);
