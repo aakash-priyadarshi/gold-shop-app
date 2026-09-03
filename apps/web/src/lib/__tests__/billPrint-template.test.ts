@@ -22,6 +22,43 @@ describe("buildBillHtml templates", () => {
     expect(html).toContain('class="bill-tpl-classic"');
   });
 
+  it("never renders the retired KYC demo watermark", () => {
+    const html = buildBillHtml({
+      invoiceNumber: "INV-1",
+      totalAmount: 100,
+      // Guard against stale callers compiled before the watermark option was
+      // removed from BillPrintPayload.
+      watermark: true,
+    } as any);
+
+    expect(html).not.toContain("DEMO BILL");
+    expect(html).not.toContain('class="wm"');
+  });
+
+  it("prefers the invoice supplier snapshot over current shop settings", () => {
+    const html = buildBillHtml({
+      invoiceNumber: "INV-1",
+      totalAmount: 100,
+      supplierName: "Original Jeweller",
+      supplierAddress: "Original Address",
+      supplierPhone: "1111111111",
+      sellerTaxId: "ORIGINAL-TAX-ID",
+      settings: {
+        shopNameOnBill: "Renamed Jeweller",
+        shopAddress: "New Address",
+        shopPhone: "2222222222",
+        gstin: "NEW-TAX-ID",
+      },
+    });
+
+    expect(html).toContain("Original Jeweller");
+    expect(html).toContain("Original Address");
+    expect(html).toContain("1111111111");
+    expect(html).toContain("ORIGINAL-TAX-ID");
+    expect(html).not.toContain("Renamed Jeweller");
+    expect(html).not.toContain("NEW-TAX-ID");
+  });
+
   it("prints the complete verification URL when QR generation is unavailable", () => {
     const html = buildBillHtml({
       invoiceNumber: "INV-1",

@@ -39,7 +39,7 @@ const TICKET_TYPES = [
   { value: "BUYER_COMPLAINT", label: "Complaint about Buyer" },
   { value: "PLATFORM_BUG", label: "Technical Issue / Bug" },
   { value: "FEATURE_REQUEST", label: "Feature Request" },
-  { value: "KYC_VERIFICATION", label: "KYC / Verification Help" },
+  { value: "KYC_VERIFICATION", label: "Business & Tax Details Help" },
   { value: "OTHER", label: "Other" },
 ];
 

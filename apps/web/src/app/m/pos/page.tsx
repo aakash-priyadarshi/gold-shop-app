@@ -1008,25 +1008,6 @@ export default function MobilePOSPage() {
   const { user } = useAuth();
   const t = useT();
 
-  const isVerified = user?.shop?.isVerified ?? false;
-
-  const registrationAgeDays = useMemo(() => {
-    if (!user) return 0;
-    const createdDate = new Date(user.createdAt).getTime();
-    return (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-  }, [user]);
-
-  const daysLeft = useMemo(() => {
-    if (!user) return 0;
-    const createdDate = new Date(user.createdAt).getTime();
-    const diffDays = 7 - (Date.now() - createdDate) / (1000 * 60 * 60 * 24);
-    return Math.max(0, Math.ceil(diffDays));
-  }, [user]);
-
-  const isWithinSandbox = useMemo(() => {
-    return registrationAgeDays <= 7;
-  }, [registrationAgeDays]);
-
   const haptic = useHaptics();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
@@ -1356,30 +1337,6 @@ export default function MobilePOSPage() {
   return (
     <MobileFeatureGate feature="mobilePOS" featureName="Mobile POS">
       <div className="flex flex-col h-full">
-        {/* KYC reminder banner — non-blocking. Shopkeepers can always use the
-            POS; unverified bills simply print with a watermark (handled at
-            print time) until they enter a Customer Tax ID or complete KYC. */}
-        {!isVerified && (
-          <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-200/50 flex items-start gap-2.5 print:hidden">
-            <span className="text-sm">⚠️</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                {isWithinSandbox
-                  ? `Sandbox Mode (${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left)`
-                  : 'Verify your shop to remove the bill watermark'}
-              </p>
-              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-normal mt-0.5">
-                Bills will print with a watermark unless you enter a Customer Tax ID or complete KYC.
-              </p>
-            </div>
-            <Link
-              href="/m/settings/kyc"
-              className="text-[10px] font-bold text-amber-600 dark:text-amber-400 underline whitespace-nowrap align-middle self-center ml-2"
-            >
-              Verify KYC
-            </Link>
-          </div>
-        )}
         {/* Page header with help */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1 bg-white dark:bg-gray-900">
           <div>

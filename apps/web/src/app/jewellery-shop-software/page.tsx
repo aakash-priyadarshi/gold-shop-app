@@ -1188,8 +1188,8 @@ export default function JewelleryShopSoftwarePage() {
                 },
                 {
                   step: "2",
-                  title: "Shop Verification (KYC)",
-                  desc: "Verify your shop details securely to get started.",
+                  title: "Add Business Details",
+                  desc: "Add your tax and business details whenever you are ready.",
                 },
                 {
                   step: "3",

@@ -79,8 +79,8 @@ export class InvoicePdfService {
       settings?.billTemplateId || DEFAULT_INVOICE_PDF_TEMPLATE_ID;
 
     const shopName =
-      settings?.shopNameOnBill?.trim() ||
       invoice.supplierName ||
+      settings?.shopNameOnBill?.trim() ||
       invoice.shop?.shopName ||
       "Jeweller";
 
@@ -102,12 +102,14 @@ export class InvoicePdfService {
     ]);
 
     const taxId =
+      invoice.supplierTaxId ||
       settings?.gstin ||
       invoice.shop?.vatNumber ||
       invoice.shop?.panNumber ||
       null;
 
     const address =
+      invoice.supplierAddress ||
       settings?.shopAddress ||
       [invoice.shop?.address, invoice.shop?.city, invoice.shop?.country]
         .filter(Boolean)
@@ -191,7 +193,11 @@ export class InvoicePdfService {
         shopName,
         tagline: settings?.tagline ?? null,
         address,
-        phone: settings?.shopPhone || invoice.shop?.contactPhone || null,
+        phone:
+          invoice.supplierPhone ||
+          settings?.shopPhone ||
+          invoice.shop?.contactPhone ||
+          null,
         email: settings?.shopEmail || invoice.shop?.contactEmail || null,
         taxId,
         licenseNumber: settings?.licenseNumber ?? null,

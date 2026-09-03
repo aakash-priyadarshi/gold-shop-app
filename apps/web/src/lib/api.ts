@@ -332,15 +332,15 @@ export const shopsApi = {
   // Inventory materials management
   getMaterials: () => api.get("/shops/my-shop/materials"),
   updateMaterials: (data: any) => api.put("/shops/my-shop/materials", data),
-  // Capabilities management
+  // Business and tax details (legacy /kyc route retained for compatibility)
   getKyc: () => api.get("/shops/my-shop/kyc"),
   updateKyc: (data: {
     panNumber?: string;
     vatNumber?: string;
     bisLicenseNumber?: string;
-    verificationDocuments?: Record<string, any>;
+    verificationDocuments?: Record<string, string | null>;
   }) => api.patch("/shops/my-shop/kyc", data),
-  remindAdminKyc: () => api.post("/shops/my-shop/kyc/remind-admin"),
+  // Capabilities management
   getCapabilities: () => api.get("/shops/my-shop/capabilities"),
   updateCapabilities: (data: any) =>
     api.put("/shops/my-shop/capabilities", data),
@@ -821,16 +821,6 @@ export const adminApi = {
   // Stats
   getStats: () => api.get("/admin/stats"),
 
-  // Verifications
-  getVerifications: (status?: string) =>
-    api.get("/admin/verifications", {
-      params: status ? { status } : undefined,
-    }),
-  approveVerification: (id: string) =>
-    api.patch(`/admin/verifications/${id}/approve`),
-  rejectVerification: (id: string, reason: string) =>
-    api.patch(`/admin/verifications/${id}/reject`, { reason }),
-
   // Reports
   getReports: (status?: string) =>
     api.get("/admin/reports", { params: status ? { status } : undefined }),
@@ -905,14 +895,6 @@ export const adminApi = {
     targetRoles?: string[];
   }) => api.post("/admin/notifications/broadcast", data),
   getSystemNotifications: () => api.get("/admin/notifications/system"),
-
-  // KYC Review
-  getShopKyc: (shopId: string) => api.get(`/shops/${shopId}/kyc`),
-  updateShopKycStatus: (
-    shopId: string,
-    action: "approve" | "reject",
-    reason?: string,
-  ) => api.patch(`/shops/${shopId}/kyc-status`, { action, reason }),
 
   // Email settings
   getEmailLogs: (params?: { page?: number; limit?: number; type?: string; direction?: string }) =>
@@ -1688,7 +1670,6 @@ export const supportApi = {
       params: { page, limit, ...(status ? { status } : {}) },
     }),
   getFlaggedConversations: () => api.get("/support/flagged-conversations"),
-  getPendingVerifications: () => api.get("/support/pending-verifications"),
   getRecentActivity: (limit = 50) =>
     api.get("/support/activity", { params: { limit } }),
   getAiAnalytics: () => api.get("/support/ai-analytics"),

@@ -23,7 +23,6 @@ import { sellerPerformanceApi, shopsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import {
   Activity,
-  AlertTriangle,
   Award,
   BarChart3,
   CheckCircle,
@@ -172,7 +171,6 @@ interface TierDashboard {
     tierUnlockedAt: string | null;
     makingChargeCap: number | null;
     makingChargePercent: number | null;
-    isVerified: boolean;
     eliteFastTracked: boolean;
   };
   badges: any[];
@@ -192,7 +190,6 @@ interface KycData {
   vatNumber: string | null;
   bisLicenseNumber: string | null;
   verificationDocuments: Record<string, any> | null;
-  isVerified: boolean;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -306,7 +303,7 @@ const CRITERIA_LABELS: Record<
   verified: { label: "Shop Verified", unit: "" },
 };
 
-/* ─── Country-specific KYC configurations ─── */
+/* ─── Country-specific business detail configurations ─── */
 
 const COUNTRY_NAMES: Record<string, string> = {
   IN: "India",
@@ -347,9 +344,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (country === "IN") {
     return {
-      title: "Indian KYC Verification",
+      title: "India Business & Tax Details",
       description:
-        "Submit your Indian business verification documents. PAN card is mandatory for gold dealers.",
+        "Add the registration and tax details your Indian business uses.",
       fields: [
         {
           key: "panNumber",
@@ -364,7 +361,7 @@ function getKycFieldsForCountry(country: string): {
           label: "PAN Card Image",
           placeholder: "Upload PAN card scan",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "vatNumber",
@@ -403,9 +400,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (country === "LK") {
     return {
-      title: "Sri Lanka KYC Verification",
+      title: "Sri Lanka Business & Tax Details",
       description:
-        "Submit your Sri Lankan business registration and Inland Revenue Department tax details.",
+        "Add your Sri Lankan business registration and Inland Revenue Department tax details.",
       fields: [
         {
           key: "panNumber",
@@ -435,14 +432,14 @@ function getKycFieldsForCountry(country: string): {
           label: "Business Registration Certificate",
           placeholder: "Upload business registration certificate",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "vatCertificate",
           label: "VAT Registration Certificate",
           placeholder: "Upload VAT registration certificate",
           type: "document",
-          required: true,
+          required: false,
         },
       ],
     };
@@ -450,9 +447,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (country === "NP") {
     return {
-      title: "Nepal KYC Verification",
+      title: "Nepal Business & Tax Details",
       description:
-        "Submit your Nepalese business verification documents for platform compliance.",
+        "Add the registration and tax details your Nepalese business uses.",
       fields: [
         {
           key: "panNumber",
@@ -467,7 +464,7 @@ function getKycFieldsForCountry(country: string): {
           label: "PAN Card Image",
           placeholder: "Upload PAN card",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "vatNumber",
@@ -497,9 +494,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (country === "GB") {
     return {
-      title: "UK KYC Verification",
+      title: "UK Business & Tax Details",
       description:
-        "Submit your UK business verification documents. Hallmark registration may be required for precious metal dealers.",
+        "Add the registration and tax details your UK business uses.",
       fields: [
         {
           key: "companiesHouseNumber",
@@ -530,7 +527,7 @@ function getKycFieldsForCountry(country: string): {
           label: "Certificate of Incorporation",
           placeholder: "Upload certificate",
           type: "document",
-          required: true,
+          required: false,
         },
       ],
     };
@@ -538,9 +535,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (country === "US") {
     return {
-      title: "US KYC Verification",
+      title: "US Business & Tax Details",
       description:
-        "Submit your US business documents for compliance with federal and state regulations.",
+        "Add the registration and tax details your US business uses.",
       fields: [
         {
           key: "einNumber",
@@ -562,7 +559,7 @@ function getKycFieldsForCountry(country: string): {
           label: "Business License Document",
           placeholder: "Upload business license",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "ftcCompliance",
@@ -578,9 +575,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (country === "AE") {
     return {
-      title: "UAE KYC Verification",
+      title: "UAE Business & Tax Details",
       description:
-        "Submit your UAE business verification documents including trade license.",
+        "Add the registration and tax details your UAE business uses.",
       fields: [
         {
           key: "tradeLicenseNumber",
@@ -595,7 +592,7 @@ function getKycFieldsForCountry(country: string): {
           label: "Trade License Document",
           placeholder: "Upload trade license",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "vatNumber",
@@ -610,7 +607,7 @@ function getKycFieldsForCountry(country: string): {
           label: "Emirates ID (Owner)",
           placeholder: "Upload Emirates ID",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "dmccCertificate",
@@ -626,9 +623,9 @@ function getKycFieldsForCountry(country: string): {
 
   if (EU_COUNTRIES.includes(country)) {
     return {
-      title: "EU KYC Verification",
+      title: "EU Business & Tax Details",
       description:
-        "Submit your EU business documents. VAT ID and hallmark registration are key for precious metals trade.",
+        "Add the registration and tax details your EU business uses.",
       fields: [
         {
           key: "vatNumber",
@@ -650,7 +647,7 @@ function getKycFieldsForCountry(country: string): {
           label: "Business Registration Certificate",
           placeholder: "Upload registration certificate",
           type: "document",
-          required: true,
+          required: false,
         },
         {
           key: "hallmarkRegistration",
@@ -666,9 +663,8 @@ function getKycFieldsForCountry(country: string): {
 
   // Generic fallback
   return {
-    title: "Business Verification",
-    description:
-      "Submit your business verification documents for platform compliance.",
+    title: "Business & Tax Details",
+    description: "Add the registration and tax details your business uses.",
     fields: [
       {
         key: "businessRegistration",
@@ -689,7 +685,7 @@ function getKycFieldsForCountry(country: string): {
         label: "Business Registration Certificate",
         placeholder: "Upload certificate",
         type: "document",
-        required: true,
+        required: false,
       },
     ],
   };
@@ -938,7 +934,9 @@ export default function ShopEngagementPage() {
       if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
         toast({
           variant: "destructive",
-          title: t("Invalid URL protocol. Only http:// and https:// are allowed."),
+          title: t(
+            "Invalid URL protocol. Only http:// and https:// are allowed.",
+          ),
         });
         return;
       }
@@ -1089,11 +1087,11 @@ export default function ShopEngagementPage() {
         verificationDocuments: docs,
       });
       setKycData(res.data);
-      toast({ title: t("KYC details saved successfully") });
+      toast({ title: t("Business details saved successfully") });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: t("Failed to save KYC"),
+        title: t("Failed to save business details"),
         description: error.response?.data?.message || t("Please try again"),
       });
     } finally {
@@ -1129,8 +1127,8 @@ export default function ShopEngagementPage() {
             </h1>
             <p className="text-muted-foreground">
               <T>
-                Track your shop's performance, tiers, milestones, and
-                verification
+                Track your shop's performance, tiers, milestones, and business
+                profile
               </T>
             </p>
           </div>
@@ -1224,7 +1222,7 @@ export default function ShopEngagementPage() {
                       <T>Tip:</T>
                     </strong>{" "}
                     <T>
-                      Complete your KYC verification, maintain a low
+                      Keep your business profile current, maintain a low
                       cancellation rate, and respond to RFQs quickly to climb
                       tiers faster. Making charge settings can be adjusted in
                     </T>{" "}
@@ -1592,7 +1590,7 @@ export default function ShopEngagementPage() {
               <TabsTrigger value="kyc" className="gap-1">
                 <FileCheck className="h-4 w-4" />
                 <span className="hidden sm:inline">
-                  <T>KYC</T>
+                  <T>Business Details</T>
                 </span>
               </TabsTrigger>
               <TabsTrigger value="onboarding" className="gap-1">
@@ -2181,7 +2179,7 @@ export default function ShopEngagementPage() {
                         <T>Invite another jeweller to Orivraa. You earn</T>{" "}
                         {referralSettings?.commissionPercent ?? 10}%{" "}
                         {t(
-                          referralSettings?.applyToInvoiceFirst ?? true
+                          (referralSettings?.applyToInvoiceFirst ?? true)
                             ? "of every paid subscription invoice while they stay subscribed. Referral commission is applied to your next Orivraa subscription invoice first. Review & Earn is a separate programme."
                             : "of every paid subscription invoice while they stay subscribed. Referral commission remains in your wallet under the current policy. Review & Earn is a separate programme.",
                         )}
@@ -2190,7 +2188,10 @@ export default function ShopEngagementPage() {
                         <div className="text-xs text-purple-600 dark:text-purple-400">
                           <p>
                             🎁 {referralSettings.commissionPercent}%{" "}
-                            <T>of each paid invoice for as long as they keep paying</T>
+                            <T>
+                              of each paid invoice for as long as they keep
+                              paying
+                            </T>
                           </p>
                         </div>
                       )}
@@ -2354,7 +2355,7 @@ export default function ShopEngagementPage() {
               </Card>
             </TabsContent>
 
-            {/* ═══ KYC & VERIFICATION TAB ═══ */}
+            {/* ═══ BUSINESS AND TAX DETAILS TAB ═══ */}
             <TabsContent value="kyc" className="space-y-4 mt-4">
               {/* Country Banner */}
               <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800/50 dark:bg-blue-950/30">
@@ -2364,7 +2365,7 @@ export default function ShopEngagementPage() {
                     <T>Your shop country is set to</T>{" "}
                     <strong>{COUNTRY_NAMES[shopCountry] || shopCountry}</strong>{" "}
                     — <T>showing</T> {COUNTRY_NAMES[shopCountry] || shopCountry}{" "}
-                    <T>KYC requirements.</T>
+                    <T>business and tax fields.</T>
                   </p>
                   <p className="text-sm text-blue-700 mt-0.5 dark:text-blue-300">
                     <T>To change your country preference, go to</T>{" "}
@@ -2377,15 +2378,9 @@ export default function ShopEngagementPage() {
                     .
                   </p>
                 </div>
-                {kycData?.isVerified && (
-                  <Badge className="bg-green-500 shrink-0">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    <T>Verified</T>
-                  </Badge>
-                )}
               </div>
 
-              {/* KYC Form */}
+              {/* Business details form */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -2487,8 +2482,8 @@ export default function ShopEngagementPage() {
                   <div className="flex items-center justify-between pt-4 border-t">
                     <p className="text-xs text-muted-foreground">
                       <T>
-                        Documents are stored securely and reviewed by our
-                        verification team.
+                        Supporting documents are optional and are stored with
+                        your shop profile. No platform approval is required.
                       </T>
                     </p>
                     <Button
@@ -2504,31 +2499,11 @@ export default function ShopEngagementPage() {
                       ) : (
                         <>
                           <FileCheck className="h-4 w-4" />
-                          <T>Save KYC Details</T>
+                          <T>Save Business Details</T>
                         </>
                       )}
                     </Button>
                   </div>
-
-                  {/* Verification Status */}
-                  {kycData && !kycData.isVerified && (
-                    <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800/50">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <div className="text-xs text-amber-700 dark:text-amber-300">
-                        <p className="font-medium">
-                          <T>Verification Pending</T>
-                        </p>
-                        <p>
-                          <T>
-                            Once you submit all required documents, our team
-                            will review and verify your shop. Verified shops get
-                            priority in seller matching and a verified badge on
-                            their profile.
-                          </T>
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </TabsContent>

@@ -4,7 +4,6 @@ import { ApiTokenManager } from "@/components/admin/ApiTokenManager";
 import { GitHubTokenExpiryAlert } from "@/components/admin/GitHubTokenExpiryAlert";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -62,14 +61,6 @@ interface CountryData {
   currency: string;
 }
 
-interface Verification {
-  id: string;
-  shopName: string;
-  owner: string;
-  location: string;
-  status: string;
-}
-
 interface Activity {
   id: string;
   type: string;
@@ -100,7 +91,7 @@ interface AdminDashboardResponse {
     users: { value: number; periodNew: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
     shops: { value: number; periodNew: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
     orders: { value: number; periodNew: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
-    pendingShops: { value: number };
+    activeShops: { value: number };
     revenueNpr: { value: number; changePct: number; changeType: "positive" | "negative" | "neutral" };
   };
   countries: {
@@ -131,9 +122,6 @@ const COUNTRY_INFO: Record<string, { name: string; currency: string }> = {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [countryStats, setCountryStats] = useState<CountryData[]>([]);
-  const [pendingVerifications, setPendingVerifications] = useState<
-    Verification[]
-  >([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [taxStats, setTaxStats] = useState<TaxStats | null>(null);
   const [downloadStats, setDownloadStats] = useState<DownloadStats | null>(null);
@@ -193,12 +181,12 @@ export default function AdminDashboard() {
               description: `${t.orders.periodNew} new this period`,
             },
             {
-              title: "Pending Shops",
-              value: t.pendingShops.value,
+              title: "Active Shops",
+              value: t.activeShops.value,
               change: "",
               changeType: "neutral",
               icon: AlertCircle,
-              description: "Awaiting verification",
+              description: "Currently operational",
             },
           ]);
         }
@@ -214,14 +202,6 @@ export default function AdminDashboard() {
           currency: COUNTRY_INFO[c.country]?.currency || "NPR",
         }));
         setCountryStats(countryData);
-
-        // Fetch pending verifications
-        const verificationsRes = await safeGet("/admin/verifications");
-        setPendingVerifications(
-          (verificationsRes?.data?.requests || []).filter(
-            (v: any) => v.status === "PENDING",
-          ),
-        );
 
         // Fetch recent activity (use reports for now)
         const reportsRes = await safeGet("/admin/reports");
@@ -449,72 +429,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Two column layout - Stack on mobile */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-            {/* Pending Verifications */}
-            <Card className="premium-card">
-              <CardHeader className="flex flex-row items-center justify-between p-4 lg:p-6">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
-                    <AlertCircle className="h-4 w-4 lg:h-5 lg:w-5 text-orange-500" />
-                    Pending Verifications
-                  </CardTitle>
-                  <CardDescription className="text-xs lg:text-sm">
-                    Shops awaiting verification
-                  </CardDescription>
-                </div>
-                <Badge variant="secondary" className="text-xs">
-                  {pendingVerifications.length} pending
-                </Badge>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
-                <div className="space-y-3">
-                  {pendingVerifications.map((shop) => (
-                    <div
-                      key={shop.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm lg:text-base truncate">
-                          {shop.shopName}
-                        </p>
-                        <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {shop.owner} • {shop.location}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs lg:text-sm rounded-lg"
-                        >
-                          Review
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-8 text-xs lg:text-sm rounded-lg bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
-                          Verify
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {pendingVerifications.length === 0 && (
-                    <div className="empty-state py-8">
-                      <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No pending verifications
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <Button variant="link" className="w-full mt-4 text-sm">
-                  View all pending verifications →
-                </Button>
-              </CardContent>
-            </Card>
-
+          <div className="grid grid-cols-1 gap-4 lg:gap-6">
             {/* Recent Activity */}
             <Card className="premium-card">
               <CardHeader className="p-4 lg:p-6">

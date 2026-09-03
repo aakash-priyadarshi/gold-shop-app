@@ -326,7 +326,7 @@ export class AuthService {
             address: dto.shop.address?.trim() || "",
             contactPhone: dto.shop.contactPhone,
             contactEmail: dto.shop.contactEmail,
-            isVerified: false, // Requires admin approval
+            isVerified: false, // Legacy marketplace trust flag; ERP access is immediate
             isActive: true,
           },
         });

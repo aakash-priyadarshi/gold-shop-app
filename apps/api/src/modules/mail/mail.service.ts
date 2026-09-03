@@ -610,23 +610,6 @@ export class MailService {
     });
   }
 
-  async sendShopVerificationStatus(to: string, data: {
-    shopOwnerName: string;
-    shopName: string;
-    status: 'approved' | 'rejected';
-    reason?: string;
-    dashboardUrl: string;
-  }): Promise<SendResult> {
-    const statusText = data.status === 'approved' ? 'Approved' : 'Requires Changes';
-    return this.send({
-      to,
-      subject: `Shop Verification ${statusText} - ${data.shopName}`,
-      template: 'shop-verification',
-      context: data,
-      from: `Orivraa Admin <${EMAIL_SENDERS.ADMIN}>`,
-    });
-  }
-
   async sendAdminAlert(to: string | string[], data: {
     alertType: string;
     title: string;

@@ -689,6 +689,7 @@ export class ShopsService {
         id: true,
         shopName: true,
         isVerified: true,
+        isActive: true,
         city: true,
         country: true,
         currency: true,
@@ -702,7 +703,7 @@ export class ShopsService {
       ...shop,
       name: shop.shopName,
       slug: shop.id, // Using ID as slug placeholder
-      status: shop.isVerified ? "ACTIVE" : "PENDING",
+      status: shop.isActive ? "ACTIVE" : "INACTIVE",
     }));
   }
 
@@ -814,143 +815,6 @@ export class ShopsService {
     });
 
     return results;
-  }
-
-  async verifyShop(shopId: string, adminId: string) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-    });
-
-    if (!shop) {
-      throw new NotFoundException("Shop not found");
-    }
-
-    const updated = await this.prisma.shop.update({
-      where: { id: shopId },
-      data: { isVerified: true },
-    });
-
-    await this.auditService.log({
-      userId: adminId,
-      actorType: "ADMIN",
-      action: "APPROVE",
-      resourceType: "SHOP",
-      resourceId: shopId,
-    });
-
-    return updated;
-  }
-
-  /**
-   * Get KYC documents for a shop by shop ID (admin use)
-   */
-  async getShopKycByShopId(shopId: string) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-      select: {
-        id: true,
-        shopName: true,
-        country: true,
-        panNumber: true,
-        vatNumber: true,
-        bisLicenseNumber: true,
-        verificationDocuments: true,
-        isVerified: true,
-        userId: true,
-        verificationRequests: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    if (!shop) {
-      throw new NotFoundException("Shop not found");
-    }
-
-    return shop;
-  }
-
-  /**
-   * Admin approve or reject shop KYC verification
-   */
-  async updateShopKycStatus(
-    shopId: string,
-    adminId: string,
-    action: "approve" | "reject",
-    reason?: string,
-  ) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: shopId },
-    });
-
-    if (!shop) {
-      throw new NotFoundException("Shop not found");
-    }
-
-    const isApproved = action === "approve";
-
-    const updated = await this.prisma.shop.update({
-      where: { id: shopId },
-      data: {
-        isVerified: isApproved,
-      },
-      select: {
-        id: true,
-        shopName: true,
-        isVerified: true,
-        country: true,
-        panNumber: true,
-        vatNumber: true,
-        bisLicenseNumber: true,
-        verificationDocuments: true,
-      },
-    });
-
-    const vrStatus = isApproved ? "APPROVED" : "ACTION_REQUIRED";
-    const existingVr = await this.prisma.verificationRequest.findFirst({
-      where: { shopId, type: "SHOP_KYC" },
-      orderBy: { createdAt: "desc" },
-    });
-    const adminNotePayload = reason ? { adminNote: reason } : { adminNote: null };
-
-    if (existingVr) {
-      // Merge with existing details if there
-      const existingDetails = (existingVr.details as any) || {};
-      const newDetails = { ...existingDetails, adminNote: reason ? reason : null };
-      
-      await this.prisma.verificationRequest.update({
-        where: { id: existingVr.id },
-        data: { status: vrStatus, details: newDetails },
-      });
-    } else {
-      await this.prisma.verificationRequest.create({
-        data: {
-          type: "SHOP_KYC",
-          status: vrStatus,
-          shopId,
-          details: adminNotePayload,
-        },
-      });
-    }
-
-    await this.auditService.log({
-      userId: adminId,
-      actorType: "ADMIN",
-      action: isApproved ? "APPROVE" : "REJECT",
-      resourceType: "SHOP_KYC",
-      resourceId: shopId,
-      newValue: { action, reason },
-    });
-
-    return updated;
   }
 
   async getShopDashboard(shopId: string) {
@@ -1237,7 +1101,7 @@ export class ShopsService {
   }
 
   /**
-   * Get KYC/verification data for a shop
+   * Get the current shop's self-managed business and tax details.
    */
   async getShopKyc(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -1257,10 +1121,6 @@ export class ShopsService {
         bisLicenseNumber: true,
         verificationDocuments: true,
         isVerified: true,
-        verificationRequests: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
       },
     });
 
@@ -1272,7 +1132,7 @@ export class ShopsService {
   }
 
   /**
-   * Update KYC/verification documents for a shop
+   * Update the current shop's business, tax, and supporting-document details.
    */
   async updateShopKyc(
     userId: string,
@@ -1299,12 +1159,20 @@ export class ShopsService {
     }
     this.assertValidVatNumber(shop.country, dto.vatNumber);
 
-    // Merge new verification documents with existing ones
+    // Preserve partial updates while allowing clients to explicitly remove a
+    // document by sending null or an empty string for its key.
     const existingDocs =
       (shop.verificationDocuments as Record<string, any>) || {};
-    const mergedDocs = dto.verificationDocuments
-      ? { ...existingDocs, ...dto.verificationDocuments }
-      : existingDocs;
+    const mergedDocs = { ...existingDocs };
+    for (const [key, value] of Object.entries(
+      dto.verificationDocuments || {},
+    )) {
+      if (value === null || value === "") {
+        delete mergedDocs[key];
+      } else {
+        mergedDocs[key] = value;
+      }
+    }
 
     const previousValue = {
       panNumber: shop.panNumber,
@@ -1342,82 +1210,17 @@ export class ShopsService {
       },
     });
 
-    const vrType = "SHOP_KYC";
-    const existingVr = await this.prisma.verificationRequest.findFirst({
-      where: { shopId: shop.id, type: vrType },
-      orderBy: { createdAt: "desc" },
-    });
-    
-    // Automatically set verification mode back to PENDING on new uploads
-    if (existingVr) {
-      await this.prisma.verificationRequest.update({
-        where: { id: existingVr.id },
-        data: { status: "PENDING" },
-      });
-    } else {
-      await this.prisma.verificationRequest.create({
-        data: {
-          type: vrType,
-          status: "PENDING",
-          shopId: shop.id,
-        },
-      });
-    }
-
     await this.auditService.log({
       userId,
       actorType: "USER",
       action: "UPDATE",
-      resourceType: "SHOP_KYC",
+      resourceType: "SHOP_BUSINESS_DETAILS",
       resourceId: shop.id,
       previousValue,
       newValue: dto,
     });
 
     return updated;
-  }
-
-  async remindAdminKyc(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { activeShopId: true },
-    });
-
-    const shop = await this.prisma.shop.findFirst({
-      where: user?.activeShopId
-        ? { id: user.activeShopId, userId }
-        : { userId },
-    });
-
-    if (!shop) {
-      throw new NotFoundException("Shop not found for this user");
-    }
-
-    const vrType = "SHOP_KYC";
-    const existingVr = await this.prisma.verificationRequest.findFirst({
-      where: { shopId: shop.id, type: vrType },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (existingVr) {
-      const existingDetails = (existingVr.details as any) || {};
-      const newDetails = { ...existingDetails, adminNote: null }; // clear rejection note since they are reminding
-      
-      await this.prisma.verificationRequest.update({
-        where: { id: existingVr.id },
-        data: { status: "PENDING", details: newDetails },
-      });
-    } else {
-      await this.prisma.verificationRequest.create({
-        data: {
-          type: vrType,
-          status: "PENDING",
-          shopId: shop.id,
-        },
-      });
-    }
-
-    return { success: true, message: "Admin has been reminded." };
   }
 
   /**

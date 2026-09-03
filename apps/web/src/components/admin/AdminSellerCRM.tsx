@@ -49,7 +49,6 @@ import {
   PauseCircle,
   Phone,
   Search,
-  Shield,
   ShoppingBag,
   Star,
   Store,
@@ -73,7 +72,6 @@ interface SellerItem {
   contactPhone: string;
   contactEmail?: string;
   profileImage?: string;
-  isVerified: boolean;
   isActive: boolean;
   isOnHold: boolean;
   sellerTier: string;
@@ -102,7 +100,6 @@ interface CrmStats {
   active: number;
   inactive: number;
   onHold: number;
-  verified: number;
   tiers: Record<string, number>;
   avgRevenue: number;
   avgRating: number;
@@ -376,14 +373,6 @@ export function AdminSellerCRM() {
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-blue-600">
-                {stats.verified}
-              </p>
-              <p className="text-xs text-muted-foreground">Verified</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold">{stats.tiers?.GOLD || 0}</p>
               <p className="text-xs text-muted-foreground">Gold Tier</p>
             </CardContent>
@@ -463,8 +452,6 @@ export function AdminSellerCRM() {
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="onHold">On Hold</SelectItem>
-            <SelectItem value="verified">Verified</SelectItem>
-            <SelectItem value="unverified">Unverified</SelectItem>
           </SelectContent>
         </Select>
         <Select
@@ -591,14 +578,6 @@ export function AdminSellerCRM() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        {s.isVerified && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-800 text-xs"
-                          >
-                            Verified
-                          </Badge>
-                        )}
                         {s.isOnHold && (
                           <Badge
                             variant="secondary"
@@ -615,7 +594,7 @@ export function AdminSellerCRM() {
                             Inactive
                           </Badge>
                         )}
-                        {s.isActive && !s.isOnHold && !s.isVerified && (
+                        {s.isActive && !s.isOnHold && (
                           <Badge variant="secondary" className="text-xs">
                             Active
                           </Badge>
@@ -683,9 +662,6 @@ export function AdminSellerCRM() {
                 <DialogTitle className="flex items-center gap-3">
                   <Store className="h-5 w-5" />
                   {selectedSeller.shop?.shopName}
-                  {selectedSeller.shop?.isVerified && (
-                    <Shield className="h-4 w-4 text-green-600" />
-                  )}
                   <Badge
                     variant="secondary"
                     className={tierColor[selectedSeller.shop?.sellerTier] || ""}
@@ -1135,17 +1111,6 @@ export function AdminSellerCRM() {
                               ),
                               text: `Complete onboarding (${onb.percentage}%) — fully onboarded sellers earn 3x more`,
                               priority: "MEDIUM",
-                            });
-                          }
-
-                          // Verification
-                          if (!selectedSeller!.shop?.isVerified) {
-                            tips.push({
-                              icon: (
-                                <Shield className="h-4 w-4 text-green-500" />
-                              ),
-                              text: "Get KYC verified — verified shops appear higher in search results",
-                              priority: "HIGH",
                             });
                           }
 

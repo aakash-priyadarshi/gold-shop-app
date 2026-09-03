@@ -1337,17 +1337,6 @@ export function Header() {
                           <span className="text-sm">{t("Users")}</span>
                         </div>
                       </Link>
-                      <Link
-                        href="/dashboard/admin/verifications"
-                        onClick={() => setDashboardPopoverOpen(false)}
-                      >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                          <DocumentTextIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">
-                            {t("KYC & Verification")}
-                          </span>
-                        </div>
-                      </Link>
                       <div className="border-t dark:border-gray-800 my-1" />
                       <Link
                         href="/dashboard/admin/settings"

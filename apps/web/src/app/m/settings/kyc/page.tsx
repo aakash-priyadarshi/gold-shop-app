@@ -16,9 +16,7 @@ import {
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
-  CheckCircle,
   Clock,
-  AlertTriangle,
   Shield,
   UploadCloud,
   X,
@@ -26,7 +24,6 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function MobileKycPage() {
@@ -35,13 +32,11 @@ export default function MobileKycPage() {
   const shopCountry = user?.shop?.country?.toUpperCase();
   const identifierConfig = getKycIdentifierConfig(shopCountry);
   const isSriLanka = shopCountry === "LK";
-  const router = useRouter();
   const haptic = useHaptics();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isReminding, setIsReminding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [activeUploadField, setActiveUploadField] = useState<string | null>(
     null,
@@ -51,17 +46,13 @@ export default function MobileKycPage() {
     panNumber: string;
     vatNumber: string;
     bisLicenseNumber: string;
-    isVerified: boolean;
-    verificationDocuments: Record<string, string>;
-    verificationRequests?: any[];
+    verificationDocuments: Record<string, string | null>;
     vatRegistrationStatus?: string;
   }>({
     panNumber: "",
     vatNumber: "",
     bisLicenseNumber: "",
-    isVerified: false,
     verificationDocuments: {},
-    verificationRequests: [],
     vatRegistrationStatus: undefined,
   });
 
@@ -74,9 +65,7 @@ export default function MobileKycPage() {
         panNumber: data.panNumber || "",
         vatNumber: data.vatNumber || "",
         bisLicenseNumber: data.bisLicenseNumber || "",
-        isVerified: data.isVerified || false,
         verificationDocuments: data.verificationDocuments || {},
-        verificationRequests: data.verificationRequests || [],
         vatRegistrationStatus: data.vatRegistrationStatus,
       });
     } catch (error: unknown) {
@@ -94,7 +83,7 @@ export default function MobileKycPage() {
           : "Please check your connection and try again.";
       toast({
         variant: "destructive",
-        title: t("Could not load verification status"),
+        title: t("Could not load business details"),
         description: t(message),
       });
     } finally {
@@ -109,9 +98,7 @@ export default function MobileKycPage() {
         panNumber: "",
         vatNumber: "",
         bisLicenseNumber: "",
-        isVerified: false,
         verificationDocuments: {},
-        verificationRequests: [],
         vatRegistrationStatus: undefined,
       });
       setIsLoading(false);
@@ -141,42 +128,23 @@ export default function MobileKycPage() {
         verificationDocuments: kycData.verificationDocuments,
       });
       toast({
-        title: "Verification Saved",
-        description: "Your document details were stored successfully.",
+        title: t("Business details saved"),
+        description: t(
+          "Your business and tax details were stored successfully.",
+        ),
       });
       await refreshUser();
       loadKyc();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save Failed",
+        title: t("Save failed"),
         description:
-          error.response?.data?.message || "Could not save your KYC details.",
+          error.response?.data?.message ||
+          t("Could not save your business details."),
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleRemindAdmin = async () => {
-    haptic("light");
-    setIsReminding(true);
-    try {
-      await shopsApi.remindAdminKyc();
-      toast({
-        title: "Admin Notified",
-        description: "Your verification request has been resubmitted.",
-      });
-      loadKyc();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Action Failed",
-        description:
-          error.response?.data?.message || "Could not notify review team.",
-      });
-    } finally {
-      setIsReminding(false);
     }
   };
 
@@ -235,17 +203,14 @@ export default function MobileKycPage() {
 
   const removeDocument = (key: string) => {
     haptic("light");
-    setKycData((prev) => {
-      const newDocs = { ...prev.verificationDocuments };
-      delete newDocs[key];
-      return { ...prev, verificationDocuments: newDocs };
-    });
+    setKycData((prev) => ({
+      ...prev,
+      verificationDocuments: {
+        ...prev.verificationDocuments,
+        [key]: null,
+      },
+    }));
   };
-
-  const latestRequest = kycData.verificationRequests?.[0];
-  const isPending = latestRequest?.status === "PENDING";
-  const isActionRequired = latestRequest?.status === "ACTION_REQUIRED";
-  const isReadOnly = kycData.isVerified || isPending;
 
   if (isLoading) {
     return (
@@ -269,95 +234,30 @@ export default function MobileKycPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            <T>KYC Verification</T>
+            <T>Business & Tax Details</T>
           </h1>
           <p className="text-xs text-gray-400">
-            <T>Submit store license &amp; tax details</T>
+            <T>Manage store registration and tax information</T>
           </p>
         </div>
       </div>
 
       {/* Content body */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {/* Status Alerts */}
-        {kycData.isVerified ? (
-          <div className="p-4 rounded-2xl bg-green-500/10 border border-green-200 dark:border-green-900/40 text-green-800 dark:text-green-300 flex items-start gap-2.5">
-            <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-bold text-xs">
-                <T>Shop Fully Verified</T>
-              </h4>
-              <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                <T>
-                  Congratulations! Your store is fully approved for unrestricted
-                  high-value billing and POS checkouts.
-                </T>
-              </p>
-            </div>
-          </div>
-        ) : isPending ? (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-            <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-bold text-xs">
-                <T>Verification Pending Review</T>
-              </h4>
-              <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                <T>
-                  Your documents are being evaluated by our team. This typically
-                  takes 1-2 business days. Counter bills will remain sandboxed
-                  with watermarks in the meantime.
-                </T>
-              </p>
-            </div>
-          </div>
-        ) : isActionRequired ? (
-          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-200 dark:border-red-900/40 text-red-800 dark:text-red-300 space-y-3">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-bold text-xs">
-                  <T>Action Required</T>
-                </h4>
-                <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
-                  <T>
-                    The reviewer requested additions or fixes to your documents:
-                  </T>
-                </p>
-              </div>
-            </div>
-            {latestRequest?.details?.adminNote && (
-              <div className="bg-white/40 dark:bg-black/30 p-2.5 rounded-xl text-[10px] italic font-medium leading-relaxed border border-red-200/50">
-                &ldquo;{latestRequest.details.adminNote}&rdquo;
-              </div>
-            )}
-            <button
-              onClick={handleRemindAdmin}
-              disabled={isReminding}
-              className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5"
-            >
-              {isReminding ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : null}
-              <T>Submit and Notify Reviewer</T>
-            </button>
-          </div>
-        ) : (
           <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-200 dark:border-blue-900/40 text-blue-800 dark:text-blue-300 flex items-start gap-2.5">
             <Shield className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
             <div>
               <h4 className="font-bold text-xs">
-                <T>Retail Sandbox Status</T>
+              <T>Self-managed business profile</T>
               </h4>
               <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
                 <T>
-                  To clear diagonal watermarks from printed bills, please upload
-                  official business identifiers and government IDs below.
+                These details are saved immediately and remain editable. They do
+                not restrict billing or POS access.
                 </T>
               </p>
             </div>
           </div>
-        )}
 
         {/* Input Fields */}
         <section className="space-y-4 bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
@@ -373,11 +273,10 @@ export default function MobileKycPage() {
           <div className="space-y-3">
             <div>
               <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-                <T>{identifierConfig.panLabel}</T> *
+                <T>{identifierConfig.panLabel}</T>
               </label>
               <input
                 type="text"
-                disabled={isReadOnly}
                 value={kycData.panNumber}
                 onChange={(e) =>
                   setKycData({ ...kycData, panNumber: e.target.value })
@@ -396,7 +295,6 @@ export default function MobileKycPage() {
               </label>
               <input
                 type="text"
-                disabled={isReadOnly}
                 value={kycData.vatNumber}
                 onChange={(e) =>
                   setKycData({ ...kycData, vatNumber: e.target.value })
@@ -415,7 +313,6 @@ export default function MobileKycPage() {
               </label>
               <input
                 type="text"
-                disabled={isReadOnly}
                 value={kycData.bisLicenseNumber}
                 onChange={(e) =>
                   setKycData({ ...kycData, bisLicenseNumber: e.target.value })
@@ -430,7 +327,7 @@ export default function MobileKycPage() {
         {/* Supporting Documents */}
         <section className="space-y-4">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide px-1">
-            <T>Supporting Documents</T>
+            <T>Optional Supporting Documents</T>
           </h3>
           <input
             type="file"
@@ -483,7 +380,6 @@ export default function MobileKycPage() {
                       >
                         {url}
                       </a>
-                      {!isReadOnly && (
                         <button
                           type="button"
                           onClick={() => removeDocument(doc.key)}
@@ -491,7 +387,6 @@ export default function MobileKycPage() {
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
-                      )}
                     </div>
                   ) : (
                     <p className="text-[10px] text-gray-400 italic">
@@ -499,7 +394,7 @@ export default function MobileKycPage() {
                     </p>
                   )}
 
-                  {!isReadOnly && !url && (
+                  {!url && (
                     <button
                       type="button"
                       disabled={isUploading}
@@ -524,14 +419,9 @@ export default function MobileKycPage() {
         </section>
 
         {/* Submit Action */}
-        {!isReadOnly && (
           <button
             onClick={handleSave}
-            disabled={
-              isSaving ||
-              !kycData.panNumber ||
-              (isSriLanka && (!kycData.vatNumber || !kycData.bisLicenseNumber))
-            }
+          disabled={isSaving}
             className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 transition-all active:scale-95 mt-4"
           >
             {isSaving ? (
@@ -539,9 +429,8 @@ export default function MobileKycPage() {
             ) : (
               <Save className="h-4 w-4" />
             )}
-            <T>Submit Verification Credentials</T>
+          <T>Save Business Details</T>
           </button>
-        )}
       </div>
     </div>
   );

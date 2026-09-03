@@ -54,14 +54,6 @@ interface FlaggedConversation {
   _count?: { messages: number };
 }
 
-interface PendingVerification {
-  id: string;
-  status: string;
-  type: string;
-  createdAt: string;
-  user?: { name: string; email: string };
-}
-
 interface ActivityItem {
   id: string;
   action: string;
@@ -198,7 +190,6 @@ export default function SupportDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [orders, setOrders] = useState<QueuedOrder[]>([]);
   const [flagged, setFlagged] = useState<FlaggedConversation[]>([]);
-  const [verifications, setVerifications] = useState<PendingVerification[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -222,17 +213,15 @@ export default function SupportDashboardPage() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [statsRes, ordersRes, flaggedRes, verificationsRes, activityRes] = await Promise.all([
+      const [statsRes, ordersRes, flaggedRes, activityRes] = await Promise.all([
         supportApi.getDashboard(),
         supportApi.getOrders(1, 20),
         supportApi.getFlaggedConversations(),
-        supportApi.getPendingVerifications(),
         supportApi.getRecentActivity(),
       ]);
       setStats(statsRes.data);
       setOrders(ordersRes.data?.orders || ordersRes.data || []);
       setFlagged(flaggedRes.data || []);
-      setVerifications(verificationsRes.data || []);
       setActivity(activityRes.data || []);
     } catch (e) {
       console.error('Failed to load support dashboard', e);
@@ -326,14 +315,6 @@ export default function SupportDashboardPage() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="verifications">
-                KYC Pending
-                {verifications.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {verifications.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
               <TabsTrigger value="activity">Recent Activity</TabsTrigger>
               <TabsTrigger value="bot">
                 <Bot className="h-3.5 w-3.5 mr-1" />
@@ -421,36 +402,6 @@ export default function SupportDashboardPage() {
                           <Badge variant={c.status === 'LOCKED' ? 'destructive' : 'outline'}>
                             {c.status}
                           </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* KYC Pending */}
-            <TabsContent value="verifications">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pending KYC Verifications</CardTitle>
-                  <CardDescription>Users waiting for identity verification</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {verifications.length === 0 ? (
-                    <p className="text-muted-foreground">No pending verifications</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {verifications.map((v) => (
-                        <div key={v.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <span className="font-medium">{v.user?.name}</span>
-                            <p className="text-sm text-muted-foreground">{v.user?.email}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Submitted: {new Date(v.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <Badge variant="secondary">{v.status}</Badge>
                         </div>
                       ))}
                     </div>

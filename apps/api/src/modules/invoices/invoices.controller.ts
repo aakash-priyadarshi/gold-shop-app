@@ -71,8 +71,7 @@ function applyPdfCors(req: Request, res: Response) {
 }
 
 // NOTE: Invoicing is a core USP feature and is intentionally NOT gated behind a
-// paid plan. New shops can always create bills/invoices (unverified shops just
-// get a watermark until KYC). PDF share is free for all shops.
+// paid plan or shop verification. PDF share is free for all shops.
 @Controller("invoices")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)

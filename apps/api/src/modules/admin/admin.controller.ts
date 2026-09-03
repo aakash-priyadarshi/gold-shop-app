@@ -56,109 +56,6 @@ export class AdminController {
   ) {}
 
   // ═══════════════════════════════════════
-  // VERIFICATION REQUESTS
-  // ═══════════════════════════════════════
-
-  @Get("verifications")
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "List all verification requests" })
-  async getVerifications(@Query("status") status?: string) {
-    const requests = await this.prisma.verificationRequest.findMany({
-      where: status ? { status } : undefined,
-      orderBy: { createdAt: "desc" },
-      include: {
-        shop: {
-          select: {
-            id: true,
-            shopName: true,
-            city: true,
-            contactPhone: true,
-            contactEmail: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-          },
-        },
-      },
-    });
-
-    const pending = requests.filter((r) => r.status === "PENDING").length;
-    return { requests, pendingCount: pending };
-  }
-
-  @Patch("verifications/:id/approve")
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Approve a verification request" })
-  async approveVerification(
-    @Param("id") id: string,
-    @CurrentUser("id") _adminId: string,
-  ) {
-    const request = await this.prisma.verificationRequest.findUnique({
-      where: { id },
-      include: { shop: true, user: true },
-    });
-
-    if (!request) {
-      return { error: "Verification request not found" };
-    }
-
-    await this.prisma.verificationRequest.update({
-      where: { id },
-      data: { status: "APPROVED" },
-    });
-
-    // Update the shop or user as verified
-    if (request.type === "SHOP" && request.shopId) {
-      await this.prisma.shop.update({
-        where: { id: request.shopId },
-        data: { isVerified: true },
-      });
-
-      // Notify shop owner
-      if (request.shop?.userId) {
-        await this.notificationsService.create({
-          userId: request.shop.userId,
-          type: "SYSTEM_ALERT",
-          titleKey: "notification.shop_verified.title",
-          bodyKey: "notification.shop_verified.body",
-          channels: ["EMAIL", "PUSH"],
-        });
-      }
-    } else if (request.type === "USER" && request.userId) {
-      await this.prisma.user.update({
-        where: { id: request.userId },
-        data: { status: "ACTIVE" },
-      });
-    }
-
-    return { success: true, message: "Verification approved" };
-  }
-
-  @Patch("verifications/:id/reject")
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Reject a verification request" })
-  async rejectVerification(
-    @Param("id") id: string,
-    @Body("reason") reason: string,
-  ) {
-    await this.prisma.verificationRequest.update({
-      where: { id },
-      data: {
-        status: "REJECTED",
-        details: { rejectionReason: reason },
-      },
-    });
-
-    return { success: true, message: "Verification rejected" };
-  }
-
-  // ═══════════════════════════════════════
   // REPORTS
   // ═══════════════════════════════════════
 
@@ -301,7 +198,6 @@ export class AdminController {
           contactPhone: data.contactPhone,
           contactEmail: data.contactEmail,
           country: data.country || "NP",
-          isVerified: true, // Admin created = auto verified
         },
       });
 
@@ -334,7 +230,6 @@ export class AdminController {
       country?: string;
       state?: string;
       pincode?: string;
-      isVerified?: boolean;
     },
   ) {
     // Check if user exists
@@ -366,7 +261,6 @@ export class AdminController {
         country: data.country || "NP",
         state: data.state,
         pincode: data.pincode,
-        isVerified: data.isVerified ?? true, // Admin created = verified by default
       },
     });
 
@@ -666,13 +560,11 @@ export class AdminController {
       totalUsers,
       totalShops,
       totalOrders,
-      pendingVerifications,
       openReports,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.shop.count(),
       this.prisma.order.count(),
-      this.prisma.verificationRequest.count({ where: { status: "PENDING" } }),
       this.prisma.report.count({ where: { status: "OPEN" } }),
     ]);
 
@@ -680,7 +572,6 @@ export class AdminController {
       totalUsers,
       totalShops,
       totalOrders,
-      pendingVerifications,
       openReports,
     };
   }
@@ -718,7 +609,7 @@ export class AdminController {
       totalUsers,
       totalShops,
       totalOrders,
-      pendingShops,
+      activeShops,
       usersCurrent,
       usersPrevious,
       shopsCurrent,
@@ -734,7 +625,7 @@ export class AdminController {
       this.prisma.user.count(),
       this.prisma.shop.count(),
       this.prisma.order.count(),
-      this.prisma.shop.count({ where: { isVerified: false } }),
+      this.prisma.shop.count({ where: { isActive: true } }),
       this.prisma.user.count({ where: { createdAt: { gte: currentStart } } }),
       this.prisma.user.count({
         where: { createdAt: { gte: previousStart, lt: currentStart } },
@@ -853,8 +744,8 @@ export class AdminController {
           periodNew: ordersCurrent,
           ...trend(ordersCurrent, ordersPrevious),
         },
-        pendingShops: {
-          value: pendingShops,
+        activeShops: {
+          value: activeShops,
         },
         revenueNpr: {
           value: revenueCurrent,
@@ -1263,7 +1154,7 @@ export class AdminController {
     @Param("shopId") shopId: string,
     @Body() body: Record<string, any>,
   ) {
-    const allowedFields = ["isOnHold", "isActive", "isVerified", "sellerTier"];
+    const allowedFields = ["isOnHold", "isActive", "sellerTier"];
     const data: Record<string, any> = {};
     for (const key of allowedFields) {
       if (body[key] !== undefined) data[key] = body[key];
@@ -1873,25 +1764,6 @@ export class AdminController {
         ],
         editable: false,
         notes: "Sent only when the shop chooses email delivery.",
-      },
-      {
-        key: "shop_verification_status",
-        name: "Shop verification status",
-        audience: "Shop owner",
-        trigger: "Admin approves or rejects shop verification",
-        backend: "MailService.sendShopVerificationStatus",
-        template: "shop-verification",
-        sender: adminSender,
-        replyTo: null,
-        variables: [
-          "shopOwnerName",
-          "shopName",
-          "status",
-          "reason",
-          "dashboardUrl",
-        ],
-        editable: false,
-        notes: "Admin-originated seller account status email.",
       },
       {
         key: "commission_reminder",

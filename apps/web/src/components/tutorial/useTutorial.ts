@@ -1596,7 +1596,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Health Score",
         description:
-          "Your overall shop health grade (A to F) is calculated across profile completeness, order performance, verification status, and customer engagement.",
+          "Your overall shop health grade (A to F) is calculated across profile completeness, order performance, and customer engagement.",
         side: "top",
         align: "center",
       },
@@ -1606,7 +1606,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Milestones & Growth",
         description:
-          "Complete milestones to earn rewards and unlock features. Track your RFQ performance, referral stats, KYC status, and onboarding progress from the tabs.",
+          "Complete milestones to earn rewards and unlock features. Track your RFQ performance, referral stats, business details, and onboarding progress from the tabs.",
         side: "bottom",
         align: "start",
       },
@@ -1768,7 +1768,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Setup Quests Roadmap",
         description:
-          "A gamified progress card tracking your setup milestones, including shop profiling, inventory seed uploads, and KYC compliance. Each quest displays the premium reward earned on completion, along with an action button that redirects you directly to the relevant settings page.",
+          "A gamified progress card tracking your setup milestones, including shop profiling and inventory seed uploads. Each quest displays the premium reward earned on completion, along with an action button that redirects you directly to the relevant settings page.",
         side: "bottom",
         align: "start",
       },

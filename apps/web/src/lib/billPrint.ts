@@ -95,7 +95,6 @@ export interface BillPrintPayload {
     ifsc?: string | null;
   } | null;
   notes?: string | null;
-  watermark?: boolean;
   /** Public QR verification token — renders a scannable code on the bill. */
   verificationToken?: string | null;
   /** Prefer a local data-URL QR; falls back to qrserver when absent. */
@@ -225,7 +224,16 @@ function renderBrandingBlock(
 export function buildBillHtml(payload: BillPrintPayload): string {
   const isSriLanka = payload.invoiceCountry?.toUpperCase() === "LK";
   const currency = isSriLanka ? "LKR" : payload.currency || "NPR";
-  const sellerTin = String(payload.sellerTaxId || payload.settings?.gstin || "").trim();
+  const effectiveSettings: BillSettings = {
+    ...(payload.settings || {}),
+    shopNameOnBill:
+      payload.supplierName || payload.settings?.shopNameOnBill || null,
+    shopAddress:
+      payload.supplierAddress || payload.settings?.shopAddress || null,
+    shopPhone: payload.supplierPhone || payload.settings?.shopPhone || null,
+    gstin: payload.sellerTaxId || payload.settings?.gstin || null,
+  };
+  const sellerTin = String(effectiveSettings.gstin || "").trim();
   const purchaserTin = String(payload.customerTaxId || "").trim();
   const validTin = (value: string) => /^\d{9}$/.test(value);
   const isLkTaxInvoice = Boolean(
@@ -241,12 +249,12 @@ export function buildBillHtml(payload: BillPrintPayload): string {
     : payload.documentTitle || "INVOICE";
 
   const topBrand = renderBrandingBlock(
-    payload.settings,
+    effectiveSettings,
     payload.fallbackShopName,
     "TOP",
   );
   const bottomBrand = renderBrandingBlock(
-    payload.settings,
+    effectiveSettings,
     payload.fallbackShopName,
     "BOTTOM",
   );
@@ -279,21 +287,18 @@ export function buildBillHtml(payload: BillPrintPayload): string {
     .join("");
 
   const supplierName =
-    payload.settings?.shopNameOnBill?.trim() ||
     payload.supplierName ||
+    payload.settings?.shopNameOnBill?.trim() ||
     payload.fallbackShopName ||
     "";
   const supplierAddress =
-    payload.settings?.shopAddress?.trim() ||
     payload.supplierAddress ||
+    payload.settings?.shopAddress?.trim() ||
     "";
   const supplierPhone =
-    payload.settings?.shopPhone?.trim() ||
     payload.supplierPhone ||
+    payload.settings?.shopPhone?.trim() ||
     "";
-  const watermarkCss = payload.watermark
-    ? `.wm{position:fixed;inset:0;pointer-events:none;z-index:9999;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250'><text fill='rgba(220,38,38,0.12)' font-family='sans-serif' font-weight='bold' font-size='14' x='20' y='180' transform='rotate(-45 100 100)'>DEMO BILL - NOT FOR COMMERCIAL SALE</text></svg>");background-repeat:repeat;}`
-    : "";
 
   const paymentModeLabel =
     (payload.paymentSummary || "").trim() ||
@@ -347,10 +352,9 @@ h1.doc-title{text-align:center;font-size:24px;letter-spacing:.08em;margin:8px 0 
 .row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px}.label{color:#6b7280;flex:1}.value{font-weight:600;white-space:nowrap}.total-row{display:flex;justify-content:space-between;padding:8px 0 0;font-size:16px;font-weight:700;border-top:2px solid #1f2937;margin-top:6px}
 .amt-paid{color:#065f46;font-weight:700}.amt-due{color:#b45309;font-weight:700}.footer{margin-top:12px;font-size:10px;color:#9ca3af;text-align:center}.parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0}.party{border:1px solid #d1d5db;border-radius:8px;padding:12px}.party h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 7px}.party p{font-size:12px;margin:3px 0}.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin:12px 0;font-size:12px}
 table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px}th,td{border:1px solid #d1d5db;padding:7px;text-align:left}th{background:#f3f4f6}.number{text-align:right;white-space:nowrap}.lk-totals{margin-left:auto;width:min(100%,340px)}
-@media print{button{display:none}}${watermarkCss}
+@media print{button{display:none}}
 ${billTemplatePrintCss(payload.settings?.billTemplateId)}
 </style></head><body class="bill-tpl-${resolveBillTemplateId(payload.settings?.billTemplateId)}">
-${payload.watermark ? '<div class="wm"></div>' : ""}
 <button onclick="window.print()" style="position:fixed;top:12px;right:12px;padding:7px 14px;background:#b45309;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Print / Save PDF</button>
 <div class="bill-frame">
 ${ornaments.top}
