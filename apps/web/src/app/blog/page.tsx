@@ -289,7 +289,7 @@ export default function BlogPage() {
           )}
 
           {/* ── Client Island: Search, Topic Filters & Curated Pillars ─ */}
-          <BlogExplorer posts={BLOG_POSTS} />
+          <BlogExplorer posts={BLOG_POSTS} featuredSlug={featured?.slug} />
 
           {/* ── Commercial Cross-Linking Solutions Bar ──────────── */}
           <section className="mt-20 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-8">

@@ -119,15 +119,16 @@ const POPULAR_SEARCH_TERMS = [
 
 interface BlogExplorerProps {
   posts: BlogPost[];
+  featuredSlug?: string;
 }
 
 /**
  * Interactive client-side explorer for browsing, searching, and filtering jewellery blog guides.
  *
- * @param props - Component props containing the list of all blog posts.
+ * @param props - Component props containing the list of all blog posts and optional spotlight slug.
  * @returns The explorer component with search bar, topic filters, curated pillar sections, and grid views.
  */
-export function BlogExplorer({ posts }: BlogExplorerProps) {
+export function BlogExplorer({ posts, featuredSlug }: BlogExplorerProps) {
   const t = useT();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -348,7 +349,10 @@ export function BlogExplorer({ posts }: BlogExplorerProps) {
           {PILLARS.map((pillar) => {
             const Icon = pillar.icon;
             const pillarPosts = posts.filter(
-              (p) => !p.featured && pillar.slugs.includes(p.slug)
+              (p) =>
+                !p.featured &&
+                p.slug !== featuredSlug &&
+                pillar.slugs.includes(p.slug)
             );
             if (pillarPosts.length === 0) return null;
 

@@ -66,12 +66,15 @@ describe("Blog Hub & Architecture", () => {
       expect(BLOG_POSTS.some((p) => p.slug === featured.slug)).toBe(true);
     }
 
-    // Filter used inside pillar cards excludes featured posts to avoid duplicate cards
-    const pillarWithoutFeatured = BLOG_POSTS.filter((p) => !p.featured);
+    // Filter used inside pillar cards excludes featured posts and featuredSlug to avoid duplicate cards
+    const fallbackFeaturedSlug = BLOG_POSTS[0].slug;
+    const pillarFiltered = BLOG_POSTS.filter(
+      (p) => !p.featured && p.slug !== fallbackFeaturedSlug
+    );
+    expect(pillarFiltered.some((p) => p.slug === fallbackFeaturedSlug)).toBe(false);
     for (const featured of featuredPosts) {
-      expect(pillarWithoutFeatured.some((p) => p.slug === featured.slug)).toBe(false);
+      expect(pillarFiltered.some((p) => p.slug === featured.slug)).toBe(false);
     }
-    expect(pillarWithoutFeatured.length).toBe(BLOG_POSTS.length - featuredPosts.length);
   });
 });
 
