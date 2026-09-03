@@ -102,6 +102,8 @@ out/
 # IDE
 .idea/
 .vscode/
+.cursor/
+.agents/
 *.swp
 *.swo
 .DS_Store

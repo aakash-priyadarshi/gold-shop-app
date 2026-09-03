@@ -2,23 +2,23 @@ import { Metadata } from "next";
 import { buildMarketingMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildMarketingMetadata({
-  title: "Jewellery Business Blog and Software Guides",
+  title: "Jewellery Business Blog, Tax Guides & ERP Benchmarks",
   description:
-    "Guides on jewellery shop software, GST billing, inventory, and growing a gold or diamond business with Orivraa.",
+    "Authoritative guides for gold & diamond jewellers: GST & Nepal 2083/84 tax compliance, jewellery billing software benchmarks, karigar workshop tracking, and retail store growth.",
   path: "/blog",
   keywords: [
     "jewellery business blog",
-    "jewellery shop tips",
+    "jewellery billing software India",
+    "nepal jewellery tax 2083 84",
     "gold shop software guide",
-    "jewellery billing software",
-    "tax reports for jewellers",
+    "jewellery GST billing guide",
+    "tally vs vyapar vs orivraa jewellery",
+    "karigar gold loss ledger",
     "jewellery inventory management",
-    "jewellery software comparison",
-    "sell jewellery online",
-    "jewellery GST guide",
-    "billing software India",
-    "jewellery shop management tips",
-    "gold business guide",
+    "huid hallmarking compliance",
+    "vat on gold dubai uae",
+    "jewellery store management software",
+    "sell jewellery online WhatsApp",
     "jewellery ERP blog",
   ],
 });
