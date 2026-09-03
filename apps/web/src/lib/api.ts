@@ -2383,6 +2383,32 @@ export interface OfferCampaign {
   isActive?: boolean;
 }
 
+export type FestivalReligion =
+  | "HINDU"
+  | "MUSLIM"
+  | "BUDDHIST"
+  | "JEWISH"
+  | "SIKH"
+  | "CHRISTIAN";
+
+export interface FestivalCalendarEvent {
+  id: string;
+  name: string;
+  religion: FestivalReligion;
+  date: string;
+  countries: Array<"IN" | "NP" | "AE" | "US" | "UK">;
+  dateAccuracy: "CALCULATED" | "MOON_SIGHTING" | "FIXED";
+  source: "PANCHANGAM" | "DATE_HOLIDAYS" | "FIXED_CALENDAR";
+}
+
+export interface FestivalCalendarResult {
+  startYear: number;
+  endYear: number;
+  generatedAt: string;
+  events: FestivalCalendarEvent[];
+  notices: string[];
+}
+
 export interface RecoveryCampaignMetrics {
   campaignKey: string;
   totals: {
@@ -2424,6 +2450,10 @@ export interface RecoveryCampaignMetrics {
 }
 
 export const recoveryOffersApi = {
+  festivalCalendar: (startYear: number, years = 3) =>
+    api.get<FestivalCalendarResult>("/recovery-offers/admin/festivals", {
+      params: { startYear, years },
+    }),
   listCampaigns: () =>
     api.get<OfferCampaign[]>("/recovery-offers/admin/campaigns"),
   createCampaign: (data: Omit<OfferCampaign, "id">) =>
