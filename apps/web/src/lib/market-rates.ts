@@ -30,7 +30,7 @@ export function unwrapMarketRatesPayload(
   if (nested && typeof nested === "object") {
     if (nested.metals || nested.currency) return nested;
   }
-  return root;
+  return null;
 }
 
 export function readMetalRate(
@@ -72,7 +72,7 @@ function asCacheStatus(value: unknown): MarketCacheStatus {
   ) {
     return value;
   }
-  return "hit";
+  return "stale";
 }
 
 export function parseMarketRatesPayload(

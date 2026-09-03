@@ -26,11 +26,11 @@ export function ShopRatesStrip() {
 
   if (!rates) return null;
 
-  const tiles = [
+  const tiles: { label: string; translatable?: boolean; value: number | undefined }[] = [
     { label: "24K", value: rates.metals.GOLD_24K },
     { label: "22K", value: rates.metals.GOLD_22K },
     { label: "18K", value: rates.metals.GOLD_18K },
-    { label: "Silver", value: rates.metals.SILVER_999 },
+    { label: "Silver", translatable: true, value: rates.metals.SILVER_999 },
   ];
 
   return (
@@ -47,11 +47,11 @@ export function ShopRatesStrip() {
           className="text-xs tabular-nums text-amber-950 dark:text-amber-100"
         >
           <span className="mr-1 text-[10px] font-semibold uppercase text-muted-foreground">
-            {tile.label}
+            {tile.translatable ? <T>{tile.label}</T> : tile.label}
           </span>
           {symbol}
           {formatRatePerGram(tile.value ?? 0)}
-          <span className="text-[10px] font-normal text-muted-foreground">/g</span>
+          <span className="text-[10px] font-normal text-muted-foreground">/<T>g</T></span>
         </span>
       ))}
       <Badge
