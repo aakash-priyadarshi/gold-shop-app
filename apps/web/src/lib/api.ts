@@ -2391,7 +2391,8 @@ export interface FestivalCalendarResult {
 }
 
 export interface RecoveryCampaignMetrics {
-  campaignKey: string;
+  scope: "ALL" | "CAMPAIGN";
+  campaignKey: string | null;
   totals: {
     targeted: number;
     scheduled: number;
@@ -2424,6 +2425,13 @@ export interface RecoveryCampaignMetrics {
     clicked: number;
     claimed: number;
     rejoined: number;
+  }>;
+  byCampaign: Array<{
+    campaignKey: string;
+    name: string;
+    kind: "RECOVERY" | "FESTIVAL";
+    totals: RecoveryCampaignMetrics["totals"];
+    rates: RecoveryCampaignMetrics["rates"];
   }>;
   webhookConfigured: boolean;
   resendApiConfigured: boolean;

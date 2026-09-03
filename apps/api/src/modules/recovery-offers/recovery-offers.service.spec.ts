@@ -964,9 +964,22 @@ describe("RecoveryOffersService", () => {
           ? "re_test"
           : fallback,
     );
+    prisma.offerCampaign.findMany.mockResolvedValue([
+      {
+        key: "festival-janmashtami-2026",
+        name: "Janmashtami 2026",
+        kind: OfferCampaignKind.FESTIVAL,
+      },
+      {
+        key: "customer-winback-2026-09",
+        name: "Customer win-back",
+        kind: OfferCampaignKind.RECOVERY,
+      },
+    ]);
     prisma.recoveryOffer.findMany.mockResolvedValue([
       {
         id: "offer-1",
+        campaignKey: "festival-janmashtami-2026",
         status: RecoveryOfferStatus.CLAIMED,
         scheduledFor: null,
         sentAt: new Date("2026-09-01T04:30:00.000Z"),
@@ -989,6 +1002,7 @@ describe("RecoveryOffersService", () => {
       },
       {
         id: "offer-2",
+        campaignKey: "customer-winback-2026-09",
         status: RecoveryOfferStatus.SENT,
         scheduledFor: null,
         sentAt: new Date("2026-09-01T04:30:00.000Z"),
@@ -1040,8 +1054,77 @@ describe("RecoveryOffersService", () => {
       expect.objectContaining({ country: "IN", rejoined: 1 }),
       expect.objectContaining({ country: "NP", rejoined: 0 }),
     ]);
+    expect(result).toEqual(
+      expect.objectContaining({ scope: "ALL", campaignKey: null }),
+    );
+    expect(result.byCampaign).toEqual([
+      expect.objectContaining({
+        campaignKey: "festival-janmashtami-2026",
+        name: "Janmashtami 2026",
+        totals: expect.objectContaining({ sent: 1, clicked: 1, claimed: 1 }),
+      }),
+      expect.objectContaining({
+        campaignKey: "customer-winback-2026-09",
+        totals: expect.objectContaining({ sent: 1, clicked: 0, claimed: 0 }),
+      }),
+    ]);
     expect(result.webhookConfigured).toBe(true);
     expect(result.resendApiConfigured).toBe(true);
+  });
+
+  it("uses distinct fallback names for the audience and incident campaigns in metrics", async () => {
+    const baseOffer = {
+      status: RecoveryOfferStatus.SENT,
+      scheduledFor: null,
+      sentAt: new Date("2026-09-01T04:30:00.000Z"),
+      deliveredAt: new Date("2026-09-01T04:31:00.000Z"),
+      firstOpenedAt: null,
+      openCount: 0,
+      firstClickedAt: null,
+      clickCount: 0,
+      claimedAt: null,
+      bouncedAt: null,
+      complainedAt: null,
+      failedAt: null,
+      suppressedAt: null,
+      user: { lastLoginAt: null, webSessions: [], desktopSessions: [] },
+      shop: { country: "NP" },
+    };
+    prisma.offerCampaign.findMany.mockResolvedValue([]);
+    prisma.recoveryOffer.findMany.mockResolvedValue([
+      { id: "offer-1", campaignKey: "incident-recovery-2026-08", ...baseOffer },
+      { id: "offer-2", campaignKey: null, ...baseOffer },
+    ]);
+
+    const result = await service.getCampaignMetrics();
+
+    const nameByKey = new Map(
+      result.byCampaign.map((campaign) => [campaign.campaignKey, campaign.name]),
+    );
+    expect(nameByKey.get("incident-recovery-2026-08")).toBe(
+      "Incident recovery",
+    );
+    expect(nameByKey.get("customer-winback-2026-09")).toBe(
+      "Customer win-back",
+    );
+  });
+
+  it("scopes offer-wise metrics to the selected campaign", async () => {
+    const result = await service.getCampaignMetrics(
+      "festival-janmashtami-2026",
+    );
+
+    expect(prisma.recoveryOffer.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { campaignKey: "festival-janmashtami-2026" },
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        scope: "CAMPAIGN",
+        campaignKey: "festival-janmashtami-2026",
+      }),
+    );
   });
 
   it("extends an existing trial to the offered window from claim time", async () => {

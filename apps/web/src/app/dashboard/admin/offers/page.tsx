@@ -117,6 +117,13 @@ function toIsoFromLocal(value: string) {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
+function apiErrorMessage(error: unknown, fallback: string) {
+  const message = (error as { response?: { data?: { message?: unknown } } })
+    ?.response?.data?.message;
+  if (Array.isArray(message)) return message.join(" ");
+  return typeof message === "string" && message.trim() ? message : fallback;
+}
+
 function dateOnlyToLocal(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day, 12);
@@ -200,6 +207,7 @@ export default function OffersAdminPage() {
   const { toast } = useToast();
   const t = useT();
   const [campaigns, setCampaigns] = useState<OfferCampaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [selectedCampaignKey, setSelectedCampaignKey] = useState(
     "customer-winback-2026-09",
   );
@@ -236,6 +244,11 @@ export default function OffersAdminPage() {
   >("all");
   const [preview, setPreview] = useState<RecoveryAudiencePreview | null>(null);
   const [metrics, setMetrics] = useState<RecoveryCampaignMetrics | null>(null);
+  const [overallMetrics, setOverallMetrics] =
+    useState<RecoveryCampaignMetrics | null>(null);
+  const [analyticsView, setAnalyticsView] = useState<"overall" | "offer">(
+    "overall",
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState<
@@ -258,12 +271,15 @@ export default function OffersAdminPage() {
   const loadAudience = useCallback(async () => {
     setLoading(true);
     try {
-      const [previewResponse, metricsResponse] = await Promise.all([
-        recoveryOffersApi.previewAudience(selectedCampaignKey),
-        recoveryOffersApi.metrics(selectedCampaignKey),
-      ]);
+      const [previewResponse, metricsResponse, overallMetricsResponse] =
+        await Promise.all([
+          recoveryOffersApi.previewAudience(selectedCampaignKey),
+          recoveryOffersApi.metrics(selectedCampaignKey),
+          recoveryOffersApi.metrics(),
+        ]);
       setPreview(previewResponse.data);
       setMetrics(metricsResponse.data);
+      setOverallMetrics(overallMetricsResponse.data);
       setSelectedIds(new Set());
     } catch (error) {
       console.error("Failed to load customer recovery audience:", error);
@@ -278,11 +294,14 @@ export default function OffersAdminPage() {
   }, [selectedCampaignKey, t, toast]);
 
   const loadCampaigns = useCallback(async () => {
+    setCampaignsLoading(true);
     try {
       const response = await recoveryOffersApi.listCampaigns();
       setCampaigns(response.data);
     } catch (error) {
       console.error("Failed to load offer campaigns:", error);
+    } finally {
+      setCampaignsLoading(false);
     }
   }, []);
 
@@ -344,7 +363,6 @@ export default function OffersAdminPage() {
         emailSubject: campaignDraft.emailSubject,
         emailHeading: campaignDraft.emailHeading,
         emailBody: campaignDraft.emailBody,
-        isActive: true,
       };
       const response = editingCampaignKey
         ? await recoveryOffersApi.updateCampaign(editingCampaignKey, payload)
@@ -361,11 +379,16 @@ export default function OffersAdminPage() {
           ? t("Festival campaign updated")
           : t("Festival campaign created"),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to create festival campaign:", error);
       toast({
         title: t("Festival campaign was not created"),
-        description: t("Check the campaign key and sale dates."),
+        description: t(
+          apiErrorMessage(
+            error,
+            "Check the campaign key and sale dates, then try again.",
+          ),
+        ),
         variant: "destructive",
       });
     } finally {
@@ -394,6 +417,27 @@ export default function OffersAdminPage() {
   };
 
   const startFestivalCampaign = (event: FestivalCalendarEvent) => {
+    if (campaignsLoading) return;
+    const key = festivalCampaignKey(event);
+    const existingCampaign = campaigns.find((campaign) => campaign.key === key);
+    if (existingCampaign?.startsAt && existingCampaign.endsAt) {
+      setSelectedCampaignKey(existingCampaign.key);
+      setCampaignDraft({
+        key: existingCampaign.key,
+        name: existingCampaign.name,
+        complimentaryDays: existingCampaign.complimentaryDays,
+        discountPercent: existingCampaign.discountPercent,
+        startsAt: toDateTimeLocalValue(existingCampaign.startsAt),
+        endsAt: toDateTimeLocalValue(existingCampaign.endsAt),
+        emailSubject: existingCampaign.emailSubject,
+        emailHeading: existingCampaign.emailHeading,
+        emailBody: existingCampaign.emailBody,
+      });
+      setEditingCampaignKey(existingCampaign.key);
+      setShowCampaignForm(true);
+      return;
+    }
+
     const festivalDate = dateOnlyToLocal(event.date);
     const saleStart = new Date(festivalDate);
     saleStart.setDate(saleStart.getDate() - 14);
@@ -405,7 +449,7 @@ export default function OffersAdminPage() {
     const year = event.date.slice(0, 4);
 
     setCampaignDraft({
-      key: festivalCampaignKey(event),
+      key,
       name: `${event.name} ${year}`,
       complimentaryDays,
       discountPercent,
@@ -728,6 +772,9 @@ export default function OffersAdminPage() {
     toast({ title: t("Email template copied") });
   };
 
+  const analyticsMetrics =
+    analyticsView === "overall" ? overallMetrics : metrics;
+
   return (
     <AdminGuard>
       <DashboardLayout>
@@ -928,7 +975,7 @@ export default function OffersAdminPage() {
                               <button
                                 key={event.id}
                                 type="button"
-                                disabled={hasPassed}
+                                disabled={hasPassed || campaignsLoading}
                                 onClick={() => startFestivalCampaign(event)}
                                 aria-label={
                                   hasPassed
@@ -1313,8 +1360,32 @@ export default function OffersAdminPage() {
             </div>
           </div>
 
-          {metrics && (
+          {analyticsMetrics && (
             <section className="rounded-xl border bg-white p-4 shadow-sm dark:bg-gray-900/60">
+              <div className="mb-4 inline-flex rounded-lg border bg-gray-50 p-1 dark:bg-gray-950/50">
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsView("overall")}
+                  className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                    analyticsView === "overall"
+                      ? "bg-white text-blue-700 shadow-sm dark:bg-gray-900 dark:text-blue-300"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <T>Overall stats</T>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsView("offer")}
+                  className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                    analyticsView === "offer"
+                      ? "bg-white text-blue-700 shadow-sm dark:bg-gray-900 dark:text-blue-300"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <T>Offer-wise stats</T>
+                </button>
+              </div>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <div className="rounded-lg bg-blue-100 p-2 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
@@ -1322,27 +1393,38 @@ export default function OffersAdminPage() {
                   </div>
                   <div>
                     <h2 className="font-semibold">
-                      <T>Offer campaign funnel</T>
+                      {analyticsView === "overall" ? (
+                        <T>All offers performance</T>
+                      ) : (
+                        <T>Offer campaign funnel</T>
+                      )}
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      <T>Campaign</T>: {metrics.campaignKey} ·{" "}
-                      <T>Updated</T> {formatDateTime(metrics.updatedAt)}
+                      {analyticsView === "overall" ? (
+                        <T>Combined results across every offer</T>
+                      ) : (
+                        <>
+                          <T>Campaign</T>: {analyticsMetrics.campaignKey}
+                        </>
+                      )}{" "}
+                      · <T>Updated</T>{" "}
+                      {formatDateTime(analyticsMetrics.updatedAt)}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  {(!metrics.webhookConfigured ||
-                    !metrics.resendApiConfigured) && (
+                  {(!analyticsMetrics.webhookConfigured ||
+                    !analyticsMetrics.resendApiConfigured) && (
                     <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
                       <T>Resend tracking setup required</T>
                     </span>
                   )}
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {metrics.totals.scheduled} <T>scheduled</T> ·{" "}
-                    {metrics.totals.bounced} <T>bounced</T> ·{" "}
-                    {metrics.totals.failed} <T>failed</T> ·{" "}
-                    {metrics.totals.unsubscribed} <T>unsubscribed</T> ·{" "}
-                    {metrics.totals.complained} <T>spam complaints</T>
+                    {analyticsMetrics.totals.scheduled} <T>scheduled</T> ·{" "}
+                    {analyticsMetrics.totals.bounced} <T>bounced</T> ·{" "}
+                    {analyticsMetrics.totals.failed} <T>failed</T> ·{" "}
+                    {analyticsMetrics.totals.unsubscribed} <T>unsubscribed</T> ·{" "}
+                    {analyticsMetrics.totals.complained} <T>spam complaints</T>
                   </p>
                 </div>
               </div>
@@ -1351,29 +1433,30 @@ export default function OffersAdminPage() {
                 {[
                   {
                     label: "Sent",
-                    value: metrics.totals.sent,
+                    value: analyticsMetrics.totals.sent,
                     detail:
-                      metrics.totals.targeted + " " + t("targeted"),
+                      analyticsMetrics.totals.targeted + " " + t("targeted"),
                     icon: MailCheck,
                     color: "bg-slate-100 text-slate-700 dark:bg-slate-950",
                   },
                   {
                     label: "Delivered",
-                    value: metrics.totals.delivered,
-                    detail: metrics.rates.delivery + "% " + t("of sent"),
+                    value: analyticsMetrics.totals.delivered,
+                    detail:
+                      analyticsMetrics.rates.delivery + "% " + t("of sent"),
                     icon: CheckCircle2,
                     color:
                       "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50",
                   },
                   {
                     label: "Opened (approx.)",
-                    value: metrics.totals.opened,
+                    value: analyticsMetrics.totals.opened,
                     detail:
-                      metrics.rates.open +
+                      analyticsMetrics.rates.open +
                       "% " +
                       t("of delivered") +
                       " · " +
-                      metrics.totals.totalOpens +
+                      analyticsMetrics.totals.totalOpens +
                       " " +
                       t("total opens"),
                     icon: Eye,
@@ -1381,13 +1464,13 @@ export default function OffersAdminPage() {
                   },
                   {
                     label: "Clicked",
-                    value: metrics.totals.clicked,
+                    value: analyticsMetrics.totals.clicked,
                     detail:
-                      metrics.rates.click +
+                      analyticsMetrics.rates.click +
                       "% " +
                       t("of delivered") +
                       " · " +
-                      metrics.totals.totalClicks +
+                      analyticsMetrics.totals.totalClicks +
                       " " +
                       t("total clicks"),
                     icon: MousePointerClick,
@@ -1395,16 +1478,16 @@ export default function OffersAdminPage() {
                   },
                   {
                     label: "Claimed Pro",
-                    value: metrics.totals.claimed,
-                    detail: metrics.rates.claim + "% " + t("of delivered"),
+                    value: analyticsMetrics.totals.claimed,
+                    detail:
+                      analyticsMetrics.rates.claim + "% " + t("of delivered"),
                     icon: Gift,
-                    color:
-                      "bg-amber-100 text-amber-700 dark:bg-amber-950/50",
+                    color: "bg-amber-100 text-amber-700 dark:bg-amber-950/50",
                   },
                   {
                     label: "Rejoined",
-                    value: metrics.totals.rejoined,
-                    detail: metrics.rates.rejoin + "% " + t("of sent"),
+                    value: analyticsMetrics.totals.rejoined,
+                    detail: analyticsMetrics.rates.rejoin + "% " + t("of sent"),
                     icon: LogIn,
                     color:
                       "bg-violet-100 text-violet-700 dark:bg-violet-950/50",
@@ -1430,6 +1513,94 @@ export default function OffersAdminPage() {
                 ))}
               </div>
 
+              {analyticsView === "overall" && (
+                <div className="mt-4 overflow-x-auto rounded-lg border">
+                  <div className="border-b bg-gray-50 px-3 py-2 dark:bg-gray-950/50">
+                    <h3 className="text-sm font-semibold">
+                      <T>Offer-wise performance</T>
+                    </h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      <T>Select an offer to open its detailed funnel.</T>
+                    </p>
+                  </div>
+                  <table className="w-full min-w-[860px] text-left text-xs">
+                    <thead className="bg-gray-50 text-muted-foreground dark:bg-gray-950/50">
+                      <tr>
+                        {[
+                          "Offer",
+                          "Sent",
+                          "Delivered",
+                          "Opened",
+                          "Clicked",
+                          "Claimed",
+                          "Rejoined",
+                          "",
+                        ].map((heading, index) => (
+                          <th
+                            key={`${heading}-${index}`}
+                            className="px-3 py-2 font-semibold"
+                          >
+                            <T>{heading}</T>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(analyticsMetrics.byCampaign || []).length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={8}
+                            className="px-3 py-6 text-center text-muted-foreground"
+                          >
+                            <T>
+                              Offer statistics will appear after campaigns are
+                              created.
+                            </T>
+                          </td>
+                        </tr>
+                      ) : (
+                        analyticsMetrics.byCampaign.map((row) => (
+                          <tr key={row.campaignKey}>
+                            <td className="px-3 py-2">
+                              <p className="font-semibold">{row.name}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {row.campaignKey}
+                              </p>
+                            </td>
+                            <td className="px-3 py-2">{row.totals.sent}</td>
+                            <td className="px-3 py-2">
+                              {row.totals.delivered}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.totals.opened} ({row.rates.open}%)
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.totals.clicked} ({row.rates.click}%)
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.totals.claimed} ({row.rates.claim}%)
+                            </td>
+                            <td className="px-3 py-2">{row.totals.rejoined}</td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCampaignKey(row.campaignKey);
+                                  setAnalyticsView("offer");
+                                }}
+                                className="rounded-md border px-2.5 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                              >
+                                <T>View details</T>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full min-w-[680px] text-left text-xs">
@@ -1451,17 +1622,19 @@ export default function OffersAdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {metrics.byCountry.length === 0 ? (
+                      {analyticsMetrics.byCountry.length === 0 ? (
                         <tr>
                           <td
                             colSpan={7}
                             className="px-3 py-6 text-center text-muted-foreground"
                           >
-                            <T>Metrics will appear after the campaign is sent.</T>
+                            <T>
+                              Metrics will appear after the campaign is sent.
+                            </T>
                           </td>
                         </tr>
                       ) : (
-                        metrics.byCountry.map((row) => (
+                        analyticsMetrics.byCountry.map((row) => (
                           <tr key={row.country}>
                             <td className="px-3 py-2 font-semibold">
                               {COUNTRY_LABELS[row.country] || row.country}
