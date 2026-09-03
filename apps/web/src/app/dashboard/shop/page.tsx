@@ -20,9 +20,13 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useShopMarketRates } from "@/hooks/useShopMarketRates";
 import { toast } from "@/hooks/use-toast";
-import { inventoryApi, materialsApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { inventoryApi, ordersApi, rfqApi, sellerSubscriptionsApi, shopsApi } from "@/lib/api";
+import {
+  formatRatePerGram,
+  isLiveMarketCache,
+} from "@/lib/market-rates";
 import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
@@ -45,12 +49,12 @@ import {
   Coins,
   Users,
   Database,
-  RefreshCw,
   Scale,
   Crown,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface Stat {
   title: string;
@@ -159,7 +163,7 @@ export default function ShopDashboard() {
     return [
       { id: "plan", label: t("Choose a Subscription Plan"), reward: "+5 AI Credits", done: !!hasActiveSub, href: "/dashboard/shop/billing", cta: t("View Plans") },
       { id: "product", label: t("Add Your First Gold Product"), reward: "+10 AI Credits", done: lowStockItems.length > 0 || stats.length > 0, href: "/dashboard/shop/products", cta: t("Add Product") },
-      { id: "invoice", label: t("Create Your First Invoice"), reward: "+20 AI Credits", done: recentOrders.length > 0, href: "/dashboard/shop/pos", cta: t("Try Counter POS") },
+      { id: "invoice", label: t("Create Your First Invoice"), reward: "+20 AI Credits", done: recentOrders.length > 0, href: "/dashboard/shop/invoices/create", cta: t("Create Invoice") },
     ];
   }, [user, currentSubscription, recentOrders, lowStockItems, stats, t]);
 
@@ -173,58 +177,29 @@ export default function ShopDashboard() {
       }).catch(() => {});
     }
   }, [doneCount, quests.length]);
-  // ── Gold Market Rates (Daily Habit Hook) ──
-  const [goldRates, setGoldRates] = useState<{
-    rate24k: number; rate22k: number; rate18k: number; silver: number;
-    currency: string; updatedAt: string; changePercent: number;
-  } | null>(null);
-  const ratesRef = useRef(false);
+  const { rates: marketRates, loading: ratesLoading } = useShopMarketRates({
+    refreshMs: 10 * 60 * 1000,
+  });
+  const goldRates = useMemo(() => {
+    if (!marketRates) return null;
+    const rate24k = marketRates.metals.GOLD_24K ?? 0;
+    return {
+      rate24k,
+      rate22k: marketRates.metals.GOLD_22K || (rate24k > 0 ? rate24k * (22 / 24) : 0),
+      rate18k: marketRates.metals.GOLD_18K || (rate24k > 0 ? rate24k * (18 / 24) : 0),
+      silver: marketRates.metals.SILVER_999 || marketRates.metals.SILVER_925 || 0,
+      cache: marketRates.cache,
+      updatedAt: marketRates.updatedAt
+        ? new Date(marketRates.updatedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+      changePercent: marketRates.changePercent ?? 0,
+    };
+  }, [marketRates]);
+  const ratesLive = isLiveMarketCache(goldRates?.cache);
   const supplyChainRef = useRef<any>({ workshops: [], vaultReserves: {}, jobs: [] });
-
-  const readMetalRate = (data: any, codes: string[]): number => {
-    const metals = data?.metals;
-    if (Array.isArray(metals)) {
-      const match = metals.find((m: any) => codes.includes(m.code));
-      return Number(match?.ratePerGram ?? match?.rate ?? 0);
-    }
-    if (metals && typeof metals === "object") {
-      for (const code of codes) {
-        const value = metals[code];
-        if (typeof value === "number") return value;
-        if (value && typeof value === "object") return Number(value.ratePerGram ?? value.rate ?? 0);
-      }
-    }
-    return 0;
-  };
-
-  const fetchGoldRates = useCallback(async () => {
-    if (ratesRef.current) return;
-    ratesRef.current = true;
-    try {
-      const params = getMobileMarketParams(user?.shop ?? null);
-      const res = await materialsApi.getMarketRates(params);
-      const data = res.data;
-      const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]);
-      setGoldRates({
-        rate24k: Math.round(rate24k),
-        rate22k: Math.round(readMetalRate(data, ["GOLD_22K"]) || rate24k * (22 / 24)),
-        rate18k: Math.round(readMetalRate(data, ["GOLD_18K"]) || rate24k * (18 / 24)),
-        silver: Math.round(readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"])),
-        currency: data?.currency ?? params.currency,
-        updatedAt: data?.updatedAt
-          ? new Date(data.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        changePercent: data?.changePercent ?? 0,
-      });
-    } catch { /* rates are supplementary */ }
-    finally { ratesRef.current = false; }
-  }, [user?.shop]);
-
-  useEffect(() => {
-    fetchGoldRates();
-    const interval = setInterval(() => { ratesRef.current = false; fetchGoldRates(); }, 10 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [fetchGoldRates]);
 
   // ── Load Karigar & Bullion from DB ──
   useEffect(() => {
@@ -294,7 +269,7 @@ export default function ShopDashboard() {
               changeType: "positive",
               icon: MessageSquare,
               description: t("Awaiting response"),
-              href: "/dashboard/shop/rfq",
+              href: "/dashboard/shop/rfqs",
             },
             {
               title: t("Avg Rating"),
@@ -303,7 +278,7 @@ export default function ShopDashboard() {
               changeType: "positive",
               icon: Star,
               description: t(`${dash.recentRatings || 0} reviews`),
-              href: "/dashboard/shop/customers",
+              href: "/dashboard/shop/reviews",
             },
             {
               title: t("Shop Status"),
@@ -593,7 +568,7 @@ export default function ShopDashboard() {
 
               {/* Right Column: Live Gold Rates */}
               <div className="xl:col-span-1">
-                {goldRates && (
+                {(goldRates || ratesLoading) && (
                   <Card data-tour="dash-live-rates" className="h-full overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-lg hover:border-amber-400/80 dark:hover:border-amber-500/50 transition-all duration-500 group relative">
                     <div className="absolute top-0 right-0 p-24 bg-amber-400/10 dark:bg-amber-400/5 blur-[40px] rounded-full mix-blend-multiply dark:mix-blend-lighten pointer-events-none group-hover:scale-125 group-hover:bg-amber-400/15 transition-all duration-700" />
                     <div className="bg-gradient-to-br from-amber-50/90 via-yellow-100/40 to-amber-50/80 dark:from-amber-950/80 dark:via-yellow-900/20 dark:to-amber-950/60 px-6 py-6 h-full flex flex-col relative z-10">
@@ -604,42 +579,68 @@ export default function ShopDashboard() {
                             <Sparkles className="h-5 w-5 text-amber-900 dark:text-amber-100" />
                           </div>
                           <div>
-                            <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 tracking-tight"><T>Live Market Pulse</T></h3>
+                            <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 tracking-tight"><T>Market Pulse</T></h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                              </span>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider"><T>Updated</T> {goldRates.updatedAt}</p>
+                              {ratesLive ? (
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                              ) : (
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+                              )}
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                {goldRates?.updatedAt ? (<><T>Updated</T> {goldRates.updatedAt}</>) : <T>Loading shop rates...</T>}
+                              </p>
                             </div>
                           </div>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={`px-2 py-1 border shadow-sm ${goldRates.changePercent >= 0 ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-red-300 text-red-700 bg-red-50/80 dark:bg-red-900/40 dark:border-red-800 dark:text-red-300"}`}
-                        >
-                          {goldRates.changePercent >= 0 ? <TrendingUp className="h-3.5 w-3.5 mr-1" /> : <TrendingDown className="h-3.5 w-3.5 mr-1" />}
-                          <span className="font-semibold">{goldRates.changePercent >= 0 ? "+" : ""}{goldRates.changePercent}%</span>
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          {goldRates && (
+                            <>
+                          <Badge
+                            variant="outline"
+                            className={`px-2 py-0.5 text-[10px] border shadow-sm ${ratesLive ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-amber-300 text-amber-800 bg-amber-50/80 dark:bg-amber-900/40 dark:border-amber-800 dark:text-amber-300"}`}
+                          >
+                            {ratesLive ? <T>Live</T> : <T>Cached</T>}
+                          </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`px-2 py-1 border shadow-sm ${goldRates.changePercent >= 0 ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-red-300 text-red-700 bg-red-50/80 dark:bg-red-900/40 dark:border-red-800 dark:text-red-300"}`}
+                            >
+                              {goldRates.changePercent >= 0 ? <TrendingUp className="h-3.5 w-3.5 mr-1" /> : <TrendingDown className="h-3.5 w-3.5 mr-1" />}
+                              <span className="font-semibold">{goldRates.changePercent >= 0 ? "+" : ""}{goldRates.changePercent}%</span>
+                            </Badge>
+                            </>
+                          )}
+                        </div>
                       </div>
 
+                      {goldRates ? (
                       <div className="grid grid-cols-2 gap-3 mb-6 flex-1">
                         {[
                           { label: "24K Gold", value: goldRates.rate24k, featured: true },
                           { label: "22K Gold", value: goldRates.rate22k },
                           { label: "18K Gold", value: goldRates.rate18k },
-                          { label: "Silver /g", value: goldRates.silver },
+                          { label: "Silver", value: goldRates.silver },
                         ].map((r) => (
                           <div key={r.label} className={`rounded-xl px-4 py-3 text-center border transition-all duration-300 ${r.featured ? 'bg-gradient-to-b from-white to-amber-50/50 dark:from-gray-900 dark:to-amber-950/20 border-amber-200 dark:border-amber-800/60 shadow-sm' : 'bg-white/60 dark:bg-gray-900/40 border-white/40 dark:border-gray-800/50 hover:bg-white dark:hover:bg-gray-800'}`}>
                             <p className={`text-[10px] font-bold uppercase tracking-wider ${r.featured ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>{r.label}</p>
                             <p className={`mt-1 font-extrabold tabular-nums tracking-tight ${r.featured ? 'text-xl text-amber-950 dark:text-amber-50' : 'text-lg text-foreground'}`}>
-                              <span className="text-xs font-medium text-muted-foreground mr-0.5">{goldRates.currency}</span>
-                              {r.value.toLocaleString()}
+                              <span className="text-xs font-medium text-muted-foreground mr-0.5">{currencySymbol}</span>
+                              {formatRatePerGram(r.value)}
+                              <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">/g</span>
                             </p>
                           </div>
                         ))}
                       </div>
+                      ) : (
+                        <div className="flex flex-1 items-center justify-center py-10 text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        </div>
+                      )}
 
+                      {goldRates && (
                       <div className="mt-auto bg-white/80 dark:bg-gray-950/50 backdrop-blur-md border border-amber-100 dark:border-amber-900/30 rounded-xl p-3.5 flex items-start gap-3 shadow-sm">
                         <div className="bg-amber-100 dark:bg-amber-900/50 p-1.5 rounded-lg shrink-0">
                           <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -651,6 +652,7 @@ export default function ShopDashboard() {
                             : t("Prices dipped today. Great opportunity to restock key inventory and offer margin discounts.")}
                         </p>
                       </div>
+                      )}
 
                     </div>
                   </Card>
@@ -659,7 +661,7 @@ export default function ShopDashboard() {
             </div>
           ) : (
             /* Standalone Gold Rates if no onboarding elements remain */
-            goldRates && (
+            (goldRates || ratesLoading) && (
               <div className="w-full">
                   <Card data-tour="dash-live-rates" className="overflow-hidden border-amber-300/60 dark:border-amber-700/50 shadow-sm hover:shadow-md transition-all duration-500 group relative">
                     <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-amber-400/5 to-transparent pointer-events-none group-hover:opacity-100 opacity-50 transition-opacity duration-700" />
@@ -671,35 +673,56 @@ export default function ShopDashboard() {
                             <Sparkles className="h-5 w-5 text-amber-900 dark:text-amber-100" />
                           </div>
                           <div>
-                            <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 tracking-tight"><T>Live Market Pulse</T></h3>
+                            <h3 className="text-base font-bold text-amber-950 dark:text-amber-100 tracking-tight"><T>Market Pulse</T></h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                              </span>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider"><T>Updated</T> {goldRates.updatedAt}</p>
+                              {ratesLive ? (
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                              ) : (
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+                              )}
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                {goldRates?.updatedAt ? (<><T>Updated</T> {goldRates.updatedAt}</>) : <T>Loading shop rates...</T>}
+                              </p>
                             </div>
                           </div>
                         </div>
 
+                        {goldRates ? (
                         <div className="flex flex-1 items-center justify-around gap-2 px-2 md:px-6 md:border-x border-amber-200/50 dark:border-amber-800/30">
                           {[
                             { label: "24K Gold", value: goldRates.rate24k, featured: true },
                             { label: "22K Gold", value: goldRates.rate22k },
                             { label: "18K Gold", value: goldRates.rate18k },
-                            { label: "Silver /g", value: goldRates.silver },
+                            { label: "Silver", value: goldRates.silver },
                           ].map((r) => (
                             <div key={r.label} className="text-center">
                               <p className={`text-[10px] font-bold uppercase tracking-wider ${r.featured ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>{r.label}</p>
                               <p className={`mt-0.5 font-extrabold tabular-nums tracking-tight ${r.featured ? 'text-lg text-amber-950 dark:text-amber-50' : 'text-base text-foreground'}`}>
-                                <span className="text-[10px] font-medium text-muted-foreground mr-0.5">{goldRates.currency}</span>
-                                {r.value.toLocaleString()}
+                                <span className="text-[10px] font-medium text-muted-foreground mr-0.5">{currencySymbol}</span>
+                                {formatRatePerGram(r.value)}
+                                <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">/g</span>
                               </p>
                             </div>
                           ))}
                         </div>
+                        ) : (
+                          <div className="flex flex-1 items-center justify-center py-4 text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          </div>
+                        )}
 
                         <div className="md:w-1/4 flex flex-col items-end justify-center">
+                          <Badge
+                            variant="outline"
+                            className={`px-2 py-0.5 mb-2 text-[10px] border shadow-sm ${ratesLive ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-amber-300 text-amber-800 bg-amber-50/80 dark:bg-amber-900/40 dark:border-amber-800 dark:text-amber-300"}`}
+                          >
+                            {ratesLive ? <T>Live</T> : <T>Cached</T>}
+                          </Badge>
+                          {goldRates && (
+                            <>
                           <Badge
                             variant="outline"
                             className={`px-2 py-1 mb-2 border shadow-sm ${goldRates.changePercent >= 0 ? "border-green-300 text-green-700 bg-green-50/80 dark:bg-green-900/40 dark:border-green-800 dark:text-green-300" : "border-red-300 text-red-700 bg-red-50/80 dark:bg-red-900/40 dark:border-red-800 dark:text-red-300"}`}
@@ -710,6 +733,8 @@ export default function ShopDashboard() {
                           <p className="text-[10px] text-muted-foreground text-right max-w-[200px] leading-tight">
                             <span className="font-medium text-amber-800 dark:text-amber-300"><T>AI Insight:</T></span> {goldRates.changePercent >= 0 ? t("Prices rising, lock in stock.") : t("Prices dipped, good time to restock.")}
                           </p>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -873,7 +898,12 @@ export default function ShopDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
+                  {recentOrders.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      <T>No recent orders yet.</T>
+                    </p>
+                  ) : (
+                  recentOrders.map((order) => (
                     <div
                       key={order.id}
                       className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
@@ -900,7 +930,8 @@ export default function ShopDashboard() {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -917,14 +948,19 @@ export default function ShopDashboard() {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/shop/rfq">
+                  <Link href="/dashboard/shop/rfqs">
                     <T>View all</T>
                   </Link>
                 </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {rfqRequests.map((rfq) => (
+                  {rfqRequests.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      <T>No RFQ requests yet.</T>
+                    </p>
+                  ) : (
+                  rfqRequests.map((rfq) => (
                     <div
                       key={rfq.id}
                       className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
@@ -947,7 +983,8 @@ export default function ShopDashboard() {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               </CardContent>
             </Card>

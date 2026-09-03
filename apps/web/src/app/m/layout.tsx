@@ -12,7 +12,8 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import api, { materialsApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
+import { readMetalRate } from "@/lib/market-rates";
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -80,25 +81,6 @@ interface MobileShopOption {
   name?: string;
   shopName?: string;
   city?: string;
-}
-
-function readMetalRate(data: any, codes: string[]): number {
-  const metals = data?.metals;
-  if (Array.isArray(metals)) {
-    const match = metals.find((m: any) => codes.includes(m.code));
-    return Number(match?.ratePerGram ?? match?.rate ?? 0);
-  }
-  if (metals && typeof metals === "object") {
-    for (const code of codes) {
-      const value = metals[code];
-      if (typeof value === "number") return value;
-      if (value && typeof value === "object") {
-        const nested = Number(value.ratePerGram ?? value.rate ?? 0);
-        if (nested > 0) return nested;
-      }
-    }
-  }
-  return 0;
 }
 
 const BOTTOM_TABS = [
@@ -229,28 +211,23 @@ export default function MobileLayout({
   );
 
   const fetchRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     if (ratesRef.current) return;
     ratesRef.current = true;
     setRatesLoading(true);
     try {
-      // Resolve the shopkeeper's market (shop > geo cookie > default).
-      // Without these params the backend falls back to NPR which is wrong for
-      // anyone outside Nepal.
-      const params = getMobileMarketParams(user?.shop ?? null);
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
-      // Normalise both backend shapes used in the app:
-      // - RFQ/PC market rates: { metals: { GOLD_24K, GOLD_22K, ... } }
-      // - Legacy rates:       { metals: [{ code, ratePerGram }] }
       const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]);
       const rate22k = readMetalRate(data, ["GOLD_22K"]);
       const rate18k = readMetalRate(data, ["GOLD_18K"]);
       const silver = readMetalRate(data, ["SILVER_999", "SILVER_925", "XAG", "SILVER"]);
       setRates({
-        rate24k: Math.round(rate24k),
-        rate22k: Math.round(rate22k || rate24k * (22 / 24)),
-        rate18k: Math.round(rate18k || rate24k * (18 / 24)),
-        silver: Math.round(silver),
+        rate24k,
+        rate22k: rate22k || rate24k * (22 / 24),
+        rate18k: rate18k || rate24k * (18 / 24),
+        silver,
         currency: data?.currency ?? params.currency,
         updatedAt: data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString([], {
           hour: "2-digit",

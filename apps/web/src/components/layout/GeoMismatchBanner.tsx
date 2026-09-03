@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
 import {
   COUNTRIES,
   usePreferencesStore,
@@ -20,6 +21,7 @@ import { useEffect, useState } from "react";
  * - Once dismissed or accepted, the banner stays hidden for the session
  */
 export function GeoMismatchBanner() {
+  const { user } = useAuth();
   const country = usePreferencesStore((s) => s.country);
   const detectedCountry = usePreferencesStore((s) => s.detectedCountry);
   const dismissed = usePreferencesStore((s) => s.geoMismatchDismissed);
@@ -40,6 +42,12 @@ export function GeoMismatchBanner() {
   // - countries match
   // - user already dismissed/accepted this session
   // - still waiting for initial delay
+  // Shop country is the source of truth for sellers; visitor geo must not
+  // nag them to switch Pulse/invoices away from the shop market.
+  if (user?.role === "SHOPKEEPER" && user.shop?.country) {
+    return null;
+  }
+
   if (!ready || !detectedCountry || detectedCountry === country || dismissed) {
     return null;
   }

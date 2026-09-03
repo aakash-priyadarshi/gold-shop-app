@@ -2,17 +2,12 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
+import { isLiveMarketCache, type ParsedMarketRates } from "@/lib/market-rates";
 import { TrendingUp, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export interface LiveRateData {
-  metals: Record<string, number>;
-  currency: string;
-  updatedAt: string;
-  cache: "fresh" | "stale" | "fallback" | "miss" | "hit";
-  fx?: { rate: number };
-  source?: string;
-}
+export type LiveRateData = ParsedMarketRates;
 
 interface LiveRatesWidgetProps {
   rates: LiveRateData | null;
@@ -57,7 +52,7 @@ export function LiveRatesWidget({
 
   const cacheBadge = () => {
     if (!rates) return null;
-    const isLive = rates.cache === "fresh";
+    const isLive = isLiveMarketCache(rates.cache);
     return (
       <Badge
         variant="outline"
@@ -67,7 +62,7 @@ export function LiveRatesWidget({
             : "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800"
         }`}
       >
-        {isLive ? "Live" : "Cached"}
+        {isLive ? <T>Live</T> : <T>Cached</T>}
       </Badge>
     );
   };

@@ -15,9 +15,11 @@
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
+import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { compactGoldRates, parseMarketRatesPayload } from "@/lib/market-rates";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import { saveTradeInPayload } from "@/lib/oldGoldTradeIn";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -87,6 +89,7 @@ function calcBuyback(item: Item, rates: GoldRate): number {
 let nextId = 2;
 
 export default function OldGoldExchangePage() {
+  const { user } = useAuth();
   const t = useT();
   const haptic = useHaptics();
 
@@ -99,24 +102,26 @@ export default function OldGoldExchangePage() {
   const [finalCredit, setFinalCredit] = useState("");
 
   const loadRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     setRateLoading(true);
     try {
-      const res = await materialsApi.getMarketRates(getMobileMarketParams());
-      const r = res.data;
+      const res = await materialsApi.getMarketRates(params);
+      const parsed = parseMarketRatesPayload(res.data);
+      const compact = parsed ? compactGoldRates(parsed) : null;
       setRates({
-        rate24k: r.rate24k ?? r.goldRate24k ?? 9500,
-        rate22k: r.rate22k ?? r.goldRate22k ?? 8750,
-        rate18k: r.rate18k ?? r.goldRate18k ?? 7000,
-        silver: r.silver ?? r.silverRate ?? 115,
-        currency: r.currency ?? "NPR",
+        rate24k: compact?.rate24k ?? 0,
+        rate22k: compact?.rate22k ?? 0,
+        rate18k: compact?.rate18k ?? 0,
+        silver: compact?.silver ?? 0,
+        currency: compact?.currency ?? params.currency,
       });
     } catch {
-      // fallback demo rates
-      setRates({ rate24k: 9500, rate22k: 8750, rate18k: 7100, silver: 115, currency: "NPR" });
+      setRates({ rate24k: 0, rate22k: 0, rate18k: 0, silver: 0, currency: params.currency });
     } finally {
       setRateLoading(false);
     }
-  }, []);
+  }, [user?.shop]);
 
   useEffect(() => {
     loadRates();

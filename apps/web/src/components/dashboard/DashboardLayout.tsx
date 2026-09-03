@@ -475,7 +475,7 @@ const navItems: NavItem[] = [
     roles: ["SHOPKEEPER"],
   },
   {
-    label: "POS Basket",
+    label: "Counter POS",
     href: "/dashboard/shop/pos",
     icon: ScanLine,
     roles: ["SHOPKEEPER"],

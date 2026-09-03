@@ -56,7 +56,7 @@ function MobileInvoiceCreateInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const shopCountry = user?.shop?.country ?? "NP";
+  const shopCountry = user?.shop?.country || "";
 
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
