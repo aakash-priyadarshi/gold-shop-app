@@ -1175,10 +1175,11 @@ export class RecoveryOffersService {
         campaignKey: resolvedCampaignKey,
         name:
           definition?.name ||
-          (resolvedCampaignKey === DEFAULT_AUDIENCE_CAMPAIGN_KEY ||
-          resolvedCampaignKey === DEFAULT_INCIDENT_CAMPAIGN_KEY
+          (resolvedCampaignKey === DEFAULT_AUDIENCE_CAMPAIGN_KEY
             ? "Customer win-back"
-            : resolvedCampaignKey),
+            : resolvedCampaignKey === DEFAULT_INCIDENT_CAMPAIGN_KEY
+              ? "Incident recovery"
+              : resolvedCampaignKey),
         kind: definition?.kind || OfferCampaignKind.RECOVERY,
         ...summarize(values),
       };

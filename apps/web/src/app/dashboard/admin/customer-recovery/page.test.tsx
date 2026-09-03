@@ -650,4 +650,34 @@ describe("OffersAdminPage", () => {
     });
     expect(mocks.createCampaign).not.toHaveBeenCalled();
   });
+
+  it("keeps festival creation disabled until campaigns finish loading", async () => {
+    let resolveCampaigns!: (value: { data: unknown[] }) => void;
+    mocks.listCampaigns.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCampaigns = resolve;
+      }),
+    );
+
+    render(<OffersAdminPage />);
+
+    const diwaliButton = await screen.findByRole("button", {
+      name: "Create Diwali offer",
+    });
+    expect(diwaliButton).toBeDisabled();
+
+    fireEvent.click(diwaliButton);
+    expect(screen.queryByLabelText("Campaign name")).not.toBeInTheDocument();
+    expect(mocks.createCampaign).not.toHaveBeenCalled();
+
+    resolveCampaigns({ data: [] });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Create Diwali offer" }),
+      ).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create Diwali offer" }));
+    expect(screen.getByLabelText("Campaign name")).toBeInTheDocument();
+  });
 });

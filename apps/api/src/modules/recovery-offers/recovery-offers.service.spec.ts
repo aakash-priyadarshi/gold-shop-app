@@ -1072,6 +1072,43 @@ describe("RecoveryOffersService", () => {
     expect(result.resendApiConfigured).toBe(true);
   });
 
+  it("uses distinct fallback names for the audience and incident campaigns in metrics", async () => {
+    const baseOffer = {
+      status: RecoveryOfferStatus.SENT,
+      scheduledFor: null,
+      sentAt: new Date("2026-09-01T04:30:00.000Z"),
+      deliveredAt: new Date("2026-09-01T04:31:00.000Z"),
+      firstOpenedAt: null,
+      openCount: 0,
+      firstClickedAt: null,
+      clickCount: 0,
+      claimedAt: null,
+      bouncedAt: null,
+      complainedAt: null,
+      failedAt: null,
+      suppressedAt: null,
+      user: { lastLoginAt: null, webSessions: [], desktopSessions: [] },
+      shop: { country: "NP" },
+    };
+    prisma.offerCampaign.findMany.mockResolvedValue([]);
+    prisma.recoveryOffer.findMany.mockResolvedValue([
+      { id: "offer-1", campaignKey: "incident-recovery-2026-08", ...baseOffer },
+      { id: "offer-2", campaignKey: null, ...baseOffer },
+    ]);
+
+    const result = await service.getCampaignMetrics();
+
+    const nameByKey = new Map(
+      result.byCampaign.map((campaign) => [campaign.campaignKey, campaign.name]),
+    );
+    expect(nameByKey.get("incident-recovery-2026-08")).toBe(
+      "Incident recovery",
+    );
+    expect(nameByKey.get("customer-winback-2026-09")).toBe(
+      "Customer win-back",
+    );
+  });
+
   it("scopes offer-wise metrics to the selected campaign", async () => {
     const result = await service.getCampaignMetrics(
       "festival-janmashtami-2026",

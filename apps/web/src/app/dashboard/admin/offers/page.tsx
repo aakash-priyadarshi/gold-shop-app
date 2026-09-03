@@ -207,6 +207,7 @@ export default function OffersAdminPage() {
   const { toast } = useToast();
   const t = useT();
   const [campaigns, setCampaigns] = useState<OfferCampaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [selectedCampaignKey, setSelectedCampaignKey] = useState(
     "customer-winback-2026-09",
   );
@@ -293,11 +294,14 @@ export default function OffersAdminPage() {
   }, [selectedCampaignKey, t, toast]);
 
   const loadCampaigns = useCallback(async () => {
+    setCampaignsLoading(true);
     try {
       const response = await recoveryOffersApi.listCampaigns();
       setCampaigns(response.data);
     } catch (error) {
       console.error("Failed to load offer campaigns:", error);
+    } finally {
+      setCampaignsLoading(false);
     }
   }, []);
 
@@ -413,6 +417,7 @@ export default function OffersAdminPage() {
   };
 
   const startFestivalCampaign = (event: FestivalCalendarEvent) => {
+    if (campaignsLoading) return;
     const key = festivalCampaignKey(event);
     const existingCampaign = campaigns.find((campaign) => campaign.key === key);
     if (existingCampaign?.startsAt && existingCampaign.endsAt) {
@@ -970,7 +975,7 @@ export default function OffersAdminPage() {
                               <button
                                 key={event.id}
                                 type="button"
-                                disabled={hasPassed}
+                                disabled={hasPassed || campaignsLoading}
                                 onClick={() => startFestivalCampaign(event)}
                                 aria-label={
                                   hasPassed
