@@ -6,7 +6,7 @@ import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { inventoryApi, materialsApi } from "@/lib/api";
 import { type JewelleryTagItem } from "@/lib/jewelleryTagPrint";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
@@ -91,7 +91,8 @@ export default function MobileStockPage() {
 
   const fetchRates = useCallback(async () => {
     try {
-      const params = getMobileMarketParams(user?.shop ?? null);
+      const params = getShopMarketParams(user?.shop ?? null);
+      if (!params) return;
       const res = await materialsApi.getMarketRates(params);
       const data = res.data;
       const rate24k = readMetalRate(data, ["GOLD_24K", "XAU", "GOLD"]) || 7250;

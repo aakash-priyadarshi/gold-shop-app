@@ -1,50 +1,43 @@
 /**
- * Resolves the country + currency to use for fetching market rates / billing
- * on the mobile interface. Priority:
- *   1. Shop settings (`resolveShopCurrency` on country + currency).
- *   2. The `orivraa_geo_country` cookie from middleware geo headers.
- *   3. Safe default (NP / NPR).
+ * Resolves the country + currency used for shopkeeper market-rate fetches.
+ *
+ * Seller tools must wait for the shop record. Visitor geo (`orivraa_geo_country`)
+ * is never used here — a US VPN or Cloudflare header used to pin Pulse to USD
+ * while invoices correctly used the shop's INR.
  */
 
-import { mapCountryToMarket, resolveShopCurrency } from "@gold-shop/shared";
-
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const prefix = `${name}=`;
-  const match = document.cookie
-    .split(";")
-    .map((c) => c.trim())
-    .find((c) => c.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : null;
-}
+import { resolveShopCurrency } from "@gold-shop/shared";
 
 export interface MarketRatesParams {
   country: string;
   currency: string;
 }
 
-/**
- * @param shop  Optional shop object (from useAuth) — its country/currency wins
- *              if present.
- */
-export function getMobileMarketParams(shop?: {
+export type ShopMarketSource = {
   country?: string | null;
   currency?: string | null;
-} | null): MarketRatesParams {
+} | null | undefined;
+
+/**
+ * Shop country/currency only. Returns null until `shop.country` is known so
+ * callers can skip the request instead of guessing a market.
+ */
+export function getShopMarketParams(
+  shop?: ShopMarketSource,
+): MarketRatesParams | null {
   const shopCountry = shop?.country?.trim().toUpperCase();
-  if (shopCountry) {
-    return {
-      country: shopCountry,
-      currency: resolveShopCurrency(shop),
-    };
-  }
-  const geoCountry = (readCookie("orivraa_geo_country") || "").toUpperCase();
-  if (geoCountry) {
-    const market = mapCountryToMarket(geoCountry);
-    return {
-      country: geoCountry,
-      currency: resolveShopCurrency({ country: market }),
-    };
-  }
-  return { country: "NP", currency: "NPR" };
+  if (!shopCountry) return null;
+  return {
+    country: shopCountry,
+    currency: resolveShopCurrency(shop),
+  };
+}
+
+/**
+ * Alias for shopkeeper surfaces. Does not fall back to geo or NPR.
+ */
+export function getMobileMarketParams(
+  shop?: ShopMarketSource,
+): MarketRatesParams | null {
+  return getShopMarketParams(shop);
 }

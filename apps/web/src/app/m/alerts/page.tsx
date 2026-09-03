@@ -12,9 +12,11 @@
 
 import { MobileHelpButton } from "@/components/mobile/MobileHelpButton";
 import { T } from "@/components/ui/T";
+import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { materialsApi } from "@/lib/api";
-import { getMobileMarketParams } from "@/lib/mobileCurrency";
+import { compactGoldRates, parseMarketRatesPayload } from "@/lib/market-rates";
+import { getShopMarketParams } from "@/lib/mobileCurrency";
 import {
   Bell,
   BellOff,
@@ -88,6 +90,7 @@ const METAL_LABELS: Record<Metal, string> = {
 };
 
 export default function AlertsPage() {
+  const { user } = useAuth();
   const haptic = useHaptics();
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -106,24 +109,27 @@ export default function AlertsPage() {
   }, []);
 
   const fetchRates = useCallback(async () => {
+    const params = getShopMarketParams(user?.shop ?? null);
+    if (!params) return;
     setLoading(true);
     try {
-      const res = await materialsApi.getMarketRates(getMobileMarketParams());
-      const r = res.data;
+      const res = await materialsApi.getMarketRates(params);
+      const parsed = parseMarketRatesPayload(res.data);
+      const compact = parsed ? compactGoldRates(parsed) : null;
       setRates({
-        rate24k: r.rate24k ?? r.goldRate24k ?? 9500,
-        rate22k: r.rate22k ?? r.goldRate22k ?? 8750,
-        rate18k: r.rate18k ?? r.goldRate18k ?? 7100,
-        silver: r.silver ?? r.silverRate ?? 115,
-        currency: r.currency ?? "NPR",
-        updatedAt: r.updatedAt,
+        rate24k: compact?.rate24k ?? 0,
+        rate22k: compact?.rate22k ?? 0,
+        rate18k: compact?.rate18k ?? 0,
+        silver: compact?.silver ?? 0,
+        currency: compact?.currency ?? params.currency,
+        updatedAt: compact?.updatedAt,
       });
     } catch {
       // keep previous
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.shop]);
 
   useEffect(() => {
     fetchRates();

@@ -8,6 +8,7 @@ import {
   type ResolvedWastageRule,
 } from "@gold-shop/shared";
 import { getApiUrl, pricingApi, shopsApi } from "@/lib/api";
+import { parseMarketRatesPayload } from "@/lib/market-rates";
 import {
   applyMakingToLine,
   computeDiscountAmount,
@@ -123,13 +124,15 @@ export function useInvoicePricing(opts: UseInvoicePricingOptions) {
   );
 
   const fetchMarketRates = useCallback(async () => {
+    if (!shopCountry || !shopCurrency) return;
     setMarketRatesLoading(true);
     try {
       const res = await fetch(
         `${getApiUrl()}/market-rates?country=${shopCountry}&currency=${shopCurrency}`,
       );
       if (res.ok) {
-        setMarketRates(await res.json());
+        const json = await res.json();
+        setMarketRates(parseMarketRatesPayload(json));
       }
     } catch {
       /* optional */
