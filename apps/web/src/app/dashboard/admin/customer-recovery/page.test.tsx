@@ -11,7 +11,9 @@ const mocks = vi.hoisted(() => ({
   recent: vi.fn(),
   sendAudience: vi.fn(),
   listCampaigns: vi.fn(),
+  festivalCalendar: vi.fn(),
   createCampaign: vi.fn(),
+  updateCampaign: vi.fn(),
   toast: vi.fn(),
 }));
 
@@ -44,7 +46,9 @@ vi.mock("@/lib/api", () => ({
     recent: mocks.recent,
     sendAudience: mocks.sendAudience,
     listCampaigns: mocks.listCampaigns,
+    festivalCalendar: mocks.festivalCalendar,
     createCampaign: mocks.createCampaign,
+    updateCampaign: mocks.updateCampaign,
   },
 }));
 
@@ -271,6 +275,43 @@ const metrics = {
   updatedAt: "2026-09-01T12:00:00.000Z",
 };
 
+function dateKey(date: Date) {
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const calendarFestivalDate = (() => {
+  const today = new Date();
+  const lastDay = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+  ).getDate();
+  return new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    Math.min(today.getDate() + 1, lastDay),
+  );
+})();
+
+const festivalCalendar = {
+  startYear: calendarFestivalDate.getFullYear(),
+  endYear: calendarFestivalDate.getFullYear() + 2,
+  generatedAt: new Date().toISOString(),
+  events: [
+    {
+      id: `hindu-diwali-${dateKey(calendarFestivalDate)}`,
+      name: "Diwali",
+      religion: "HINDU",
+      date: dateKey(calendarFestivalDate),
+      countries: ["IN"],
+      dateAccuracy: "CALCULATED",
+      source: "PANCHANGAM",
+    },
+  ],
+  notices: ["Islamic dates may move by one day."],
+};
+
 async function renderLoadedPage() {
   render(<OffersAdminPage />);
   expect(await screen.findByText("Owner Gold")).toBeInTheDocument();
@@ -286,6 +327,12 @@ describe("OffersAdminPage", () => {
       data: { queued: 0, scheduled: 1, failed: 0, excluded: [] },
     });
     mocks.listCampaigns.mockResolvedValue({ data: [] });
+    mocks.festivalCalendar.mockResolvedValue({ data: festivalCalendar });
+    mocks.createCampaign.mockResolvedValue({
+      data: {
+        key: `festival-diwali-${calendarFestivalDate.getFullYear()}`,
+      },
+    });
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
@@ -402,7 +449,7 @@ describe("OffersAdminPage", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Select all sendable" }),
     );
-    fireEvent.change(screen.getByDisplayValue("All countries"), {
+    fireEvent.change(screen.getByLabelText("Audience country"), {
       target: { value: "US" },
     });
     fireEvent.click(
@@ -440,5 +487,44 @@ describe("OffersAdminPage", () => {
         title: "The sale must end after it starts",
       }),
     );
+  });
+
+  it("prefills an editable campaign from a calendar festival", async () => {
+    await renderLoadedPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Create Diwali offer" }),
+    );
+
+    expect(screen.getByLabelText("Campaign name")).toHaveValue(
+      `Diwali ${calendarFestivalDate.getFullYear()}`,
+    );
+    expect(screen.getByLabelText("Campaign key")).toHaveValue(
+      `festival-diwali-${calendarFestivalDate.getFullYear()}`,
+    );
+    expect(screen.getByLabelText("Complimentary Pro days")).toHaveValue(14);
+    expect(screen.getByLabelText("Plan discount percent")).toHaveValue(10);
+
+    fireEvent.change(screen.getByLabelText("Complimentary Pro days"), {
+      target: { value: "21" },
+    });
+    fireEvent.change(screen.getByLabelText("Plan discount percent"), {
+      target: { value: "15" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save festival campaign" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.createCampaign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: `festival-diwali-${calendarFestivalDate.getFullYear()}`,
+          name: `Diwali ${calendarFestivalDate.getFullYear()}`,
+          complimentaryDays: 21,
+          discountPercent: 15,
+          kind: "FESTIVAL",
+        }),
+      );
+    });
   });
 });

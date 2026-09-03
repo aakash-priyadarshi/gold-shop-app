@@ -30,6 +30,22 @@ export type RecoveryOfferDeliveryTiming =
 export const OFFER_CAMPAIGN_KINDS = ["RECOVERY", "FESTIVAL"] as const;
 export type OfferCampaignKindInput = (typeof OFFER_CAMPAIGN_KINDS)[number];
 
+export class FestivalCalendarQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2020)
+  @Max(2078)
+  startYear?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  years?: number;
+}
+
 export class CreateOfferCampaignDto {
   @IsString()
   @MinLength(3)

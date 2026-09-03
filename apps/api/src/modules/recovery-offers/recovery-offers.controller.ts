@@ -19,6 +19,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
   CreateOfferCampaignDto,
+  FestivalCalendarQueryDto,
   PreviewRecoveryOffersDto,
   PreviewRecoveryAudienceDto,
   RecoveryOfferTokenDto,
@@ -26,6 +27,7 @@ import {
   SendRecoveryOffersDto,
   UpdateOfferCampaignDto,
 } from "./dto/recovery-offer.dto";
+import { FestivalCalendarService } from "./festival-calendar.service";
 import { RecoveryOffersService } from "./recovery-offers.service";
 
 function asSingleQueryValue(value: unknown): string | undefined {
@@ -34,7 +36,20 @@ function asSingleQueryValue(value: unknown): string | undefined {
 
 @Controller("recovery-offers")
 export class RecoveryOffersController {
-  constructor(private readonly recoveryOffers: RecoveryOffersService) {}
+  constructor(
+    private readonly recoveryOffers: RecoveryOffersService,
+    private readonly festivalCalendar: FestivalCalendarService,
+  ) {}
+
+  @Get("admin/festivals")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  festivals(@Query() query: FestivalCalendarQueryDto) {
+    return this.festivalCalendar.getCalendar(
+      query.startYear ?? new Date().getUTCFullYear(),
+      query.years ?? 3,
+    );
+  }
 
   @Get("admin/campaigns")
   @UseGuards(JwtAuthGuard, RolesGuard)

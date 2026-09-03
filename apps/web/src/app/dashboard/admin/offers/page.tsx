@@ -6,6 +6,9 @@ import { T } from "@/components/ui/T";
 import { useToast } from "@/hooks/use-toast";
 import {
   recoveryOffersApi,
+  type FestivalCalendarEvent,
+  type FestivalCalendarResult,
+  type FestivalReligion,
   type OfferCampaign,
   type RecoveryAudiencePreview,
   type RecoveryCampaignMetrics,
@@ -14,8 +17,11 @@ import { useT } from "@/providers/translation-provider";
 import {
   AlertTriangle,
   BarChart3,
+  CalendarDays,
   CalendarClock,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Copy,
   Gift,
@@ -47,6 +53,31 @@ const COUNTRY_LABELS: Record<string, string> = {
   US: "United States",
   LK: "Sri Lanka",
 };
+
+const FESTIVAL_RELIGION_LABELS: Record<FestivalReligion, string> = {
+  HINDU: "Hindu",
+  MUSLIM: "Muslim",
+  BUDDHIST: "Buddhist",
+  JEWISH: "Jewish",
+  SIKH: "Sikh",
+  CHRISTIAN: "Christian",
+};
+
+const FESTIVAL_RELIGION_STYLES: Record<FestivalReligion, string> = {
+  HINDU:
+    "border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-100",
+  MUSLIM:
+    "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100",
+  BUDDHIST:
+    "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100",
+  JEWISH:
+    "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100",
+  SIKH: "border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-100",
+  CHRISTIAN:
+    "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100",
+};
+
+const CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const SEGMENT_LABELS: Record<Recipient["activitySegment"], string> = {
   recent: "Recently active",
@@ -84,6 +115,31 @@ function toDateTimeLocalValue(value?: string | null) {
 function toIsoFromLocal(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function dateOnlyToLocal(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 12);
+}
+
+function toLocalDateKey(date: Date) {
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function toLocalDateTimeInput(date: Date, hours: number, minutes: number) {
+  const value = new Date(date);
+  value.setHours(hours, minutes, 0, 0);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+}
+
+function festivalCampaignKey(event: FestivalCalendarEvent) {
+  return `festival-${event.name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}-${event.date.slice(0, 4)}`;
 }
 
 function recipientStatus(recipient: Recipient) {
@@ -163,6 +219,21 @@ export default function OffersAdminPage() {
     emailHeading: "",
     emailBody: "",
   });
+  const [calendarStartYear] = useState(() => new Date().getFullYear());
+  const [festivalCalendar, setFestivalCalendar] =
+    useState<FestivalCalendarResult | null>(null);
+  const [festivalCalendarLoading, setFestivalCalendarLoading] = useState(true);
+  const [festivalCalendarError, setFestivalCalendarError] = useState(false);
+  const [festivalMonth, setFestivalMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [festivalReligion, setFestivalReligion] = useState<
+    FestivalReligion | "all"
+  >("all");
+  const [festivalCountry, setFestivalCountry] = useState<
+    FestivalCalendarEvent["countries"][number] | "all"
+  >("all");
   const [preview, setPreview] = useState<RecoveryAudiencePreview | null>(null);
   const [metrics, setMetrics] = useState<RecoveryCampaignMetrics | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -215,9 +286,30 @@ export default function OffersAdminPage() {
     }
   }, []);
 
+  const loadFestivalCalendar = useCallback(async () => {
+    setFestivalCalendarLoading(true);
+    setFestivalCalendarError(false);
+    try {
+      const response = await recoveryOffersApi.festivalCalendar(
+        calendarStartYear,
+        3,
+      );
+      setFestivalCalendar(response.data);
+    } catch (error) {
+      console.error("Failed to load the festival calendar:", error);
+      setFestivalCalendarError(true);
+    } finally {
+      setFestivalCalendarLoading(false);
+    }
+  }, [calendarStartYear]);
+
   useEffect(() => {
     void loadCampaigns();
   }, [loadCampaigns]);
+
+  useEffect(() => {
+    void loadFestivalCalendar();
+  }, [loadFestivalCalendar]);
 
   useEffect(() => {
     void loadAudience();
@@ -299,6 +391,81 @@ export default function OffersAdminPage() {
     });
     setEditingCampaignKey(campaign.key);
     setShowCampaignForm(true);
+  };
+
+  const startFestivalCampaign = (event: FestivalCalendarEvent) => {
+    const festivalDate = dateOnlyToLocal(event.date);
+    const saleStart = new Date(festivalDate);
+    saleStart.setDate(saleStart.getDate() - 14);
+    const complimentaryDays = 14;
+    const discountPercent = 10;
+    const year = event.date.slice(0, 4);
+
+    setCampaignDraft({
+      key: festivalCampaignKey(event),
+      name: t(`${event.name} ${year}`),
+      complimentaryDays,
+      discountPercent,
+      startsAt: toLocalDateTimeInput(saleStart, 0, 0),
+      endsAt: toLocalDateTimeInput(festivalDate, 23, 59),
+      emailSubject: t(
+        `Celebrate ${event.name}: ${complimentaryDays} days Pro and ${discountPercent}% off`,
+      ),
+      emailHeading: t(
+        `A ${event.name} offer for your jewellery business`,
+      ),
+      emailBody: t(
+        `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro and save ${discountPercent}% on your first paid plan during this festival offer.`,
+      ),
+    });
+    setEditingCampaignKey(null);
+    setShowCampaignForm(true);
+  };
+
+  const filteredFestivalEvents = useMemo(
+    () =>
+      (festivalCalendar?.events || []).filter((event) => {
+        if (festivalReligion !== "all" && event.religion !== festivalReligion) {
+          return false;
+        }
+        if (
+          festivalCountry !== "all" &&
+          !event.countries.includes(festivalCountry)
+        ) {
+          return false;
+        }
+        return (
+          Number(event.date.slice(0, 4)) === festivalMonth.getFullYear() &&
+          Number(event.date.slice(5, 7)) === festivalMonth.getMonth() + 1
+        );
+      }),
+    [festivalCalendar, festivalCountry, festivalMonth, festivalReligion],
+  );
+
+  const festivalEventsByDate = useMemo(() => {
+    const byDate = new Map<string, FestivalCalendarEvent[]>();
+    for (const event of filteredFestivalEvents) {
+      byDate.set(event.date, [...(byDate.get(event.date) || []), event]);
+    }
+    return byDate;
+  }, [filteredFestivalEvents]);
+
+  const festivalCalendarDays = useMemo(() => {
+    const year = festivalMonth.getFullYear();
+    const month = festivalMonth.getMonth();
+    const leadingDays = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return [
+      ...Array.from({ length: leadingDays }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+    ];
+  }, [festivalMonth]);
+
+  const changeFestivalMonth = (offset: number) => {
+    setFestivalMonth(
+      (current) =>
+        new Date(current.getFullYear(), current.getMonth() + offset, 1),
+    );
   };
 
   const filteredRecipients = useMemo(() => {
@@ -599,6 +766,217 @@ export default function OffersAdminPage() {
               <T>Refresh audience</T>
             </button>
           </div>
+
+          <section className="rounded-xl border bg-white p-4 shadow-sm dark:bg-gray-900/60">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-violet-600" />
+                  <h2 className="font-semibold">
+                    <T>Festival calendar</T>
+                  </h2>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <T>
+                    Browse this year and the next two years. Click any upcoming
+                    festival to prefill an editable offer.
+                  </T>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <label className="text-xs font-medium">
+                  <span className="sr-only">
+                    <T>Religion</T>
+                  </span>
+                  <select
+                    aria-label={t("Festival religion")}
+                    value={festivalReligion}
+                    onChange={(event) =>
+                      setFestivalReligion(
+                        event.target.value as FestivalReligion | "all",
+                      )
+                    }
+                    className="min-h-10 rounded-lg border bg-white px-3 dark:bg-gray-950"
+                  >
+                    <option value="all">{t("All religions")}</option>
+                    {Object.entries(FESTIVAL_RELIGION_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {t(label)}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className="text-xs font-medium">
+                  <span className="sr-only">
+                    <T>Country</T>
+                  </span>
+                  <select
+                    aria-label={t("Festival country")}
+                    value={festivalCountry}
+                    onChange={(event) =>
+                      setFestivalCountry(
+                        event.target.value as
+                          | FestivalCalendarEvent["countries"][number]
+                          | "all",
+                      )
+                    }
+                    className="min-h-10 rounded-lg border bg-white px-3 dark:bg-gray-950"
+                  >
+                    <option value="all">{t("All countries")}</option>
+                    {["IN", "NP", "AE", "US", "UK"].map((code) => (
+                      <option key={code} value={code}>
+                        {t(COUNTRY_LABELS[code])}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between rounded-lg border bg-gray-50 px-2 py-2 dark:bg-gray-950/40">
+              <button
+                type="button"
+                aria-label={t("Previous month")}
+                onClick={() => changeFestivalMonth(-1)}
+                disabled={festivalMonth <= new Date(calendarStartYear, 0, 1)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white disabled:opacity-30 dark:hover:bg-gray-900"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <h3 className="font-semibold">
+                <T>
+                  {new Intl.DateTimeFormat("en", {
+                    month: "long",
+                    year: "numeric",
+                  }).format(festivalMonth)}
+                </T>
+              </h3>
+              <button
+                type="button"
+                aria-label={t("Next month")}
+                onClick={() => changeFestivalMonth(1)}
+                disabled={
+                  festivalMonth >=
+                  new Date(
+                    festivalCalendar?.endYear ?? calendarStartYear + 2,
+                    11,
+                    1,
+                  )
+                }
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white disabled:opacity-30 dark:hover:bg-gray-900"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+
+            {festivalCalendarLoading ? (
+              <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <T>Loading festival dates</T>
+              </div>
+            ) : festivalCalendarError ? (
+              <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                <T>Festival dates could not be loaded.</T>
+                <button
+                  type="button"
+                  onClick={() => void loadFestivalCalendar()}
+                  className="rounded-lg border px-3 py-2 font-semibold"
+                >
+                  <T>Try again</T>
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {CALENDAR_WEEKDAYS.map((day) => (
+                    <div key={day} className="py-1">
+                      <T>{day}</T>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {festivalCalendarDays.map((day, index) => {
+                    if (!day) {
+                      return (
+                        <div
+                          key={`empty-${index}`}
+                          aria-hidden="true"
+                          className="min-h-24 rounded-lg bg-gray-50/50 dark:bg-gray-950/20"
+                        />
+                      );
+                    }
+                    const date = toLocalDateKey(
+                      new Date(
+                        festivalMonth.getFullYear(),
+                        festivalMonth.getMonth(),
+                        day,
+                      ),
+                    );
+                    const events = festivalEventsByDate.get(date) || [];
+                    return (
+                      <div
+                        key={date}
+                        className="min-h-24 rounded-lg border bg-white p-1.5 dark:bg-gray-950/40"
+                      >
+                        <div className="text-xs font-semibold text-muted-foreground">
+                          {day}
+                        </div>
+                        <div className="mt-1 space-y-1">
+                          {events.map((event) => {
+                            const hasPassed =
+                              event.date < toLocalDateKey(new Date());
+                            return (
+                              <button
+                                key={event.id}
+                                type="button"
+                                disabled={hasPassed}
+                                onClick={() => startFestivalCampaign(event)}
+                                aria-label={
+                                  hasPassed
+                                    ? t(`${event.name} has passed`)
+                                    : t(`Create ${event.name} offer`)
+                                }
+                                title={t(
+                                  event.dateAccuracy === "MOON_SIGHTING"
+                                    ? "Estimated date; confirm after local moon sighting"
+                                    : "Create an offer from this festival",
+                                )}
+                                className={`block w-full rounded-md border px-1.5 py-1 text-left text-[10px] leading-tight transition hover:brightness-95 disabled:cursor-default disabled:opacity-60 ${FESTIVAL_RELIGION_STYLES[event.religion]}`}
+                              >
+                                <span className="block font-semibold">
+                                  {event.dateAccuracy === "MOON_SIGHTING"
+                                    ? "≈ "
+                                    : ""}
+                                  <T>{event.name}</T>
+                                </span>
+                                <span className="mt-0.5 block opacity-75">
+                                  {event.countries.join(" · ")}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {filteredFestivalEvents.length === 0 && (
+                  <p className="mt-3 rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    <T>No matching festivals in this month.</T>
+                  </p>
+                )}
+                <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
+                  {(festivalCalendar?.notices || []).map((notice) => (
+                    <p key={notice}>
+                      <T>{notice}</T>
+                    </p>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
 
           <section
             className="rounded-xl border bg-white p-4 shadow-sm dark:bg-gray-900/60"
@@ -1158,6 +1536,7 @@ export default function OffersAdminPage() {
                       />
                     </div>
                     <select
+                      aria-label={t("Audience country")}
                       value={country}
                       onChange={(event) => setCountry(event.target.value)}
                       className="min-h-11 rounded-lg border bg-white px-3 text-sm dark:bg-gray-950"
