@@ -3,7 +3,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OffersAdminPage from "../offers/page";
 
-const t = (value: string) => value;
+const t = vi.fn((value: string) =>
+  /^(Diwali \d{4}|Celebrate Diwali:|A Diwali offer|Celebrate Diwali with Orivraa\.)/.test(
+    value,
+  )
+    ? `[translated] ${value}`
+    : value,
+);
 
 const mocks = vi.hoisted(() => ({
   previewAudience: vi.fn(),
@@ -502,8 +508,20 @@ describe("OffersAdminPage", () => {
     expect(screen.getByLabelText("Campaign key")).toHaveValue(
       `festival-diwali-${calendarFestivalDate.getFullYear()}`,
     );
+    expect(screen.getByLabelText("Sale starts")).toHaveValue(
+      `${dateKey(new Date())}T00:00`,
+    );
     expect(screen.getByLabelText("Complimentary Pro days")).toHaveValue(14);
     expect(screen.getByLabelText("Plan discount percent")).toHaveValue(10);
+    expect(screen.getByLabelText("Email subject")).toHaveValue(
+      "Celebrate Diwali: 14 days Pro and 10% off",
+    );
+    expect(screen.getByLabelText("Email heading")).toHaveValue(
+      "A Diwali offer for your jewellery business",
+    );
+    expect(screen.getByLabelText("Email message")).toHaveValue(
+      "Celebrate Diwali with Orivraa. Claim 14 complimentary days of Pro and save 10% on your first paid plan during this festival offer.",
+    );
 
     fireEvent.change(screen.getByLabelText("Complimentary Pro days"), {
       target: { value: "21" },
@@ -523,6 +541,10 @@ describe("OffersAdminPage", () => {
           complimentaryDays: 21,
           discountPercent: 15,
           kind: "FESTIVAL",
+          emailSubject: "Celebrate Diwali: 14 days Pro and 10% off",
+          emailHeading: "A Diwali offer for your jewellery business",
+          emailBody:
+            "Celebrate Diwali with Orivraa. Claim 14 complimentary days of Pro and save 10% on your first paid plan during this festival offer.",
         }),
       );
     });

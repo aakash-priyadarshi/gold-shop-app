@@ -397,26 +397,23 @@ export default function OffersAdminPage() {
     const festivalDate = dateOnlyToLocal(event.date);
     const saleStart = new Date(festivalDate);
     saleStart.setDate(saleStart.getDate() - 14);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (saleStart < today) saleStart.setTime(today.getTime());
     const complimentaryDays = 14;
     const discountPercent = 10;
     const year = event.date.slice(0, 4);
 
     setCampaignDraft({
       key: festivalCampaignKey(event),
-      name: t(`${event.name} ${year}`),
+      name: `${event.name} ${year}`,
       complimentaryDays,
       discountPercent,
       startsAt: toLocalDateTimeInput(saleStart, 0, 0),
       endsAt: toLocalDateTimeInput(festivalDate, 23, 59),
-      emailSubject: t(
-        `Celebrate ${event.name}: ${complimentaryDays} days Pro and ${discountPercent}% off`,
-      ),
-      emailHeading: t(
-        `A ${event.name} offer for your jewellery business`,
-      ),
-      emailBody: t(
-        `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro and save ${discountPercent}% on your first paid plan during this festival offer.`,
-      ),
+      emailSubject: `Celebrate ${event.name}: ${complimentaryDays} days Pro and ${discountPercent}% off`,
+      emailHeading: `A ${event.name} offer for your jewellery business`,
+      emailBody: `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro and save ${discountPercent}% on your first paid plan during this festival offer.`,
     });
     setEditingCampaignKey(null);
     setShowCampaignForm(true);
