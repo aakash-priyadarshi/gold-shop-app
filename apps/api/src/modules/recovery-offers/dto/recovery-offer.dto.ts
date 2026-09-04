@@ -28,7 +28,11 @@ export const RECOVERY_OFFER_DELIVERY_TIMINGS = [
 export type RecoveryOfferDeliveryTiming =
   (typeof RECOVERY_OFFER_DELIVERY_TIMINGS)[number];
 
-export const OFFER_CAMPAIGN_KINDS = ["RECOVERY", "FESTIVAL"] as const;
+export const OFFER_CAMPAIGN_KINDS = [
+  "RECOVERY",
+  "FESTIVAL",
+  "PRODUCT_UPDATE",
+] as const;
 export type OfferCampaignKindInput = (typeof OFFER_CAMPAIGN_KINDS)[number];
 
 export class FestivalCalendarQueryDto {
@@ -62,7 +66,7 @@ export class CreateOfferCampaignDto {
   kind: OfferCampaignKindInput;
 
   @IsInt()
-  @Min(1)
+  @Min(0)
   @Max(90)
   complimentaryDays: number;
 
@@ -99,6 +103,19 @@ export class CreateOfferCampaignDto {
   })
   @MaxLength(500)
   imageUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https:\/\/\S+$/i, {
+    message: "ctaUrl must be an https URL or empty",
+  })
+  @MaxLength(500)
+  ctaUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  ctaLabel?: string | null;
 }
 
 export class UpdateOfferCampaignDto extends PartialType(

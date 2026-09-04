@@ -222,6 +222,7 @@ export default function OffersAdminPage() {
   const [campaignDraft, setCampaignDraft] = useState({
     key: "",
     name: "",
+    kind: "FESTIVAL" as OfferCampaign["kind"],
     complimentaryDays: 14,
     discountPercent: 10,
     startsAt: "",
@@ -230,6 +231,8 @@ export default function OffersAdminPage() {
     emailHeading: "",
     emailBody: "",
     imageUrl: "",
+    ctaUrl: "",
+    ctaLabel: "",
   });
   const [calendarStartYear] = useState(() => new Date().getFullYear());
   const [festivalCalendar, setFestivalCalendar] =
@@ -365,20 +368,25 @@ export default function OffersAdminPage() {
   }, [emailLockAt]);
   const emailEditLocked = emailLockAt !== null && emailLockReached;
 
-  const saveFestivalCampaign = async () => {
+  const saveCampaign = async () => {
     const startsAt = toIsoFromLocal(campaignDraft.startsAt);
     const endsAt = toIsoFromLocal(campaignDraft.endsAt);
+    const isProductUpdate = campaignDraft.kind === "PRODUCT_UPDATE";
     if (campaignFormMode !== "email") {
       if (!startsAt || !endsAt) {
         toast({
-          title: t("Choose the festival sale window"),
+          title: isProductUpdate
+            ? t("Choose the announcement window")
+            : t("Choose the festival sale window"),
           variant: "destructive",
         });
         return;
       }
       if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
         toast({
-          title: t("The sale must end after it starts"),
+          title: isProductUpdate
+            ? t("The announcement must end after it starts")
+            : t("The sale must end after it starts"),
           variant: "destructive",
         });
         return;
@@ -393,7 +401,16 @@ export default function OffersAdminPage() {
         emailHeading: campaignDraft.emailHeading,
         emailBody: campaignDraft.emailBody,
         imageUrl: campaignDraft.imageUrl,
+        ctaUrl: campaignDraft.ctaUrl || null,
+        ctaLabel: campaignDraft.ctaLabel || null,
       };
+      const kind = isProductUpdate ? "PRODUCT_UPDATE" : "FESTIVAL";
+      const offerValues = isProductUpdate
+        ? { complimentaryDays: 0, discountPercent: 0 }
+        : {
+            complimentaryDays: campaignDraft.complimentaryDays,
+            discountPercent: campaignDraft.discountPercent,
+          };
       let response: { data: { key: string } };
       if (campaignFormMode === "email" && editingCampaignKey) {
         response = await recoveryOffersApi.updateCampaign(
@@ -401,13 +418,10 @@ export default function OffersAdminPage() {
           emailContent,
         );
       } else if (editingCampaignKey) {
-        // Email content is omitted from the payload while locked; the API
-        // only guards the fields that are actually sent.
         response = await recoveryOffersApi.updateCampaign(editingCampaignKey, {
           name: campaignDraft.name,
-          kind: "FESTIVAL",
-          complimentaryDays: campaignDraft.complimentaryDays,
-          discountPercent: campaignDraft.discountPercent,
+          kind,
+          ...offerValues,
           startsAt: startsAt as string,
           endsAt: endsAt as string,
           ...(emailEditLocked ? {} : emailContent),
@@ -415,9 +429,8 @@ export default function OffersAdminPage() {
       } else {
         response = await recoveryOffersApi.createCampaign({
           name: campaignDraft.name,
-          kind: "FESTIVAL",
-          complimentaryDays: campaignDraft.complimentaryDays,
-          discountPercent: campaignDraft.discountPercent,
+          kind,
+          ...offerValues,
           startsAt: startsAt as string,
           endsAt: endsAt as string,
           ...emailContent,
@@ -432,22 +445,22 @@ export default function OffersAdminPage() {
       toast({
         title:
           campaignFormMode === "email"
-            ? t("Festival email updated")
+            ? t("Email updated")
             : editingCampaignKey
-              ? t("Festival campaign updated")
-              : t("Festival campaign created"),
+              ? t("Campaign updated")
+              : t("Campaign created"),
       });
     } catch (error: unknown) {
-      console.error("Failed to create festival campaign:", error);
+      console.error("Failed to save campaign:", error);
       toast({
         title:
           campaignFormMode === "email"
-            ? t("Festival email was not updated")
-            : t("Festival campaign was not created"),
+            ? t("Email was not updated")
+            : t("Campaign was not saved"),
         description: t(
           apiErrorMessage(
             error,
-            "Check the campaign key and sale dates, then try again.",
+            "Check the campaign key and dates, then try again.",
           ),
         ),
         variant: "destructive",
@@ -457,23 +470,28 @@ export default function OffersAdminPage() {
     }
   };
 
+  const draftFromCampaign = (campaign: OfferCampaign) => ({
+    key: campaign.key,
+    name: campaign.name,
+    kind: campaign.kind,
+    complimentaryDays: campaign.complimentaryDays,
+    discountPercent: campaign.discountPercent,
+    startsAt: toDateTimeLocalValue(campaign.startsAt),
+    endsAt: toDateTimeLocalValue(campaign.endsAt),
+    emailSubject: campaign.emailSubject,
+    emailHeading: campaign.emailHeading,
+    emailBody: campaign.emailBody,
+    imageUrl: campaign.imageUrl || "",
+    ctaUrl: campaign.ctaUrl || "",
+    ctaLabel: campaign.ctaLabel || "",
+  });
+
   const editSelectedCampaign = () => {
     const campaign = campaigns.find(
       (item) => item.key === selectedCampaignKey,
     );
     if (!campaign?.startsAt || !campaign.endsAt) return;
-    setCampaignDraft({
-      key: campaign.key,
-      name: campaign.name,
-      complimentaryDays: campaign.complimentaryDays,
-      discountPercent: campaign.discountPercent,
-      startsAt: toDateTimeLocalValue(campaign.startsAt),
-      endsAt: toDateTimeLocalValue(campaign.endsAt),
-      emailSubject: campaign.emailSubject,
-      emailHeading: campaign.emailHeading,
-      emailBody: campaign.emailBody,
-      imageUrl: campaign.imageUrl || "",
-    });
+    setCampaignDraft(draftFromCampaign(campaign));
     setEditingCampaignKey(campaign.key);
     setCampaignFormMode("edit");
     setShowCampaignForm(true);
@@ -484,18 +502,7 @@ export default function OffersAdminPage() {
       (item) => item.key === selectedCampaignKey,
     );
     if (!campaign) return;
-    setCampaignDraft({
-      key: campaign.key,
-      name: campaign.name,
-      complimentaryDays: campaign.complimentaryDays,
-      discountPercent: campaign.discountPercent,
-      startsAt: toDateTimeLocalValue(campaign.startsAt),
-      endsAt: toDateTimeLocalValue(campaign.endsAt),
-      emailSubject: campaign.emailSubject,
-      emailHeading: campaign.emailHeading,
-      emailBody: campaign.emailBody,
-      imageUrl: campaign.imageUrl || "",
-    });
+    setCampaignDraft(draftFromCampaign(campaign));
     setEditingCampaignKey(campaign.key);
     setCampaignFormMode("email");
     setShowCampaignForm(true);
@@ -510,6 +517,7 @@ export default function OffersAdminPage() {
       setCampaignDraft({
         key: existingCampaign.key,
         name: existingCampaign.name,
+        kind: existingCampaign.kind,
         complimentaryDays: existingCampaign.complimentaryDays,
         discountPercent: existingCampaign.discountPercent,
         startsAt: toDateTimeLocalValue(existingCampaign.startsAt),
@@ -518,6 +526,8 @@ export default function OffersAdminPage() {
         emailHeading: existingCampaign.emailHeading,
         emailBody: existingCampaign.emailBody,
         imageUrl: existingCampaign.imageUrl || "",
+        ctaUrl: existingCampaign.ctaUrl || "",
+        ctaLabel: existingCampaign.ctaLabel || "",
       });
       setEditingCampaignKey(existingCampaign.key);
       setCampaignFormMode("edit");
@@ -538,6 +548,7 @@ export default function OffersAdminPage() {
     setCampaignDraft({
       key,
       name: `${event.name} ${year}`,
+      kind: "FESTIVAL",
       complimentaryDays,
       discountPercent,
       startsAt: toLocalDateTimeInput(saleStart, 0, 0),
@@ -546,6 +557,44 @@ export default function OffersAdminPage() {
       emailHeading: `A ${event.name} offer for your jewellery business`,
       emailBody: `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro — no card, no automatic renewal.\n\nOnce the complimentary days end, the Pro plan you buy starts with ${discountPercent}% off your first payment. Claim your free days now, then upgrade with the festival discount.`,
       imageUrl: "",
+      ctaUrl: "",
+      ctaLabel: "",
+    });
+    setEditingCampaignKey(null);
+    setCampaignFormMode("create");
+    setShowCampaignForm(true);
+  };
+
+  const startProductUpdateCampaign = () => {
+    const existing = campaigns.find(
+      (campaign) => campaign.key === "whats-new-ai-photo-2026-09",
+    );
+    if (existing?.startsAt && existing.endsAt) {
+      setSelectedCampaignKey(existing.key);
+      setCampaignDraft(draftFromCampaign(existing));
+      setEditingCampaignKey(existing.key);
+      setCampaignFormMode("edit");
+      setShowCampaignForm(true);
+      return;
+    }
+    const starts = new Date();
+    const ends = new Date();
+    ends.setDate(ends.getDate() + 90);
+    setCampaignDraft({
+      key: "whats-new-ai-photo-2026-09",
+      name: "AI product photo studio",
+      kind: "PRODUCT_UPDATE",
+      complimentaryDays: 0,
+      discountPercent: 0,
+      startsAt: toLocalDateTimeInput(starts, 0, 0),
+      endsAt: toLocalDateTimeInput(ends, 23, 59),
+      emailSubject: "New: studio photos from the pictures you already have",
+      emailHeading: "Turn a shop photo into a listing-ready image",
+      emailBody:
+        "Open Product Catalog, pick a photo, and tap Enhance. Orivraa keeps the jewellery exactly as it is — metal, stones, hallmark — and only changes lighting, background, and sharpness.\n\nWatch the short demo first, then try it on a real piece in your catalog. Pro+ and Enterprise shops can enhance photos from the catalog, jewelry sets, and mobile POS.",
+      imageUrl: "https://www.orivraa.com/ai-photo-studio-demo.gif",
+      ctaUrl: "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+      ctaLabel: "See it in action",
     });
     setEditingCampaignKey(null);
     setCampaignFormMode("create");
@@ -825,6 +874,23 @@ export default function OffersAdminPage() {
 
   const copyTemplate = async () => {
     const days = preview?.days || 50;
+    if (preview?.campaign.kind === "PRODUCT_UPDATE") {
+      await navigator.clipboard.writeText(
+        [
+          `Subject: ${preview.campaign.emailSubject}`,
+          "",
+          "Hi {{firstName}},",
+          "",
+          preview.campaign.emailBody,
+          "",
+          "See the live demo, then open Product Catalog to enhance a photo.",
+          "",
+          "— Team Orivraa",
+        ].join("\n"),
+      );
+      toast({ title: t("Email template copied") });
+      return;
+    }
     if (preview?.campaign.kind === "FESTIVAL") {
       await navigator.clipboard.writeText(
         [
@@ -1122,8 +1188,9 @@ export default function OffersAdminPage() {
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   <T>
-                    Recovery and festival emails use separate copy, claim rules,
-                    and campaign metrics.
+                    Recovery, festival, and product-update emails use separate
+                    copy, claim rules, and campaign metrics. Product updates go
+                    only to registered shops — never to cold leads.
                   </T>
                 </p>
               </div>
@@ -1151,13 +1218,29 @@ export default function OffersAdminPage() {
                     onClick={editSelectedCampaign}
                     className="inline-flex min-h-10 items-center rounded-lg border px-3 py-2 text-sm font-semibold"
                   >
-                    <T>Edit selected festival</T>
+                    {selectedCampaign?.kind === "PRODUCT_UPDATE" ? (
+                      <T>Edit selected announcement</T>
+                    ) : (
+                      <T>Edit selected festival</T>
+                    )}
                   </button>
                 )}
                 <button
                   type="button"
+                  onClick={startProductUpdateCampaign}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <T>Create product update</T>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setEditingCampaignKey(null);
+                    setCampaignDraft((current) => ({
+                      ...current,
+                      kind: "FESTIVAL",
+                    }));
                     setCampaignFormMode("create");
                     setShowCampaignForm((value) => !value);
                   }}
@@ -1189,11 +1272,16 @@ export default function OffersAdminPage() {
                   onClick={() => setSelectedCampaignKey(campaign.key)}
                   className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
                     selectedCampaignKey === campaign.key
-                      ? "border-violet-500 bg-violet-50 text-violet-900 dark:bg-violet-950/30"
+                      ? campaign.kind === "PRODUCT_UPDATE"
+                        ? "border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/30"
+                        : "border-violet-500 bg-violet-50 text-violet-900 dark:bg-violet-950/30"
                       : "bg-white dark:bg-gray-950"
                   }`}
                 >
                   {campaign.name}
+                  {campaign.kind === "PRODUCT_UPDATE"
+                    ? ` · ${t("update")}`
+                    : ""}
                   {!campaign.isActive ? ` · ${t("inactive")}` : ""}
                 </button>
               ))}
@@ -1204,8 +1292,8 @@ export default function OffersAdminPage() {
                 {campaignFormMode === "email" ? (
                   <p className="text-xs text-muted-foreground md:col-span-2">
                     <T>
-                      Editing email content only. Use “Edit selected festival”
-                      to change the sale window or offer values.
+                      Editing email content only. Use Edit selected campaign to
+                      change dates or offer values.
                     </T>
                   </p>
                 ) : (
@@ -1241,7 +1329,11 @@ export default function OffersAdminPage() {
                       />
                     </label>
                     <label className="text-xs font-medium">
-                      <T>Sale starts</T>
+                      {campaignDraft.kind === "PRODUCT_UPDATE" ? (
+                        <T>Announcement starts</T>
+                      ) : (
+                        <T>Sale starts</T>
+                      )}
                       <input
                         type="datetime-local"
                         value={campaignDraft.startsAt}
@@ -1255,7 +1347,11 @@ export default function OffersAdminPage() {
                       />
                     </label>
                     <label className="text-xs font-medium">
-                      <T>Sale ends</T>
+                      {campaignDraft.kind === "PRODUCT_UPDATE" ? (
+                        <T>Announcement ends</T>
+                      ) : (
+                        <T>Sale ends</T>
+                      )}
                       <input
                         type="datetime-local"
                         value={campaignDraft.endsAt}
@@ -1268,6 +1364,8 @@ export default function OffersAdminPage() {
                         className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
                       />
                     </label>
+                    {campaignDraft.kind !== "PRODUCT_UPDATE" && (
+                      <>
                     <label className="text-xs font-medium">
                       <T>Complimentary Pro days</T>
                       <input
@@ -1300,6 +1398,8 @@ export default function OffersAdminPage() {
                         className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 dark:bg-gray-950"
                       />
                     </label>
+                      </>
+                    )}
                   </>
                 )}
                 <label className="text-xs font-medium md:col-span-2">
@@ -1370,11 +1470,47 @@ export default function OffersAdminPage() {
                   </label>
                   <span className="mt-1 block text-[11px] text-muted-foreground">
                     <T>
-                      Leave empty to use the default Orivraa artwork. Locked 5
-                      minutes before a scheduled send.
+                      Leave empty to use the default artwork. For product
+                      updates, a looping GIF works in most inboxes; Outlook may
+                      show the first frame. Locked 5 minutes before a scheduled
+                      send.
                     </T>
                   </span>
                 </div>
+                {campaignDraft.kind === "PRODUCT_UPDATE" && (
+                  <>
+                    <label className="text-xs font-medium">
+                      <T>Demo URL</T>
+                      <input
+                        value={campaignDraft.ctaUrl}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            ctaUrl: event.target.value,
+                          }))
+                        }
+                        disabled={emailEditLocked}
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
+                        placeholder="https://www.orivraa.com/jewellery-shop-software#ai-photo-studio"
+                      />
+                    </label>
+                    <label className="text-xs font-medium">
+                      <T>Demo button label</T>
+                      <input
+                        value={campaignDraft.ctaLabel}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            ctaLabel: event.target.value,
+                          }))
+                        }
+                        disabled={emailEditLocked}
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
+                        placeholder={t("See it in action")}
+                      />
+                    </label>
+                  </>
+                )}
                 {emailEditLocked && (
                   <p className="text-xs font-medium text-orange-700 dark:text-orange-300 md:col-span-2">
                     <T>
@@ -1385,7 +1521,7 @@ export default function OffersAdminPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => void saveFestivalCampaign()}
+                  onClick={() => void saveCampaign()}
                   disabled={savingCampaign || (campaignFormMode === "email" && emailEditLocked)}
                   className="inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-700 px-4 font-semibold text-white disabled:opacity-50 md:col-span-2"
                 >
@@ -1395,7 +1531,9 @@ export default function OffersAdminPage() {
                   {campaignFormMode === "email" ? (
                     <T>Update email content</T>
                   ) : editingCampaignKey ? (
-                    <T>Update festival campaign</T>
+                    <T>Update campaign</T>
+                  ) : campaignDraft.kind === "PRODUCT_UPDATE" ? (
+                    <T>Save product update</T>
                   ) : (
                     <T>Save festival campaign</T>
                   )}
@@ -1488,7 +1626,9 @@ export default function OffersAdminPage() {
                 <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
                 <div>
                   <p className="font-semibold">
-                    {preview?.campaign.kind === "FESTIVAL" ? (
+                    {preview?.campaign.kind === "PRODUCT_UPDATE" ? (
+                      <T>Feature announcement · no complimentary Pro</T>
+                    ) : preview?.campaign.kind === "FESTIVAL" ? (
                       <>
                         {preview.days} <T>days Pro</T> ·{" "}
                         {preview.campaign.discountPercent}%{" "}
@@ -2219,16 +2359,19 @@ export default function OffersAdminPage() {
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/luxury-gold-globe.png"
-                  alt="Golden globe"
+                  src={
+                    preview?.campaign.imageUrl || "/luxury-gold-globe.png"
+                  }
+                  alt=""
                   className="aspect-[16/7] w-full object-cover"
                 />
                 <div className="p-5">
                   <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                    {preview?.campaign.kind === "FESTIVAL" ? (
-                      preview.campaign.name
-                    ) : (
+                    {preview?.campaign.kind === "RECOVERY" ||
+                    !preview?.campaign.kind ? (
                       <T>A message from our CEO</T>
+                    ) : (
+                      preview.campaign.name
                     )}
                   </span>
                   <h2 className="mt-4 font-serif text-2xl font-bold leading-tight text-slate-900 dark:text-white">
@@ -2245,6 +2388,25 @@ export default function OffersAdminPage() {
                       </T>
                     )}
                   </p>
+                  {preview?.campaign.kind === "PRODUCT_UPDATE" ? (
+                    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/60 dark:bg-amber-950/20">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
+                        <T>Live demo</T>
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        <T>
+                          Clicking the GIF opens the Framer Motion demo. The
+                          catalog button opens Product Catalog for signed-in
+                          shops.
+                        </T>
+                      </p>
+                      <div className="mt-3 rounded-lg bg-amber-700 px-3 py-2 text-sm font-bold text-white">
+                        {preview.campaign.ctaLabel || (
+                          <T>See it in action</T>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/60 dark:bg-amber-950/20">
                     <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
                       <T>Welcome-back gift</T>
@@ -2269,7 +2431,9 @@ export default function OffersAdminPage() {
                       )}
                     </div>
                   </div>
-                  {preview?.campaign.kind !== "FESTIVAL" && (
+                  )}
+                  {(preview?.campaign.kind === "RECOVERY" ||
+                    !preview?.campaign.kind) && (
                     <div className="mt-5 border-l-2 border-amber-500 pl-3">
                       <p className="font-serif text-lg font-bold italic">
                         Aakash
@@ -2286,10 +2450,17 @@ export default function OffersAdminPage() {
                 <div className="flex items-start gap-2">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-700 dark:text-blue-300" />
                   <p className="text-blue-900 dark:text-blue-200">
-                    <T>
-                      Each link works only for the recipient’s account. Pro is
-                      granted only after they sign in and claim it.
-                    </T>
+                    {preview?.campaign.kind === "PRODUCT_UPDATE" ? (
+                      <T>
+                        Demo and catalog links are the same for every recipient.
+                        This email does not grant Pro or apply a discount.
+                      </T>
+                    ) : (
+                      <T>
+                        Each link works only for the recipient’s account. Pro is
+                        granted only after they sign in and claim it.
+                      </T>
+                    )}
                   </p>
                 </div>
               </div>

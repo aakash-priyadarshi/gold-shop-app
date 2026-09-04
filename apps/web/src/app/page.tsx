@@ -11,6 +11,7 @@ import { BillingCalculationSpotlight } from "@/components/home/BillingCalculatio
 import { Header } from "@/components/layout/header";
 import { AISalesteamPromo } from "@/components/marketing/AISalesteamPromo";
 import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
+import { AiPhotoStudioSpotlight } from "@/components/marketing/AiPhotoStudioSpotlight";
 import { TrustSignals } from "@/components/marketing/TrustSignals";
 import { T } from "@/components/ui/T";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
@@ -84,6 +85,7 @@ export default async function HomePage() {
       "Live gold and silver rate billing",
       "Making charges and wastage (jarti) on separate invoice lines",
       "Jewellery sets with set discount sold as one POS line",
+      "AI product photo enhancement for catalog images",
       "GST, Skill Promotion Fee, gemstone VAT, and multi-country tax breakdown",
       "Weight-based billing in gram, tola, ounce, and laal",
       "GST/VAT-ready invoices and mobile POS",
@@ -144,6 +146,8 @@ export default async function HomePage() {
           <MobilePosSpotlight />
 
           <BillingCalculationSpotlight />
+
+          <AiPhotoStudioSpotlight compact />
 
           {/* 4: Resource hub linking demo, tutorial, support, and comparison pages */}
           <SellerResourceHubSection />

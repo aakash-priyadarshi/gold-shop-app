@@ -2586,7 +2586,7 @@ export interface OfferCampaign {
   id?: string;
   key: string;
   name: string;
-  kind: "RECOVERY" | "FESTIVAL";
+  kind: "RECOVERY" | "FESTIVAL" | "PRODUCT_UPDATE";
   complimentaryDays: number;
   discountPercent: number;
   startsAt: string | null;
@@ -2595,6 +2595,8 @@ export interface OfferCampaign {
   emailHeading: string;
   emailBody: string;
   imageUrl?: string | null;
+  ctaUrl?: string | null;
+  ctaLabel?: string | null;
   nextScheduledFor?: string | null;
   isActive?: boolean;
 }
@@ -2664,7 +2666,7 @@ export interface RecoveryCampaignMetrics {
   byCampaign: Array<{
     campaignKey: string;
     name: string;
-    kind: "RECOVERY" | "FESTIVAL";
+    kind: "RECOVERY" | "FESTIVAL" | "PRODUCT_UPDATE";
     totals: RecoveryCampaignMetrics["totals"];
     rates: RecoveryCampaignMetrics["rates"];
   }>;
