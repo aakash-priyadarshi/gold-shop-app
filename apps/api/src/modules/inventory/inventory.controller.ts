@@ -26,6 +26,7 @@ import {
   InventoryFilterDto,
   MultiTagPrintDto,
   GenerateProductDescriptionDto,
+  EnhanceProductImagesDto,
 } from "./dto/inventory.dto";
 import {
   CreateSetDto,
@@ -37,6 +38,7 @@ import {
 import { SkipSecurity } from "../security/security.guard";
 import { FeatureGateGuard } from "../core/subscriptions/feature-gate.guard";
 import { RequireFeature } from "../core/subscriptions/require-feature.decorator";
+import { ImageEnhancementService } from "./image-enhancement.service";
 
 @ApiTags("inventory")
 @Controller("inventory")
@@ -48,6 +50,7 @@ export class InventoryController {
     private transferService: InventoryLocationTransferService,
     private stockAuditService: StockAuditService,
     private productDescriptionService: ProductDescriptionService,
+    private imageEnhancementService: ImageEnhancementService,
   ) {}
 
   // Public endpoints
@@ -251,6 +254,32 @@ export class InventoryController {
         weightUnit: dto.weightUnit,
         gemstones: dto.gemstones,
       },
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  @Post("shop/:shopId/images/enhance")
+  @UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+  @Roles("SHOPKEEPER")
+  @RequireFeature("aiImageEnhancement")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Enhance product photos with studio lighting" })
+  async enhanceProductImages(
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") userShopId: string,
+    @Body() dto: EnhanceProductImagesDto,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException("You can only enhance photos for your own shop");
+    }
+    return this.imageEnhancementService.enhance({
+      userId,
+      shopId,
+      imageUrls: dto.imageUrls,
+      referenceImageUrls: dto.referenceImageUrls,
+      model: dto.model,
+      context: dto.context,
       idempotencyKey: dto.idempotencyKey,
     });
   }

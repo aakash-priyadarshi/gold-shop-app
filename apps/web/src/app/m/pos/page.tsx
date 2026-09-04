@@ -3,6 +3,7 @@
 import { MobileFeatureGate } from "@/components/mobile/MobileFeatureGate";
 
 import { BarcodeScannerSheet } from "@/components/mobile/BarcodeScannerSheet";
+import { AiPhotoEnhancer } from "@/components/ai/AiPhotoEnhancer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import {
   formatCurrencyAmount,
@@ -12,6 +13,7 @@ import {
 import { loadHardwareConfig, printReceipt } from "@/lib/posHardware";
 import { getCounterPaymentMethods } from "@/lib/counterPayments";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { SellerProductBreakdown } from "@/components/shop/SellerProductBreakdown";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +26,7 @@ import { useT } from "@/providers/translation-provider";
 import { calculateGrossWeightGrams } from "@gold-shop/shared";
 import {
     Check,
+    Camera,
     Loader2,
     MessageCircle,
     Minus,
@@ -770,8 +773,31 @@ function AddProductSheet({
   const [metalValue, setMetalValue] = useState("");
   const [makingCharge, setMakingCharge] = useState("");
   const [stockQty, setStockQty] = useState("1");
+  const [images, setImages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [skuScanOpen, setSkuScanOpen] = useState(false);
+  const {
+    uploading: uploadingPhoto,
+    progress: photoProgress,
+    uploadMultiple: uploadPhotos,
+  } = useImageUpload({
+    type: "product",
+    maxFiles: 3,
+    onSuccess: (result) => {
+      if (!result.url) return;
+      setImages((current) =>
+        current.includes(result.url!)
+          ? current
+          : [...current, result.url!].slice(0, 3),
+      );
+    },
+    onError: (message) =>
+      toast({
+        title: t("Photo upload failed"),
+        description: message,
+        variant: "destructive",
+      }),
+  });
 
   const handleSubmit = async () => {
     if (!name.trim() || !weightGrams) {
@@ -791,7 +817,7 @@ function AddProductSheet({
         makingChargeNpr: parseFloat(makingCharge) || 0,
         gemstoneValueNpr: 0,
         stockQuantity: parseInt(stockQty) || 1,
-        images: [],
+        images,
       });
       toast({ title: t("Product added!") });
       onCreated();
@@ -960,6 +986,88 @@ function AddProductSheet({
               className={FIELD}
             />
           </div>
+        </div>
+
+        {/* Photos */}
+        <div className="space-y-2 border-y border-gray-100 py-4 dark:border-gray-800">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-gray-500">
+                <T>Product photos</T>
+              </label>
+              <p className="mt-0.5 text-xs text-gray-400"><T>Up to 3 photos</T></p>
+            </div>
+            {images.length ? (
+              <AiPhotoEnhancer
+                shopId={shopId}
+                images={images}
+                onChange={setImages}
+                context={{
+                  name,
+                  jewelleryType,
+                  metal: metalType,
+                  purity,
+                }}
+              />
+            ) : null}
+          </div>
+          <input
+            id="mobile-product-photo"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="sr-only"
+            disabled={uploadingPhoto || images.length >= 3}
+            onChange={async (event) => {
+              const files = Array.from(event.target.files || []).slice(
+                0,
+                3 - images.length,
+              );
+              if (files.length) await uploadPhotos(files);
+              event.target.value = "";
+            }}
+          />
+          <label
+            htmlFor="mobile-product-photo"
+            className={`flex h-12 items-center justify-center gap-2 rounded-xl border border-dashed text-sm font-medium ${
+              uploadingPhoto || images.length >= 3
+                ? "cursor-not-allowed border-gray-200 text-gray-400 opacity-60 dark:border-gray-700"
+                : "cursor-pointer border-amber-300 bg-amber-50 text-amber-800 active:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+            }`}
+          >
+            {uploadingPhoto ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /><T>Uploading photo…</T> {photoProgress}%</>
+            ) : (
+              <><Camera className="h-4 w-4" /><T>Take or choose photos</T> <span className="tabular-nums">{images.length}/3</span></>
+            )}
+          </label>
+          {images.length ? (
+            <div className="grid grid-cols-3 gap-2">
+              {images.map((url, index) => (
+                <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                  <Image src={url} alt={t(`Product photo ${index + 1}`)} fill className="object-cover" unoptimized />
+                  <AiPhotoEnhancer
+                    shopId={shopId}
+                    images={images}
+                    targetIndex={index}
+                    trigger="icon"
+                    onChange={setImages}
+                    context={{ name, jewelleryType, metal: metalType, purity }}
+                    className="absolute left-1 top-1 z-10 h-8 w-8 border-amber-300 bg-white/95 text-amber-700 shadow-sm dark:bg-gray-950/95"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImages((current) => current.filter((item) => item !== url))}
+                    className="absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm"
+                    aria-label={t("Remove photo")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {/* Stock */}

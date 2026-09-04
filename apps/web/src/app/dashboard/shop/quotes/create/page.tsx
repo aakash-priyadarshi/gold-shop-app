@@ -4,6 +4,7 @@ import {
     type AiDesignVariation,
 } from "@/components/ai/AiDesignStudio";
 import { AiCreditsDepletedNotice, AiCreditCostHint } from "@/components/ai/AiCreditsDepletedNotice";
+import { AiImageModelPicker } from "@/components/ai/AiImageModelPicker";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
@@ -50,7 +51,9 @@ import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl, shopQuotesApi, shopsApi } from "@/lib/api";
 import { isInsufficientAiCreditsError } from "@/lib/aiCredits";
 import {
-    AI_CREDIT_COSTS,
+    AI_IMAGE_MODELS,
+    DEFAULT_GENERATION_MODEL,
+    type AiGenerationModelId,
     toGrams,
     fromGrams,
     getSupportedWeightUnits,
@@ -316,6 +319,10 @@ export default function CreateShopQuotePage() {
     null,
   );
   const [creditsDepleted, setCreditsDepleted] = useState(false);
+  const [designModel, setDesignModel] = useState<AiGenerationModelId>(
+    DEFAULT_GENERATION_MODEL,
+  );
+  const designCreditCost = AI_IMAGE_MODELS[designModel].creditsPerImage;
 
   const { selectedWeightUnit, setWeightUnit, config: marketConfig } = useMarket();
 
@@ -697,13 +704,16 @@ export default function CreateShopQuotePage() {
     setCreditsDepleted(false);
     try {
       const weightG = parseFloat(formData.targetTotalWeightG) || 0;
-      const designSpecs = buildDesignSpecsPayload(formData, {
-        regenerationFeedback: regenerationFeedback || undefined,
-        jewelleryTypeLabel: getJewelleryTypeLabel(formData.jewelleryType),
-        weightDisplay: weightG
-          ? `weighing approximately ${gramsToDisplay(weightG).toFixed(2)}${weightUnitSymbol} (${weightG}g)`
-          : undefined,
-      });
+      const designSpecs = {
+        ...buildDesignSpecsPayload(formData, {
+          regenerationFeedback: regenerationFeedback || undefined,
+          jewelleryTypeLabel: getJewelleryTypeLabel(formData.jewelleryType),
+          weightDisplay: weightG
+            ? `weighing approximately ${gramsToDisplay(weightG).toFixed(2)}${weightUnitSymbol} (${weightG}g)`
+            : undefined,
+        }),
+        model: designModel,
+      };
 
       console.log("[AI Design] POST /designs specs:", designSpecs);
 
@@ -1894,6 +1904,11 @@ export default function CreateShopQuotePage() {
                           <T>Powered by AI</T>
                         </Badge>
                       </div>
+                      <AiImageModelPicker
+                        capability="generation"
+                        value={designModel}
+                        onChange={setDesignModel}
+                      />
                       {designPreviewUrl ? (
                         <div className="space-y-3">
                           <div className="relative w-full rounded-lg overflow-hidden border">
@@ -1986,13 +2001,13 @@ export default function CreateShopQuotePage() {
                             <T>Show the customer an AI preview of the final piece</T>
                           </p>
                           <div className="mt-2">
-                            <AiCreditCostHint cost={AI_CREDIT_COSTS.DESIGN_IMAGE} />
+                            <AiCreditCostHint cost={designCreditCost} />
                           </div>
                           {creditsDepleted && (
                             <div className="mt-2 text-left">
                               <AiCreditsDepletedNotice
                                 action="Generate AI Design Preview"
-                                required={AI_CREDIT_COSTS.DESIGN_IMAGE}
+                                required={designCreditCost}
                               />
                             </div>
                           )}

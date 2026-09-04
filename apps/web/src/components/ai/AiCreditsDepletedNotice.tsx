@@ -56,14 +56,16 @@ export function AiCreditsDepletedNotice({
 export function AiCreditCostHint({
   cost,
   balance,
+  action = "Generate with AI",
 }: {
   cost: number;
   balance?: number | null;
+  action?: string;
 }) {
   const showBalance = typeof balance === "number";
   return (
     <p className="text-[11px] text-muted-foreground">
-      <T>Generate with AI uses</T> {formatAiCredits(cost)} <T>credits</T>
+      <T>{action}</T> <T>uses</T> {formatAiCredits(cost)} <T>credits</T>
       {showBalance ? (
         <>
           {" · "}

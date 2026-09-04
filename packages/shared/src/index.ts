@@ -14,6 +14,7 @@ export * from "./invoice/bill-templates";
 
 // Product catalogue helpers
 export * from "./ai/credits";
+export * from "./ai/image-models";
 export * from "./ai/variation-billing";
 export * from "./product/description-templates";
 export * from "./product/hallmark-id";

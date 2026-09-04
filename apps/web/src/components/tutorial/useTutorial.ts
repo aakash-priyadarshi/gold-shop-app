@@ -430,6 +430,26 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       },
     },
     {
+      element: "[data-tour='product-image-enhance']",
+      popover: {
+        title: "Enhance one photo",
+        description:
+          "Create a studio-lit version of one uploaded product photo, compare it with the original, and accept it only when you are happy with the result. Other photos are used as references without being billed as targets.",
+        side: "top",
+        align: "start",
+      },
+    },
+    {
+      element: "[data-tour='product-images-enhance-all']",
+      popover: {
+        title: "Enhance all photos",
+        description:
+          "Process every uploaded photo together. Each target is billed at the selected model rate, and any failed target is refunded automatically.",
+        side: "top",
+        align: "end",
+      },
+    },
+    {
       element: "[data-tour='product-certificates']",
       popover: {
         title: "Certificates",

@@ -19,12 +19,17 @@ import {
     IsArray,
     IsBoolean,
     IsEnum,
+    IsIn,
     IsNumber,
     IsObject,
     IsOptional,
     IsString,
     ValidateNested,
 } from "class-validator";
+import {
+    AI_GENERATION_MODEL_IDS,
+    type AiGenerationModelId,
+} from "@gold-shop/shared";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
@@ -124,6 +129,10 @@ class GemstoneDto {
 }
 
 class CreateDesignDto {
+  @IsOptional()
+  @IsIn(AI_GENERATION_MODEL_IDS)
+  model?: AiGenerationModelId;
+
   @IsEnum(JewelleryType)
   jewelryType: JewelleryType;
 
@@ -234,6 +243,10 @@ class UpdateVisibilityDto {
 }
 
 class GenerateVariationsDto {
+  @IsOptional()
+  @IsIn(AI_GENERATION_MODEL_IDS)
+  model?: AiGenerationModelId;
+
   @IsString()
   prompt: string;
 

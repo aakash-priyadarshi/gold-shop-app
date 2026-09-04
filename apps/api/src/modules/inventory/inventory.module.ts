@@ -14,6 +14,8 @@ import {
 import { StorageLocationsService } from "./storage-locations.service";
 import { StockAuditService } from "./stock-audit.service";
 import { ProductDescriptionService } from "./product-description.service";
+import { ImageEnhancementService } from "./image-enhancement.service";
+import { ImageWorkerUploadService } from "../media/image-worker-upload.service";
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { ProductDescriptionService } from "./product-description.service";
     StorageLocationsService,
     StockAuditService,
     ProductDescriptionService,
+    ImageEnhancementService,
+    ImageWorkerUploadService,
   ],
   exports: [InventoryService, InventorySetsService, StorageLocationsService, StockAuditService],
 })

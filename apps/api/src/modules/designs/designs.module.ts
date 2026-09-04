@@ -10,6 +10,7 @@ import { DesignVariationsService } from "./design-variations.service";
 import { DesignsController } from "./designs.controller";
 import { DesignsService } from "./designs.service";
 import { ImageGenerationService } from "./image-generation.service";
+import { ImageWorkerUploadService } from "../media/image-worker-upload.service";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ImageGenerationService } from "./image-generation.service";
     ImageGenerationService,
     DescriptionGeneratorService,
     DesignVariationsService,
+    ImageWorkerUploadService,
   ],
   exports: [
     DesignsService,
