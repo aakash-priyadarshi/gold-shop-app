@@ -174,6 +174,22 @@ export class UpdateOfferCampaignEmailDto {
   ctaLabel?: string | null;
 }
 
+/**
+ * Block-based design saved by the advanced product-update email builder.
+ * Blocks are deeply validated by parseOfferEmailDesign in the service —
+ * class-validator only checks the envelope.
+ */
+export class SaveOfferCampaignEmailDesignDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  emailSubject: string;
+
+  @IsArray()
+  @ArrayMaxSize(40)
+  blocks: unknown[];
+}
+
 export class PreviewRecoveryOffersDto {
   @IsArray()
   @ArrayMinSize(1)

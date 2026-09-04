@@ -25,6 +25,13 @@ import type { WebhookEventPayload } from "resend";
 import sharp from "sharp";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
+import {
+  OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES,
+  OFFER_EMAIL_DESIGN_HTML_SOFT_LIMIT_BYTES,
+  parseOfferEmailDesign,
+  isValidOfferEmailDesign,
+} from "./email-design";
+import { EmailDesignRendererService } from "./email-design-renderer.service";
 import { RecoveryOfferDeliveryTiming } from "./dto/recovery-offer.dto";
 import type {
   CreateOfferCampaignDto,
@@ -113,6 +120,7 @@ type CampaignDefinition = {
   emailSubject: string;
   emailHeading: string;
   emailBody: string;
+  emailDesign?: unknown;
   imageUrl?: string | null;
   ctaUrl?: string | null;
   ctaLabel?: string | null;
@@ -140,6 +148,7 @@ export class RecoveryOffersService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly emailDesignRenderer: EmailDesignRendererService,
     @InjectQueue(RECOVERY_OFFERS_QUEUE)
     private readonly queue: Queue<RecoveryOfferDeliveryJob>,
   ) {}
@@ -394,6 +403,195 @@ export class RecoveryOffersService {
     });
 
     return { subject: input.emailSubject, html };
+  }
+
+  /**
+   * Saves a block-based design for a product-update campaign. The design is
+   * parsed and normalized first, then size-checked against the rendered HTML
+   * so an oversized email can never reach the queue. Festival and recovery
+   * campaigns intentionally keep the simple editor.
+   */
+  async updateCampaignEmailDesign(
+    key: string,
+    input: { emailSubject: string; blocks: unknown[] },
+  ) {
+    const resolvedKey = this.normalizeCampaignKey(key, key);
+    const design = this.parseDesignInput(input.blocks);
+
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.offerCampaign.findUnique({
+        where: { key: resolvedKey },
+      });
+      if (!existing) {
+        throw new NotFoundException("Offer campaign not found");
+      }
+      if (existing.kind !== OfferCampaignKind.PRODUCT_UPDATE) {
+        throw new BadRequestException(
+          "Only product-update campaigns support the advanced email builder",
+        );
+      }
+      await this.assertEmailContentEditable(resolvedKey, tx);
+
+      const rendered = this.renderDesignOrThrow(
+        design.blocks,
+        existing.name,
+        input.emailSubject,
+      );
+      if (rendered.bytes > OFFER_EMAIL_DESIGN_HTML_SOFT_LIMIT_BYTES) {
+        this.logger.warn(
+          `Campaign ${resolvedKey} email design renders at ${rendered.bytes} bytes (Gmail clips around 102 KB)`,
+        );
+      }
+
+      return tx.offerCampaign.update({
+        where: { key: resolvedKey },
+        data: {
+          emailSubject: input.emailSubject,
+          emailDesign: design as unknown as Prisma.InputJsonValue,
+        },
+        include: {
+          emailImage: {
+            select: {
+              id: true,
+              fileName: true,
+              contentType: true,
+              byteSize: true,
+              expiresAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+  }
+
+  /** Renders unsaved design blocks for the builder's live preview. */
+  async previewCampaignEmailDesign(
+    key: string,
+    input: { emailSubject: string; blocks: unknown[] },
+  ) {
+    const resolvedKey = this.normalizeCampaignKey(key, key);
+    const campaign = await this.prisma.offerCampaign.findUnique({
+      where: { key: resolvedKey },
+      select: { name: true, kind: true },
+    });
+    if (!campaign) {
+      throw new NotFoundException("Offer campaign not found");
+    }
+    if (campaign.kind !== OfferCampaignKind.PRODUCT_UPDATE) {
+      throw new BadRequestException(
+        "Only product-update campaigns support the advanced email builder",
+      );
+    }
+    const design = this.parseDesignInput(input.blocks);
+    const rendered = this.renderDesignOrThrow(
+      design.blocks,
+      campaign.name,
+      input.emailSubject,
+      "Shop owner",
+    );
+    return {
+      subject: input.emailSubject,
+      html: rendered.html,
+      bytes: rendered.bytes,
+    };
+  }
+
+  /** Clears the design so the campaign falls back to the simple template path. */
+  async clearCampaignEmailDesign(key: string) {
+    const resolvedKey = this.normalizeCampaignKey(key, key);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.offerCampaign.findUnique({
+        where: { key: resolvedKey },
+      });
+      if (!existing) {
+        throw new NotFoundException("Offer campaign not found");
+      }
+      if (existing.kind !== OfferCampaignKind.PRODUCT_UPDATE) {
+        throw new BadRequestException(
+          "Only product-update campaigns support the advanced email builder",
+        );
+      }
+      await this.assertEmailContentEditable(resolvedKey, tx);
+      // DbNull stores a SQL NULL so the column keeps IS NULL semantics.
+      return tx.offerCampaign.update({
+        where: { key: resolvedKey },
+        data: { emailDesign: Prisma.DbNull },
+        include: {
+          emailImage: {
+            select: {
+              id: true,
+              fileName: true,
+              contentType: true,
+              byteSize: true,
+              expiresAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+  }
+
+  /**
+   * Delivery-time design rendering. A queued send must never fail because of
+   * design size, so an oversized render falls back to the proven template
+   * path (saves already enforce the hard limit; this is defense in depth).
+   */
+  private renderDesignForDelivery(
+    design: import("./email-design").OfferEmailDesign,
+    options: {
+      campaignName: string;
+      unsubscribeUrl: string;
+      firstName: string;
+      brandIconUrl: string;
+    },
+  ) {
+    const rendered = this.emailDesignRenderer.render(design.blocks, options);
+    if (rendered.bytes > OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES) {
+      this.logger.error(
+        `Campaign ${options.campaignName} email design renders at ${rendered.bytes} bytes; falling back to the template email`,
+      );
+      return null;
+    }
+    return rendered;
+  }
+
+  private parseDesignInput(blocks: unknown[]) {
+    try {
+      return parseOfferEmailDesign({ blocks });
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error
+          ? error.message
+          : "The email design contains an invalid block",
+      );
+    }
+  }
+
+  private renderDesignOrThrow(
+    blocks: import("./email-design").OfferEmailBlock[],
+    campaignName: string,
+    subject: string,
+    firstName?: string,
+  ) {
+    const rendered = this.emailDesignRenderer.render(blocks, {
+      unsubscribeUrl: "#",
+      campaignName,
+      firstName,
+      brandIconUrl: `${this.frontendBaseUrl()}/favicon/android-chrome-192x192.png`,
+    });
+    if (!subject || !campaignName) {
+      throw new BadRequestException(
+        "The email design needs a campaign name and subject",
+      );
+    }
+    if (rendered.bytes > OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES) {
+      throw new BadRequestException(
+        "The rendered email is too large for Gmail (over 102 KB). Remove or shrink a few blocks.",
+      );
+    }
+    return rendered;
   }
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -879,7 +1077,40 @@ export class RecoveryOffersService {
     const emailImageContentId = activeEmailImage
       ? `offer-header-${activeEmailImage.id}`
       : null;
-    const delivery = await this.mail.send({
+    const activeDesign = isValidOfferEmailDesign(campaign.emailDesign)
+      ? (campaign.emailDesign as import("./email-design").OfferEmailDesign)
+      : null;
+    const designDelivery =
+      activeDesign && isProductUpdate
+        ? this.renderDesignForDelivery(activeDesign, {
+            campaignName: campaign.name,
+            unsubscribeUrl,
+            firstName: offer.user.firstName || "there",
+            brandIconUrl: `${appUrl}/favicon/android-chrome-192x192.png`,
+          })
+        : null;
+    const delivery = designDelivery
+      ? await this.mail.sendHtml({
+          to: offer.email,
+          subject,
+          html: designDelivery.html,
+          from: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
+          replyTo: EMAIL_SENDERS.SUPPORT,
+          idempotencyKey: `recovery-offer/${offer.id}/${tokenHash}`,
+          tags: [
+            {
+              name: "category",
+              value: category,
+            },
+            { name: "offer_id", value: offer.id },
+            { name: "campaign", value: offer.campaignKey },
+          ],
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        })
+      : await this.mail.send({
       to: offer.email,
       subject,
       template,
@@ -962,7 +1193,7 @@ export class RecoveryOffersService {
           toAddress: offer.email,
           subject,
           body: isProductUpdate
-            ? `${campaign.name}: ${campaign.emailHeading}`
+            ? `${campaign.name}: ${designDelivery ? campaign.emailSubject : campaign.emailHeading}`
             : isFestival
               ? `${campaign.name}: ${offer.days} days of PRO and ${campaign.discountPercent}% off during the campaign window.`
               : `Service recovery offer: ${offer.days} days of PRO; no card or automatic renewal.`,

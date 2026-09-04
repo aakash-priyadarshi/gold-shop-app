@@ -53,7 +53,8 @@ export type UploadType =
   | "rfq"
   | "kyc"
   | "review-proof"
-  | "certificate";
+  | "certificate"
+  | "email";
 
 export type UploadErrorCode =
   | "FILE_TOO_LARGE"
@@ -159,6 +160,7 @@ const DEFAULT_OPTIONS: Record<
   kyc: { maxWidth: 1600, maxHeight: 1600, quality: 95 },
   "review-proof": { maxWidth: 1600, maxHeight: 1600, quality: 95 },
   certificate: { maxWidth: 1600, maxHeight: 1600, quality: 90 },
+  email: { maxWidth: 1600, maxHeight: 1600, quality: 90 },
 };
 
 /**
@@ -565,7 +567,86 @@ export function isValidImageUrl(url: string): boolean {
   }
 
   // Check if it's a valid key format (type/timestamp-random.ext)
-  return /^(product|profile|rfq|designs|kyc|chat|certificate|review-proof)\/\d+-[a-z0-9]+\.(jpg|jpeg|png|webp|gif|avif)$/i.test(
+  return /^(product|profile|rfq|designs|kyc|chat|certificate|review-proof|email)\/\d+-[a-z0-9]+\.(jpg|jpeg|png|webp|gif|avif|mp4|webm)$/i.test(
     url,
   );
+}
+
+const EMAIL_MEDIA_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+];
+const EMAIL_MEDIA_VIDEO_TYPES = ["video/mp4", "video/webm"];
+const EMAIL_MEDIA_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Upload media for campaign email designs. Animated GIFs and videos are
+ * uploaded byte-exact — canvas compression would flatten GIF animation —
+ * while still images go through the normal resize/compress path.
+ */
+export async function uploadEmailMedia(
+  file: File,
+  options?: { onProgress?: (progress: number) => void },
+): Promise<UploadResult> {
+  const onProgress = options?.onProgress;
+  const isVideo = EMAIL_MEDIA_VIDEO_TYPES.includes(file.type);
+  const isAnimatedGif =
+    file.type === "image/gif" && /\.gif$/i.test(file.name);
+  const isImage = EMAIL_MEDIA_IMAGE_TYPES.includes(file.type);
+
+  if (!isImage && !isVideo) {
+    return {
+      success: false,
+      error:
+        "Invalid file type. Allowed: JPEG, PNG, WebP, GIF, AVIF images and MP4/WebM videos",
+      errorCode: "INVALID_FILE_TYPE",
+    };
+  }
+  if (file.size > EMAIL_MEDIA_MAX_BYTES) {
+    return {
+      success: false,
+      error: "File too large. Maximum size is 10MB",
+      errorCode: "FILE_TOO_LARGE",
+    };
+  }
+
+  try {
+    onProgress?.(10);
+    // Raw passthrough keeps every GIF frame and the video stream intact.
+    const blob = isAnimatedGif || isVideo ? file : await compressImage(file, {
+      maxWidth: 1600,
+      maxHeight: 1600,
+      quality: 90,
+    });
+    onProgress?.(40);
+
+    const formData = new FormData();
+    formData.append("file", blob, isAnimatedGif || isVideo ? file.name : filenameForCompressed(file.name, blob));
+    const token = await getWorkerToken("upload", "email");
+
+    const response = await fetch(`${getWorkerUrl()}/upload`, {
+      method: "POST",
+      headers: {
+        "X-Upload-Type": "email",
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    onProgress?.(90);
+    const result = await readUploadResult(response);
+    onProgress?.(100);
+    return result;
+  } catch (error) {
+    console.error("Email media upload error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Upload failed",
+    };
+  }
 }

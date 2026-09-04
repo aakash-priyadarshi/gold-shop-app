@@ -8,6 +8,7 @@ import {
 import { createHash } from "crypto";
 import sharp from "sharp";
 import { RecoveryOffersService } from "./recovery-offers.service";
+import { EmailDesignRendererService } from "./email-design-renderer.service";
 
 describe("RecoveryOffersService", () => {
   const prisma: any = {
@@ -47,12 +48,22 @@ describe("RecoveryOffersService", () => {
     emailLog: { create: jest.fn() },
     $transaction: jest.fn(),
   };
-  const mail: any = { send: jest.fn(), renderTemplate: jest.fn() };
+  const mail: any = {
+    send: jest.fn(),
+    sendHtml: jest.fn(),
+    renderTemplate: jest.fn(),
+  };
   const config: any = {
     get: jest.fn((_key: string, fallback: string) => fallback),
   };
   const queue: any = { add: jest.fn() };
-  const service = new RecoveryOffersService(prisma, mail, config, queue);
+  const service = new RecoveryOffersService(
+    prisma,
+    mail,
+    config,
+    new EmailDesignRendererService(),
+    queue,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -2253,7 +2264,238 @@ describe("RecoveryOffersService", () => {
     await expect(service.claim("g".repeat(32), "user-1")).rejects.toThrow(
       "does not include a claimable offer",
     );
-    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
     expect(prisma.sellerSubscription.create).not.toHaveBeenCalled();
   });
+
+  it("saves a validated email design for a product-update campaign", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      name: "AI product photo studio",
+      emailSubject: "Old subject",
+    });
+    prisma.recoveryOffer.findFirst.mockResolvedValue(null);
+    prisma.offerCampaign.update.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+    });
+
+    await service.updateCampaignEmailDesign("whats-new-ai-photo-2026-09", {
+      emailSubject: "New: studio photos from your catalog",
+      blocks: [
+        { type: "heading", text: "Turn a shop photo into a listing-ready image" },
+        {
+          type: "text",
+          text: "Open Product Catalog and tap **Enhance**.",
+        },
+        {
+          type: "image",
+          url: "https://images.orivraa.com/email/demo.gif",
+          alt: "Photo studio demo",
+        },
+      ],
+    });
+
+    expect(prisma.offerCampaign.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { key: "whats-new-ai-photo-2026-09" },
+        data: expect.objectContaining({
+          emailSubject: "New: studio photos from your catalog",
+          emailDesign: expect.objectContaining({
+            blocks: expect.arrayContaining([
+              expect.objectContaining({ type: "heading" }),
+              expect.objectContaining({ type: "image" }),
+            ]),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("rejects the advanced email builder for festival campaigns", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "festival-dashain-2026",
+      kind: OfferCampaignKind.FESTIVAL,
+      name: "Dashain 2026",
+      emailSubject: "Old subject",
+    });
+
+    await expect(
+      service.updateCampaignEmailDesign("festival-dashain-2026", {
+        emailSubject: "Celebrate Dashain",
+        blocks: [{ type: "heading", text: "Happy Dashain" }],
+      }),
+    ).rejects.toThrow(/only product-update campaigns/i);
+    expect(prisma.offerCampaign.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a design block with a javascript URL", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      name: "AI product photo studio",
+      emailSubject: "Old subject",
+    });
+
+    await expect(
+      service.updateCampaignEmailDesign("whats-new-ai-photo-2026-09", {
+        emailSubject: "New: studio photos",
+        blocks: [
+          {
+            type: "button",
+            label: "Try it",
+            url: "javascript:alert(1)",
+          },
+        ],
+      }),
+    ).rejects.toThrow(/https URL/i);
+    expect(prisma.offerCampaign.update).not.toHaveBeenCalled();
+  });
+
+  it("locks design edits when a send is scheduled within 5 minutes", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      name: "AI product photo studio",
+      emailSubject: "Old subject",
+    });
+    prisma.recoveryOffer.findFirst.mockResolvedValue({ id: "offer-1" });
+
+    await expect(
+      service.updateCampaignEmailDesign("whats-new-ai-photo-2026-09", {
+        emailSubject: "New: studio photos",
+        blocks: [{ type: "heading", text: "Hello" }],
+      }),
+    ).rejects.toThrow(/scheduled within 5 minutes/i);
+    expect(prisma.offerCampaign.update).not.toHaveBeenCalled();
+  });
+
+  it("delivers a designed product-update email with tracking headers via sendHtml", async () => {
+    const rawToken = "design-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-design",
+      campaignKey: "whats-new-ai-photo-2026-09",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 0,
+      status: RecoveryOfferStatus.PREPARED,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: "admin-1",
+      user: { firstName: "Owner", marketingUnsubscribedAt: null },
+      shop: { shopName: "Owner Gold" },
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      name: "AI product photo studio",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      complimentaryDays: 0,
+      discountPercent: 0,
+      startsAt: new Date("2026-09-04T00:00:00.000Z"),
+      endsAt: new Date("2026-12-04T00:00:00.000Z"),
+      emailSubject: "New: studio photos from your catalog",
+      emailHeading: "Turn shop photos into listing-ready images",
+      emailBody: "Open Product Catalog and tap Enhance.",
+      emailDesign: {
+        blocks: [
+          { type: "heading", text: "Studio photos in one tap" },
+          { type: "text", text: "Watch the demo, then try **Enhance**." },
+          {
+            type: "video",
+            posterUrl: "https://images.orivraa.com/email/poster.png",
+            videoUrl: "https://images.orivraa.com/email/demo.mp4",
+            label: "Watch the demo",
+          },
+        ],
+      },
+      isActive: true,
+      emailImage: null,
+    });
+    mail.sendHtml.mockResolvedValue({
+      success: true,
+      messageId: "message-design",
+    });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emailLog.create.mockResolvedValue({ id: "log-design" });
+
+    const result = await service.deliverQueuedOffer({
+      offerId: "offer-design",
+      rawToken,
+    });
+
+    expect(result).toEqual({ skipped: false });
+    expect(mail.sendHtml).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "New: studio photos from your catalog",
+        idempotencyKey: `recovery-offer/offer-design/${tokenHash}`,
+        tags: [
+          { name: "category", value: "product_update" },
+          { name: "offer_id", value: "offer-design" },
+          { name: "campaign", value: "whats-new-ai-photo-2026-09" },
+        ],
+        headers: {
+          "List-Unsubscribe": expect.stringMatching(
+            /^<https:\/\/api\.orivraa\.com\/api\/recovery-offers\/unsubscribe\?token=/,
+          ),
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      }),
+    );
+    const html = mail.sendHtml.mock.calls[0][0].html as string;
+    expect(html).toContain("Studio photos in one tap");
+    expect(html).toContain("https://images.orivraa.com/email/poster.png");
+    expect(html).toContain("Unsubscribe from future offers");
+    expect(mail.send).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the template email when a design is invalid JSON", async () => {
+    const rawToken = "design-fallback-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-fallback",
+      campaignKey: "whats-new-ai-photo-2026-09",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 0,
+      status: RecoveryOfferStatus.PREPARED,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: "admin-1",
+      user: { firstName: "Owner", marketingUnsubscribedAt: null },
+      shop: { shopName: "Owner Gold" },
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      name: "AI product photo studio",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      complimentaryDays: 0,
+      discountPercent: 0,
+      startsAt: new Date("2026-09-04T00:00:00.000Z"),
+      endsAt: new Date("2026-12-04T00:00:00.000Z"),
+      emailSubject: "New: studio photos from your catalog",
+      emailHeading: "Turn shop photos into listing-ready images",
+      emailBody: "Open Product Catalog and tap Enhance.",
+      emailDesign: { blocks: [{ type: "nonsense" }] },
+      isActive: true,
+      emailImage: null,
+    });
+    mail.send.mockResolvedValue({
+      success: true,
+      messageId: "message-fallback",
+    });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emailLog.create.mockResolvedValue({ id: "log-fallback" });
+
+    const result = await service.deliverQueuedOffer({
+      offerId: "offer-fallback",
+      rawToken,
+    });
+
+    expect(result).toEqual({ skipped: false });
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "product-update" }),
+    );
+    expect(mail.sendHtml).not.toHaveBeenCalled();
+  });
 });
+

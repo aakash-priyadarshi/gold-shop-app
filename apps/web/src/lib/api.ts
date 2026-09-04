@@ -2651,6 +2651,8 @@ export interface OfferCampaign {
   emailSubject: string;
   emailHeading: string;
   emailBody: string;
+  /** Persisted block design; matches the backend's { blocks: [...] } shape. */
+  emailDesign?: { blocks: OfferEmailBlock[] } | null;
   imageUrl?: string | null;
   ctaUrl?: string | null;
   ctaLabel?: string | null;
@@ -2667,6 +2669,44 @@ export interface OfferCampaign {
 }
 
 export type OfferEmailImageMode = "KEEP" | "DEFAULT" | "URL" | "UPLOAD";
+
+export type OfferEmailAnimation = "none" | "fadeIn" | "slideUp";
+
+export type OfferEmailBlock =
+  | { type: "heading"; text: string; animation?: OfferEmailAnimation }
+  | {
+      type: "text";
+      text: string;
+      align?: "left" | "center";
+      animation?: OfferEmailAnimation;
+    }
+  | {
+      type: "image";
+      url: string;
+      alt: string;
+      linkUrl?: string;
+      animation?: OfferEmailAnimation;
+    }
+  | {
+      type: "video";
+      posterUrl: string;
+      videoUrl: string;
+      label?: string;
+      animation?: OfferEmailAnimation;
+    }
+  | {
+      type: "button";
+      label: string;
+      url: string;
+      variant?: "primary" | "secondary";
+    }
+  | { type: "divider" }
+  | { type: "spacer"; size?: number };
+
+export interface OfferCampaignEmailDesignDraft {
+  emailSubject: string;
+  blocks: OfferEmailBlock[];
+}
 
 export interface OfferCampaignEmailDraft {
   emailSubject: string;
@@ -2800,6 +2840,23 @@ export const recoveryOffersApi = {
     api.post<{ subject: string; html: string }>(
       `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email/preview`,
       offerCampaignEmailFormData(data),
+    ),
+  updateCampaignEmailDesign: (key: string, data: OfferCampaignEmailDesignDraft) =>
+    api.put<OfferCampaign>(
+      `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email-design`,
+      data,
+    ),
+  previewCampaignEmailDesign: (
+    key: string,
+    data: OfferCampaignEmailDesignDraft,
+  ) =>
+    api.post<{ subject: string; html: string; bytes: number }>(
+      `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email-design/preview`,
+      data,
+    ),
+  clearCampaignEmailDesign: (key: string) =>
+    api.delete<OfferCampaign>(
+      `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email-design`,
     ),
   getCampaign: (key: string) =>
     api.get<OfferCampaign>(

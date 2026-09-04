@@ -3530,6 +3530,9 @@ model OfferCampaign {
   emailSubject      String
   emailHeading      String
   emailBody         String                    @db.Text
+  /// Optional block-based email design (advanced product-update builder).
+  /// When present, delivery renders this design instead of the .hbs template.
+  emailDesign       Json?
   imageUrl          String?
   ctaUrl            String?
   ctaLabel          String?
