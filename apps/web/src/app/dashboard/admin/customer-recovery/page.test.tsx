@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   festivalCalendar: vi.fn(),
   createCampaign: vi.fn(),
   updateCampaign: vi.fn(),
+  updateCampaignEmail: vi.fn(),
+  previewCampaignEmail: vi.fn(),
   toast: vi.fn(),
 }));
 
@@ -55,6 +57,8 @@ vi.mock("@/lib/api", () => ({
     festivalCalendar: mocks.festivalCalendar,
     createCampaign: mocks.createCampaign,
     updateCampaign: mocks.updateCampaign,
+    updateCampaignEmail: mocks.updateCampaignEmail,
+    previewCampaignEmail: mocks.previewCampaignEmail,
   },
 }));
 
@@ -367,6 +371,12 @@ describe("OffersAdminPage", () => {
         key: `festival-diwali-${calendarFestivalDate.getFullYear()}`,
       },
     });
+    mocks.previewCampaignEmail.mockResolvedValue({
+      data: {
+        subject: "Offer preview",
+        html: "<html><body><p>Rendered preview</p></body></html>",
+      },
+    });
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
@@ -437,13 +447,18 @@ describe("OffersAdminPage", () => {
     fireEvent.click(
       screen.getByRole("checkbox", { name: "Select No shop yet" }),
     );
-    fireEvent.click(screen.getByRole("radio", { name: "Custom date and time" }));
+    fireEvent.click(
+      screen.getByRole("radio", { name: "Custom date and time" }),
+    );
     fireEvent.change(screen.getByLabelText("Custom send time"), {
       target: { value: "2026-09-05T10:00" },
     });
-    fireEvent.change(screen.getByLabelText("Send time for noshop@example.com"), {
-      target: { value: "2026-09-06T14:30" },
-    });
+    fireEvent.change(
+      screen.getByLabelText("Send time for noshop@example.com"),
+      {
+        target: { value: "2026-09-06T14:30" },
+      },
+    );
     fireEvent.click(
       screen.getByRole("button", { name: "Schedule selected at custom time" }),
     );
@@ -674,7 +689,7 @@ describe("OffersAdminPage", () => {
       isActive: true,
     };
     mocks.listCampaigns.mockResolvedValue({ data: [winbackCampaign] });
-    mocks.updateCampaign.mockResolvedValue({ data: winbackCampaign });
+    mocks.updateCampaignEmail.mockResolvedValue({ data: winbackCampaign });
 
     await renderLoadedPage();
 
@@ -689,14 +704,73 @@ describe("OffersAdminPage", () => {
     );
 
     await waitFor(() => {
-      expect(mocks.updateCampaign).toHaveBeenCalledWith(
+      expect(mocks.updateCampaignEmail).toHaveBeenCalledWith(
         "customer-winback-2026-09",
         {
           emailSubject: "Updated win-back subject",
           emailHeading: winbackCampaign.emailHeading,
           emailBody: winbackCampaign.emailBody,
-          imageUrl: "",
+          imageMode: "DEFAULT",
         },
+      );
+    });
+  });
+
+  it("previews and saves an uploaded GIF as the inline email header", async () => {
+    const campaign = {
+      id: "campaign-winback",
+      key: "customer-winback-2026-09",
+      name: "Customer win-back",
+      kind: "RECOVERY",
+      complimentaryDays: 50,
+      discountPercent: 0,
+      startsAt: null,
+      endsAt: null,
+      emailSubject: "Recovery offer",
+      emailHeading: "Come back to Orivraa",
+      emailBody: "We made Orivraa better for your jewellery shop.",
+      imageUrl: null,
+      emailImage: null,
+      nextScheduledFor: null,
+      isActive: true,
+    };
+    mocks.listCampaigns.mockResolvedValue({ data: [campaign] });
+    mocks.updateCampaignEmail.mockResolvedValue({ data: campaign });
+
+    await renderLoadedPage();
+    fireEvent.click(screen.getByRole("button", { name: "Edit email content" }));
+
+    const gif = new File(["GIF89a"], "festival-header.gif", {
+      type: "image/gif",
+    });
+    fireEvent.change(screen.getByLabelText("Upload email header image"), {
+      target: { files: [gif] },
+    });
+    expect(screen.getByText("festival-header.gif")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Preview email" }));
+    await waitFor(() => {
+      expect(mocks.previewCampaignEmail).toHaveBeenCalledWith(
+        campaign.key,
+        expect.objectContaining({ imageMode: "UPLOAD", image: gif }),
+      );
+    });
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      "Offer preview",
+    );
+    expect(screen.getByTitle("Rendered email preview")).toHaveAttribute(
+      "sandbox",
+      "",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update email content" }),
+    );
+    await waitFor(() => {
+      expect(mocks.updateCampaignEmail).toHaveBeenCalledWith(
+        campaign.key,
+        expect.objectContaining({ imageMode: "UPLOAD", image: gif }),
       );
     });
   });
@@ -751,7 +825,9 @@ describe("OffersAdminPage", () => {
       imageUrl: null,
       // Lock point (5 minutes before the send) is ~8s away so the form can
       // be opened unlocked before the threshold passes.
-      nextScheduledFor: new Date(Date.now() + 5 * 60 * 1000 + 8000).toISOString(),
+      nextScheduledFor: new Date(
+        Date.now() + 5 * 60 * 1000 + 8000,
+      ).toISOString(),
       isActive: true,
     };
     mocks.listCampaigns.mockResolvedValue({ data: [winbackCampaign] });
@@ -813,9 +889,7 @@ describe("OffersAdminPage", () => {
     });
     await waitFor(() => expect(editEmailButton).toBeDisabled());
 
-    fireEvent.click(
-      screen.getByRole("button", { name: futureFestival.name }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: futureFestival.name }));
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Edit email content" }),
@@ -849,7 +923,9 @@ describe("OffersAdminPage", () => {
       ).toBeEnabled();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Create Diwali offer" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create Diwali offer" }),
+    );
     expect(screen.getByLabelText("Campaign name")).toBeInTheDocument();
   });
 });

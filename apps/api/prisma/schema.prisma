@@ -3531,14 +3531,29 @@ model OfferCampaign {
   emailHeading      String
   emailBody         String                    @db.Text
   imageUrl          String?
+  emailImageId      String?                   @unique
   isActive          Boolean                   @default(true)
   createdBy         String?
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
   redemptions       OfferCampaignRedemption[]
+  emailImage        OfferEmailImage?          @relation(fields: [emailImageId], references: [id], onDelete: SetNull)
 
   @@index([kind, isActive, startsAt, endsAt])
   @@index([endsAt])
+}
+
+model OfferEmailImage {
+  id          String         @id @default(cuid())
+  fileName    String
+  contentType String
+  byteSize    Int
+  content     Bytes
+  expiresAt   DateTime
+  createdAt   DateTime       @default(now())
+  campaign    OfferCampaign?
+
+  @@index([expiresAt])
 }
 
 /// Sales inquiry raised from the billing page ("contact sales" for Pro+ /

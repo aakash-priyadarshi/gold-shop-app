@@ -6,6 +6,15 @@ import * as nodemailer from 'nodemailer';
 import * as path from 'path';
 import { Resend } from 'resend';
 
+export interface EmailAttachment {
+  filename: string;
+  content?: Buffer | string;
+  path?: string;
+  contentType?: string;
+  /** When present, the image is embedded in the message body via cid:. */
+  contentId?: string;
+}
+
 export interface EmailOptions {
   to: string | string[];
   subject: string;
@@ -17,12 +26,7 @@ export interface EmailOptions {
   idempotencyKey?: string;
   tags?: Array<{ name: string; value: string }>;
   headers?: Record<string, string>;
-  attachments?: Array<{
-    filename: string;
-    content?: Buffer | string;
-    path?: string;
-    contentType?: string;
-  }>;
+  attachments?: EmailAttachment[];
 }
 
 export interface SendResult {
@@ -38,12 +42,7 @@ export interface RenderedEmailOptions {
   from?: string;
   replyTo?: string;
   allowAdminLinks?: boolean;
-  attachments?: Array<{
-    filename: string;
-    content?: Buffer | string;
-    path?: string;
-    contentType?: string;
-  }>;
+  attachments?: EmailAttachment[];
 }
 
 // Sender identities
@@ -189,21 +188,12 @@ export class MailService {
     // newlines become <br />. Content is HTML-escaped before wrapping.
     handlebars.registerHelper('paragraphs', (text: string) => {
       if (!text) return '';
-      const escapeHtml = (value: string) =>
-        value
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
+      const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const html = String(text)
         .split(/\r?\n\s*\r?\n/)
         .map((block) => block.trim())
         .filter(Boolean)
-        .map(
-          (block) =>
-            `<p style="margin:0 0 14px;font-size:16px;color:#344054">${escapeHtml(
-              block,
-            ).replace(/\r?\n/g, '<br />')}</p>`,
-        )
+        .map((block) => `<p style="margin:0 0 14px;font-size:16px;color:#344054">${escapeHtml(block).replace(/\r?\n/g, '<br />')}</p>`)
         .join('');
       return new handlebars.SafeString(html);
     });
@@ -215,7 +205,7 @@ export class MailService {
     }
 
     const templatePath = path.join(this.templatesDir, `${templateName}.hbs`);
-    
+
     try {
       const templateSource = fs.readFileSync(templatePath, 'utf-8');
       const template = handlebars.compile(templateSource);
@@ -230,9 +220,7 @@ export class MailService {
 
   private assertSafeCustomerEmail(templateName: string, html: string) {
     if (html.includes('/dashboard/admin')) {
-      throw new Error(
-        `Email template ${templateName} contains an admin dashboard link. Set allowAdminLinks only for internal/admin-only emails.`,
-      );
+      throw new Error(`Email template ${templateName} contains an admin dashboard link. Set allowAdminLinks only for internal/admin-only emails.`);
     }
   }
 
@@ -250,6 +238,15 @@ export class MailService {
 
   renderTemplateString(source: string, context: Record<string, any>): string {
     return handlebars.compile(source)(this.buildTemplateContext(context));
+  }
+
+  async renderTemplate(templateName: string, context: Record<string, any>, allowAdminLinks = false): Promise<string> {
+    const template = await this.loadTemplate(templateName);
+    const html = template(this.buildTemplateContext(context));
+    if (!allowAdminLinks) {
+      this.assertSafeCustomerEmail(templateName, html);
+    }
+    return html;
   }
 
   async sendHtml(options: RenderedEmailOptions): Promise<SendResult> {
@@ -288,15 +285,7 @@ export class MailService {
     }
 
     try {
-      // Load and compile template
-      const template = await this.loadTemplate(options.template);
-      const html = template({
-        ...this.buildTemplateContext(options.context),
-      });
-
-      if (!options.allowAdminLinks) {
-        this.assertSafeCustomerEmail(options.template, html);
-      }
+      const html = await this.renderTemplate(options.template, options.context, options.allowAdminLinks);
 
       // Determine sender
       const from = options.from || `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`;
@@ -304,31 +293,12 @@ export class MailService {
 
       // Use Resend if available
       if (this.provider === 'resend' && this.resend) {
-        return this.sendWithResend(
-          from,
-          to,
-          options.subject,
-          html,
-          options.replyTo,
-          options.attachments,
-          options.idempotencyKey,
-          options.tags,
-          options.headers,
-        );
+        return this.sendWithResend(from, to, options.subject, html, options.replyTo, options.attachments, options.idempotencyKey, options.tags, options.headers);
       }
 
       // Fallback to SMTP
       if (this.provider === 'smtp' && this.transporter) {
-        return this.sendWithSmtp(
-          from,
-          to,
-          options.subject,
-          html,
-          options.replyTo,
-          options.attachments,
-          options.idempotencyKey,
-          options.headers,
-        );
+        return this.sendWithSmtp(from, to, options.subject, html, options.replyTo, options.attachments, options.idempotencyKey, options.headers);
       }
 
       return { success: false, error: 'No email provider available' };
@@ -350,15 +320,14 @@ export class MailService {
     extraHeaders?: EmailOptions['headers'],
   ): Promise<SendResult> {
     try {
-      const resendAttachments = attachments?.map((a) => ({
-        filename: a.filename,
-        content: Buffer.isBuffer(a.content)
-          ? a.content
-          : typeof a.content === "string"
-            ? Buffer.from(a.content)
-            : undefined,
-        contentType: a.contentType,
-      })).filter((a) => a.content);
+      const resendAttachments = attachments
+        ?.map((a) => ({
+          filename: a.filename,
+          content: Buffer.isBuffer(a.content) ? a.content : typeof a.content === 'string' ? Buffer.from(a.content) : undefined,
+          contentType: a.contentType,
+          contentId: a.contentId,
+        }))
+        .filter((a) => a.content);
 
       const { data, error } = await this.resend!.emails.send(
         {
@@ -368,12 +337,8 @@ export class MailService {
           html,
           replyTo,
           ...(tags?.length ? { tags } : {}),
-          ...(resendAttachments?.length
-            ? { attachments: resendAttachments }
-            : {}),
-          ...(extraHeaders && Object.keys(extraHeaders).length
-            ? { headers: extraHeaders }
-            : {}),
+          ...(resendAttachments?.length ? { attachments: resendAttachments } : {}),
+          ...(extraHeaders && Object.keys(extraHeaders).length ? { headers: extraHeaders } : {}),
         },
         idempotencyKey ? { idempotencyKey } : undefined,
       );
@@ -403,14 +368,9 @@ export class MailService {
   ): Promise<SendResult> {
     const maxRetries = 3;
     let lastError: Error | null = null;
-    const resendHeaders =
-      idempotencyKey && this.smtpHost === 'smtp.resend.com'
-        ? { 'Resend-Idempotency-Key': idempotencyKey }
-        : undefined;
+    const resendHeaders = idempotencyKey && this.smtpHost === 'smtp.resend.com' ? { 'Resend-Idempotency-Key': idempotencyKey } : undefined;
     if (idempotencyKey && !resendHeaders) {
-      this.logger.warn(
-        `SMTP provider ${this.smtpHost || 'unknown'} does not support provider-side idempotency`,
-      );
+      this.logger.warn(`SMTP provider ${this.smtpHost || 'unknown'} does not support provider-side idempotency`);
     }
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -421,7 +381,10 @@ export class MailService {
           subject,
           html,
           replyTo,
-          attachments,
+          attachments: attachments?.map(({ contentId, ...attachment }) => ({
+            ...attachment,
+            ...(contentId ? { cid: contentId, contentDisposition: 'inline' as const } : {}),
+          })),
           headers: {
             ...(resendHeaders || {}),
             ...(extraHeaders || {}),
@@ -433,9 +396,9 @@ export class MailService {
       } catch (sendError: any) {
         lastError = sendError;
         this.logger.warn(`SMTP attempt ${attempt}/${maxRetries} failed: ${sendError.message}`);
-        
+
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+          await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
         }
       }
     }
@@ -450,7 +413,11 @@ export class MailService {
   }
 
   // Get current provider info
-  getProviderInfo(): { provider: EmailProvider; configured: boolean; sender: string } {
+  getProviderInfo(): {
+    provider: EmailProvider;
+    configured: boolean;
+    sender: string;
+  } {
     return {
       provider: this.provider,
       configured: this.provider !== 'none',
@@ -507,18 +474,21 @@ export class MailService {
 
   // ==================== ORDER EMAILS ====================
 
-  async sendOrderConfirmation(to: string, data: {
-    customerName: string;
-    orderNumber: string;
-    items: Array<{ name: string; quantity: number; price: number }>;
-    subtotal: number;
-    shipping: number;
-    tax: number;
-    total: number;
-    currency: string;
-    shippingAddress: string;
-    shopName: string;
-  }): Promise<SendResult> {
+  async sendOrderConfirmation(
+    to: string,
+    data: {
+      customerName: string;
+      orderNumber: string;
+      items: Array<{ name: string; quantity: number; price: number }>;
+      subtotal: number;
+      shipping: number;
+      tax: number;
+      total: number;
+      currency: string;
+      shippingAddress: string;
+      shopName: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Order Confirmed - #${data.orderNumber}`,
@@ -528,14 +498,17 @@ export class MailService {
     });
   }
 
-  async sendOrderStatusUpdate(to: string, data: {
-    customerName: string;
-    orderNumber: string;
-    status: string;
-    statusMessage: string;
-    trackingNumber?: string;
-    trackingUrl?: string;
-  }): Promise<SendResult> {
+  async sendOrderStatusUpdate(
+    to: string,
+    data: {
+      customerName: string;
+      orderNumber: string;
+      status: string;
+      statusMessage: string;
+      trackingNumber?: string;
+      trackingUrl?: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Order Update - #${data.orderNumber}`,
@@ -545,14 +518,17 @@ export class MailService {
     });
   }
 
-  async sendOrderShipped(to: string, data: {
-    customerName: string;
-    orderNumber: string;
-    trackingNumber: string;
-    trackingUrl: string;
-    carrier: string;
-    estimatedDelivery: string;
-  }): Promise<SendResult> {
+  async sendOrderShipped(
+    to: string,
+    data: {
+      customerName: string;
+      orderNumber: string;
+      trackingNumber: string;
+      trackingUrl: string;
+      carrier: string;
+      estimatedDelivery: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Your Order Has Shipped - #${data.orderNumber}`,
@@ -562,11 +538,14 @@ export class MailService {
     });
   }
 
-  async sendOrderDelivered(to: string, data: {
-    customerName: string;
-    orderNumber: string;
-    shopName: string;
-  }): Promise<SendResult> {
+  async sendOrderDelivered(
+    to: string,
+    data: {
+      customerName: string;
+      orderNumber: string;
+      shopName: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Order Delivered - #${data.orderNumber}`,
@@ -578,15 +557,18 @@ export class MailService {
 
   // ==================== SELLER EMAILS ====================
 
-  async sendNewOrderNotification(to: string, data: {
-    shopOwnerName: string;
-    orderNumber: string;
-    customerName: string;
-    items: Array<{ name: string; quantity: number; price: number }>;
-    total: number;
-    currency: string;
-    dashboardUrl: string;
-  }): Promise<SendResult> {
+  async sendNewOrderNotification(
+    to: string,
+    data: {
+      shopOwnerName: string;
+      orderNumber: string;
+      customerName: string;
+      items: Array<{ name: string; quantity: number; price: number }>;
+      total: number;
+      currency: string;
+      dashboardUrl: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `🎉 New Order Received - #${data.orderNumber}`,
@@ -596,15 +578,18 @@ export class MailService {
     });
   }
 
-  async sendNewRfqNotification(to: string, data: {
-    shopOwnerName: string;
-    rfqNumber: string;
-    customerName: string;
-    itemDescription: string;
-    material: string;
-    weight: string;
-    dashboardUrl: string;
-  }): Promise<SendResult> {
+  async sendNewRfqNotification(
+    to: string,
+    data: {
+      shopOwnerName: string;
+      rfqNumber: string;
+      customerName: string;
+      itemDescription: string;
+      material: string;
+      weight: string;
+      dashboardUrl: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `New Quote Request - ${data.rfqNumber}`,
@@ -616,14 +601,17 @@ export class MailService {
 
   // ==================== ADMIN EMAILS ====================
 
-  async sendCommissionReminder(to: string, data: {
-    shopOwnerName: string;
-    shopName: string;
-    pendingAmount: number;
-    currency: string;
-    dueDate: string;
-    paymentUrl: string;
-  }): Promise<SendResult> {
+  async sendCommissionReminder(
+    to: string,
+    data: {
+      shopOwnerName: string;
+      shopName: string;
+      pendingAmount: number;
+      currency: string;
+      dueDate: string;
+      paymentUrl: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Commission Payment Reminder - ${data.shopName}`,
@@ -633,14 +621,17 @@ export class MailService {
     });
   }
 
-  async sendAdminAlert(to: string | string[], data: {
-    alertType: string;
-    title: string;
-    message: string;
-    details?: Record<string, string>;
-    actionUrl?: string;
-    actionText?: string;
-  }): Promise<SendResult> {
+  async sendAdminAlert(
+    to: string | string[],
+    data: {
+      alertType: string;
+      title: string;
+      message: string;
+      details?: Record<string, string>;
+      actionUrl?: string;
+      actionText?: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `[Alert] ${data.title}`,
@@ -653,15 +644,18 @@ export class MailService {
 
   // ==================== QUOTE EMAILS ====================
 
-  async sendQuoteReceived(to: string, data: {
-    customerName: string;
-    rfqNumber: string;
-    shopName: string;
-    quotedPrice: number;
-    currency: string;
-    validUntil: string;
-    viewUrl: string;
-  }): Promise<SendResult> {
+  async sendQuoteReceived(
+    to: string,
+    data: {
+      customerName: string;
+      rfqNumber: string;
+      shopName: string;
+      quotedPrice: number;
+      currency: string;
+      validUntil: string;
+      viewUrl: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Quote Received from ${data.shopName}`,
@@ -670,13 +664,16 @@ export class MailService {
     });
   }
 
-  async sendQuoteAccepted(to: string, data: {
-    shopOwnerName: string;
-    rfqNumber: string;
-    customerName: string;
-    quotedPrice: number;
-    currency: string;
-  }): Promise<SendResult> {
+  async sendQuoteAccepted(
+    to: string,
+    data: {
+      shopOwnerName: string;
+      rfqNumber: string;
+      customerName: string;
+      quotedPrice: number;
+      currency: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `✅ Quote Accepted - ${data.rfqNumber}`,
@@ -686,15 +683,7 @@ export class MailService {
     });
   }
 
-  async sendContactForm(data: {
-    name: string;
-    email: string;
-    phone?: string;
-    company?: string;
-    interest?: string;
-    message: string;
-    source?: string;
-  }): Promise<SendResult> {
+  async sendContactForm(data: { name: string; email: string; phone?: string; company?: string; interest?: string; message: string; source?: string }): Promise<SendResult> {
     return this.send({
       to: 'sales@orivraa.com',
       subject: `💬 New Inquiry from ${data.name}${data.interest ? ` — ${data.interest}` : ''}`,
@@ -705,14 +694,17 @@ export class MailService {
     });
   }
 
-  async sendTrackingLink(to: string, data: {
-    customerName: string;
-    quoteNumber: string;
-    shopName: string;
-    jewelleryType: string;
-    estimatedDays?: number;
-    trackingUrl: string;
-  }): Promise<SendResult> {
+  async sendTrackingLink(
+    to: string,
+    data: {
+      customerName: string;
+      quoteNumber: string;
+      shopName: string;
+      jewelleryType: string;
+      estimatedDays?: number;
+      trackingUrl: string;
+    },
+  ): Promise<SendResult> {
     return this.send({
       to,
       subject: `Track your order ${data.quoteNumber} at ${data.shopName}`,
