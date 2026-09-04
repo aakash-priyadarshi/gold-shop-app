@@ -3557,6 +3557,7 @@ model PlanInquiry {
   user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   quote PlanQuote?
 
+  @@unique([id, shopId])
   @@index([status, createdAt])
   @@index([shopId])
 }
@@ -3585,7 +3586,10 @@ model PlanQuote {
 
   shop Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
   plan SubscriptionPlan @relation(fields: [planId], references: [id])
-  inquiry PlanInquiry?  @relation(fields: [inquiryId], references: [id])
+  // Prisma cannot model an optional composite FK while shopId stays required.
+  // The migration enforces UNIQUE(PlanInquiry.id, shopId) plus a composite
+  // FK so a quote cannot attach another shop's inquiry.
+  inquiry PlanInquiry?  @relation(fields: [inquiryId], references: [id], onDelete: Restrict)
 
   @@index([shopId, status])
   @@index([status, validUntil])

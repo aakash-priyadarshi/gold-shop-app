@@ -359,6 +359,7 @@ export default function OffersAdminPage() {
       setEmailLockReached(true);
       return;
     }
+    setEmailLockReached(false);
     const timer = window.setTimeout(() => setEmailLockReached(true), delay);
     return () => window.clearTimeout(timer);
   }, [emailLockAt]);

@@ -29,8 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useT } from "@/providers/translation-provider";
 import {
   aiCreditsApi,
   paymentGatewayApi,
@@ -142,7 +144,9 @@ export default function AdminBillingPage() {
             <TabsList>
               <TabsTrigger value="plans">Plans</TabsTrigger>
               <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-              <TabsTrigger value="quotes">Plan Requests</TabsTrigger>
+              <TabsTrigger value="quotes">
+                <T>Plan Requests</T>
+              </TabsTrigger>
               <TabsTrigger value="credits">AI Credits</TabsTrigger>
               <TabsTrigger value="gateways">Payment Gateways</TabsTrigger>
             </TabsList>
@@ -261,6 +265,12 @@ const ALL_FEATURE_KEYS: {
   {
     key: "aiDesignGeneration",
     label: "AI design generation",
+    category: "AI & Intelligence",
+    enforced: true,
+  },
+  {
+    key: "aiImageEnhancement",
+    label: "AI product photo enhancement",
     category: "AI & Intelligence",
     enforced: true,
   },
@@ -3463,10 +3473,17 @@ type PlanQuoteRow = {
 };
 
 function PlanRequestsTab() {
+  const t = useT();
   const [inquiries, setInquiries] = useState<PlanInquiryRow[]>([]);
   const [quotes, setQuotes] = useState<PlanQuoteRow[]>([]);
   const [plans, setPlans] = useState<
-    { id: string; displayName: string; currency: string; monthlyPrice: number }[]
+    {
+      id: string;
+      name: string;
+      displayName: string;
+      currency: string;
+      monthlyPrice: number;
+    }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [quotingInquiry, setQuotingInquiry] = useState<PlanInquiryRow | null>(
@@ -3498,8 +3515,8 @@ function PlanRequestsTab() {
       );
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load plan requests",
+        title: t("Error"),
+        description: t("Failed to load plan requests"),
         variant: "destructive",
       });
     } finally {
@@ -3513,9 +3530,7 @@ function PlanRequestsTab() {
   }, []);
 
   const openQuoteDialog = (inquiry: PlanInquiryRow) => {
-    const matchingPlan = plans.find(
-      (plan) => plan.displayName === inquiry.planName,
-    );
+    const matchingPlan = plans.find((plan) => plan.name === inquiry.planName);
     setForm({
       planId: matchingPlan?.id ?? "",
       monthlyPrice: matchingPlan ? String(matchingPlan.monthlyPrice) : "",
@@ -3530,8 +3545,8 @@ function PlanRequestsTab() {
     if (!quotingInquiry) return;
     if (!form.planId) {
       toast({
-        title: "Select a plan",
-        description: "Choose the plan this quote customises.",
+        title: t("Select a plan"),
+        description: t("Choose the plan this quote customises."),
         variant: "destructive",
       });
       return;
@@ -3540,8 +3555,8 @@ function PlanRequestsTab() {
     const annualPrice = form.annualPrice ? Number(form.annualPrice) : 0;
     if (!monthlyPrice && !annualPrice) {
       toast({
-        title: "Price required",
-        description: "Enter a monthly or annual price for the quote.",
+        title: t("Price required"),
+        description: t("Enter a monthly or annual price for the quote."),
         variant: "destructive",
       });
       return;
@@ -3558,16 +3573,16 @@ function PlanRequestsTab() {
         notes: form.notes.trim() || undefined,
       });
       toast({
-        title: "Quote sent",
-        description: `Emailed a custom quote to ${quotingInquiry.user.email}.`,
+        title: t("Quote sent"),
+        description: `${t("Emailed a custom quote to")} ${quotingInquiry.user.email}.`,
       });
       setQuotingInquiry(null);
       fetchData();
     } catch (err: any) {
       toast({
-        title: "Error",
+        title: t("Error"),
         description:
-          err?.response?.data?.message || "Could not create the quote",
+          err?.response?.data?.message || t("Could not create the quote"),
         variant: "destructive",
       });
     } finally {
@@ -3581,8 +3596,8 @@ function PlanRequestsTab() {
       fetchData();
     } catch {
       toast({
-        title: "Error",
-        description: "Could not update the inquiry",
+        title: t("Error"),
+        description: t("Could not update the inquiry"),
         variant: "destructive",
       });
     }
@@ -3594,9 +3609,9 @@ function PlanRequestsTab() {
       fetchData();
     } catch (err: any) {
       toast({
-        title: "Error",
+        title: t("Error"),
         description:
-          err?.response?.data?.message || "Could not revoke the quote",
+          err?.response?.data?.message || t("Could not revoke the quote"),
         variant: "destructive",
       });
     }
@@ -3605,7 +3620,7 @@ function PlanRequestsTab() {
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        Loading plan requests...
+        <T>Loading plan requests...</T>
       </div>
     );
   }
@@ -3614,16 +3629,22 @@ function PlanRequestsTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Sales inquiries</CardTitle>
+          <CardTitle>
+            <T>Sales inquiries</T>
+          </CardTitle>
           <CardDescription>
-            Shops that asked for custom pricing. Prepare a quote and it is
-            emailed to the shop owner with a private accept link.
+            <T>
+              Shops that asked for custom pricing. Prepare a quote and it is
+              emailed to the shop owner with a private accept link.
+            </T>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {inquiries.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No inquiries yet. They appear when a shop clicks “Contact sales”.
+              <T>
+                No inquiries yet. They appear when a shop clicks “Contact sales”.
+              </T>
             </p>
           ) : (
             inquiries.map((inquiry) => (
@@ -3642,7 +3663,11 @@ function PlanRequestsTab() {
                     >
                       {inquiry.status}
                     </Badge>
-                    {inquiry.quote && <Badge variant="outline">quoted</Badge>}
+                    {inquiry.quote && (
+                      <Badge variant="outline">
+                        <T>quoted</T>
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     {!inquiry.quote && inquiry.status !== "CLOSED" && (
@@ -3652,7 +3677,7 @@ function PlanRequestsTab() {
                         onClick={() => openQuoteDialog(inquiry)}
                       >
                         <Plus className="mr-1 h-3 w-3" />
-                        Create quote
+                        <T>Create quote</T>
                       </Button>
                     )}
                     {inquiry.status !== "CLOSED" && (
@@ -3661,7 +3686,7 @@ function PlanRequestsTab() {
                         variant="ghost"
                         onClick={() => closeInquiry(inquiry.id)}
                       >
-                        Close
+                        <T>Close</T>
                       </Button>
                     )}
                   </div>
@@ -3683,16 +3708,20 @@ function PlanRequestsTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sent quotes</CardTitle>
+          <CardTitle>
+            <T>Sent quotes</T>
+          </CardTitle>
           <CardDescription>
-            A quote is redeemed when the shop completes Stripe checkout with
-            its private link.
+            <T>
+              A quote is redeemed when the shop completes Stripe checkout with
+              its private link.
+            </T>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {quotes.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No quotes sent yet.
+              <T>No quotes sent yet.</T>
             </p>
           ) : (
             quotes.map((quote) => (
@@ -3715,7 +3744,7 @@ function PlanRequestsTab() {
                         · {quote.plan.currency} {quote.annualPrice}/yr{" "}
                       </>
                     )}
-                    · valid until{" "}
+                    · <T>valid until</T>{" "}
                     {new Date(quote.validUntil).toLocaleDateString()}
                   </div>
                 </div>
@@ -3737,7 +3766,7 @@ function PlanRequestsTab() {
                       variant="ghost"
                       onClick={() => revokeQuote(quote.id)}
                     >
-                      Revoke
+                      <T>Revoke</T>
                     </Button>
                   )}
                 </div>
@@ -3756,16 +3785,20 @@ function PlanRequestsTab() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Custom quote for {quotingInquiry?.shop.shopName}
+              <T>Custom quote for</T> {quotingInquiry?.shop.shopName}
             </DialogTitle>
             <DialogDescription>
-              Leave a field empty to omit that billing cycle. The shop receives
-              an email with a private accept link and pays through Stripe
-              Checkout.
+              <T>
+                Leave a field empty to omit that billing cycle. The shop receives
+                an email with a private accept link and pays through Stripe
+                Checkout.
+              </T>
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <Label>Plan</Label>
+            <Label>
+              <T>Plan</T>
+            </Label>
             <Select
               value={form.planId}
               onValueChange={(value) =>
@@ -3773,7 +3806,7 @@ function PlanRequestsTab() {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Choose a plan" />
+                <SelectValue placeholder={t("Choose a plan")} />
               </SelectTrigger>
               <SelectContent>
                 {plans.map((plan) => (
@@ -3785,7 +3818,9 @@ function PlanRequestsTab() {
             </Select>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Monthly price</Label>
+                <Label>
+                  <T>Monthly price</T>
+                </Label>
                 <Input
                   type="number"
                   min={1}
@@ -3796,7 +3831,9 @@ function PlanRequestsTab() {
                 />
               </div>
               <div>
-                <Label>Annual price</Label>
+                <Label>
+                  <T>Annual price</T>
+                </Label>
                 <Input
                   type="number"
                   min={1}
@@ -3808,7 +3845,9 @@ function PlanRequestsTab() {
               </div>
             </div>
             <div>
-              <Label>Valid for (days)</Label>
+              <Label>
+                <T>Valid for (days)</T>
+              </Label>
               <Input
                 type="number"
                 min={1}
@@ -3820,7 +3859,9 @@ function PlanRequestsTab() {
               />
             </div>
             <div>
-              <Label>Notes (included in the email)</Label>
+              <Label>
+                <T>Notes (included in the email)</T>
+              </Label>
               <textarea
                 value={form.notes}
                 onChange={(e) =>
@@ -3833,10 +3874,10 @@ function PlanRequestsTab() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setQuotingInquiry(null)}>
-              Cancel
+              <T>Cancel</T>
             </Button>
             <Button onClick={submitQuote} disabled={saving}>
-              {saving ? "Sending..." : "Send quote"}
+              {saving ? t("Sending...") : t("Send quote")}
             </Button>
           </DialogFooter>
         </DialogContent>

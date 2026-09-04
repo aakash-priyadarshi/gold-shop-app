@@ -128,10 +128,13 @@ export class PlanQuotesService {
     }
 
     if (dto.inquiryId) {
-      const inquiry = await this.prisma.planInquiry.findUnique({
-        where: { id: dto.inquiryId },
+      // The inquiry must belong to the same shop the quote is issued to.
+      const inquiry = await this.prisma.planInquiry.findFirst({
+        where: { id: dto.inquiryId, shopId: shop.id },
       });
-      if (!inquiry) throw new NotFoundException("Plan inquiry not found");
+      if (!inquiry) {
+        throw new NotFoundException("Plan inquiry not found for this shop");
+      }
     }
 
     const token = randomBytes(QUOTE_TOKEN_BYTES).toString("hex");

@@ -769,6 +769,60 @@ describe("OffersAdminPage", () => {
     );
   }, 20000);
 
+  it("unlocks email editing after switching from a locked campaign to a future one", async () => {
+    const lockedWinback = {
+      id: "campaign-winback",
+      key: "customer-winback-2026-09",
+      name: "Customer win-back",
+      kind: "RECOVERY",
+      complimentaryDays: 50,
+      discountPercent: 0,
+      startsAt: null,
+      endsAt: null,
+      emailSubject: "We’re sorry about the invoice issue",
+      emailHeading: "We’re sorry about the invoice issue.",
+      emailBody: "We fixed the issue and improved invoice reliability.",
+      imageUrl: null,
+      nextScheduledFor: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
+      isActive: true,
+    };
+    const futureFestival = {
+      id: "campaign-diwali",
+      key: `festival-diwali-${calendarFestivalDate.getFullYear()}`,
+      name: `Diwali ${calendarFestivalDate.getFullYear()}`,
+      kind: "FESTIVAL",
+      complimentaryDays: 14,
+      discountPercent: 10,
+      startsAt: new Date(`${dateKey(new Date())}T00:00`).toISOString(),
+      endsAt: new Date(`${dateKey(calendarFestivalDate)}T23:59`).toISOString(),
+      emailSubject: "Diwali offer",
+      emailHeading: "Celebrate Diwali",
+      emailBody: "A future Diwali campaign.",
+      imageUrl: null,
+      nextScheduledFor: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      isActive: true,
+    };
+    mocks.listCampaigns.mockResolvedValue({
+      data: [lockedWinback, futureFestival],
+    });
+
+    await renderLoadedPage();
+
+    const editEmailButton = screen.getByRole("button", {
+      name: "Edit email content",
+    });
+    await waitFor(() => expect(editEmailButton).toBeDisabled());
+
+    fireEvent.click(
+      screen.getByRole("button", { name: futureFestival.name }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Edit email content" }),
+      ).toBeEnabled(),
+    );
+  });
+
   it("keeps festival creation disabled until campaigns finish loading", async () => {
     let resolveCampaigns!: (value: { data: unknown[] }) => void;
     mocks.listCampaigns.mockReturnValue(

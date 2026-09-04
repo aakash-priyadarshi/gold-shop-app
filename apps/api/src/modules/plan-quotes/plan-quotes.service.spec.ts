@@ -12,6 +12,7 @@ describe("PlanQuotesService", () => {
     planInquiry: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
     },
     planQuote: {
@@ -96,7 +97,10 @@ describe("PlanQuotesService", () => {
       id: "shop-1",
       user: { email: "owner@example.com", firstName: "Owner" },
     });
-    prisma.planInquiry.findUnique.mockResolvedValue({ id: "inq-1" });
+    prisma.planInquiry.findFirst.mockResolvedValue({
+      id: "inq-1",
+      shopId: "shop-1",
+    });
     prisma.planQuote.create.mockResolvedValue({ id: "quote-1", token: "tok" });
     prisma.planInquiry.update.mockResolvedValue({});
 
@@ -124,6 +128,9 @@ describe("PlanQuotesService", () => {
       where: { id: "inq-1" },
       data: { status: "QUOTED" },
     });
+    expect(prisma.planInquiry.findFirst).toHaveBeenCalledWith({
+      where: { id: "inq-1", shopId: "shop-1" },
+    });
     expect(mail.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "owner@example.com",
@@ -134,6 +141,36 @@ describe("PlanQuotesService", () => {
         }),
       }),
     );
+  });
+
+  it("rejects attaching an inquiry from a different shop", async () => {
+    prisma.subscriptionPlan.findUnique.mockResolvedValue({
+      id: "plan-plus",
+      name: "PRO_PLUS",
+      displayName: "Pro+",
+      currency: "INR",
+      monthlyPrice: 4999,
+      isActive: true,
+    });
+    prisma.shop.findUnique.mockResolvedValue({
+      id: "shop-1",
+      user: { email: "owner@example.com", firstName: "Owner" },
+    });
+    prisma.planInquiry.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createQuote(
+        {
+          shopId: "shop-1",
+          planId: "plan-plus",
+          inquiryId: "inq-other-shop",
+          monthlyPrice: 3999,
+          validityDays: 30,
+        },
+        "admin-1",
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.planQuote.create).not.toHaveBeenCalled();
   });
 
   it("rejects quotes for free plans and quotes without any price", async () => {
