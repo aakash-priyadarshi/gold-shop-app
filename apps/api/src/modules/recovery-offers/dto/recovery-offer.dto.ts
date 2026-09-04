@@ -34,6 +34,13 @@ export const OFFER_CAMPAIGN_KINDS = [
   "PRODUCT_UPDATE",
 ] as const;
 export type OfferCampaignKindInput = (typeof OFFER_CAMPAIGN_KINDS)[number];
+export const OFFER_EMAIL_IMAGE_MODES = [
+  "KEEP",
+  "DEFAULT",
+  "URL",
+  "UPLOAD",
+] as const;
+export type OfferEmailImageMode = (typeof OFFER_EMAIL_IMAGE_MODES)[number];
 
 export class FestivalCalendarQueryDto {
   @IsOptional()
@@ -124,6 +131,47 @@ export class UpdateOfferCampaignDto extends PartialType(
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+}
+
+export class UpdateOfferCampaignEmailDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  emailSubject: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  emailHeading: string;
+
+  @IsString()
+  @MinLength(10)
+  @MaxLength(4000)
+  emailBody: string;
+
+  @IsIn(OFFER_EMAIL_IMAGE_MODES)
+  imageMode: OfferEmailImageMode;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https?:\/\/\S+$/i, {
+    message: "imageUrl must be an http(s) URL",
+  })
+  @MaxLength(500)
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https:\/\/\S+$/i, {
+    message: "ctaUrl must be an https URL or empty",
+  })
+  @MaxLength(500)
+  ctaUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  ctaLabel?: string | null;
 }
 
 export class PreviewRecoveryOffersDto {

@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   MarketRegion,
   OfferCampaignKind,
@@ -20,11 +22,13 @@ import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
 import { CronTime } from "cron";
 import type { WebhookEventPayload } from "resend";
+import sharp from "sharp";
 import { PrismaService } from "../../prisma/prisma.service";
 import { EMAIL_SENDERS, MailService } from "../mail/mail.service";
 import { RecoveryOfferDeliveryTiming } from "./dto/recovery-offer.dto";
 import type {
   CreateOfferCampaignDto,
+  UpdateOfferCampaignEmailDto,
   UpdateOfferCampaignDto,
 } from "./dto/recovery-offer.dto";
 
@@ -32,6 +36,9 @@ const DEFAULT_INCIDENT_CAMPAIGN_KEY = "incident-recovery-2026-08";
 const DEFAULT_AUDIENCE_CAMPAIGN_KEY = "customer-winback-2026-09";
 const RECOVERY_DAYS = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const OFFER_EMAIL_IMAGE_RETENTION_MS = 30 * DAY_MS;
+export const OFFER_EMAIL_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const OFFER_EMAIL_IMAGE_MAX_PIXELS = 40_000_000;
 // Email copy and artwork are locked this close to a scheduled send so the
 // rendered emails cannot change while sends are already going out.
 const EMAIL_EDIT_LOCK_MS = 5 * 60 * 1000;
@@ -89,6 +96,12 @@ type Candidate = {
 
 type RecoveryGrantOutcome = "activated" | "extended" | "already_covered";
 
+type ValidatedOfferEmailImage = {
+  fileName: string;
+  contentType: "image/png" | "image/jpeg" | "image/gif";
+  content: Buffer;
+};
+
 type CampaignDefinition = {
   key: string;
   name: string;
@@ -103,6 +116,14 @@ type CampaignDefinition = {
   imageUrl?: string | null;
   ctaUrl?: string | null;
   ctaLabel?: string | null;
+  emailImage?: {
+    id: string;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+    content: Buffer;
+    expiresAt: Date;
+  } | null;
 };
 
 type Exclusion = {
@@ -113,6 +134,8 @@ type Exclusion = {
 
 @Injectable()
 export class RecoveryOffersService {
+  private readonly logger = new Logger(RecoveryOffersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
@@ -125,6 +148,18 @@ export class RecoveryOffersService {
     const [campaigns, scheduled] = await Promise.all([
       this.prisma.offerCampaign.findMany({
         orderBy: [{ isActive: "desc" }, { startsAt: "desc" }],
+        include: {
+          emailImage: {
+            select: {
+              id: true,
+              fileName: true,
+              contentType: true,
+              byteSize: true,
+              expiresAt: true,
+              createdAt: true,
+            },
+          },
+        },
       }),
       this.prisma.recoveryOffer.groupBy({
         by: ["campaignKey"],
@@ -138,8 +173,13 @@ export class RecoveryOffersService {
     const nextScheduledByKey = new Map(
       scheduled.map((row) => [row.campaignKey, row._min.scheduledFor]),
     );
+    const now = Date.now();
     return campaigns.map((campaign) => ({
       ...campaign,
+      emailImage:
+        campaign.emailImage && campaign.emailImage.expiresAt.getTime() > now
+          ? campaign.emailImage
+          : null,
       nextScheduledFor: nextScheduledByKey.get(campaign.key) ?? null,
     }));
   }
@@ -178,24 +218,7 @@ export class RecoveryOffersService {
       input.ctaUrl !== undefined ||
       input.ctaLabel !== undefined;
     if (emailContentTouched) {
-      const imminentSend = await this.prisma.recoveryOffer.findFirst({
-        where: {
-          campaignKey: resolvedKey,
-          status: RecoveryOfferStatus.PREPARED,
-          OR: [
-            { scheduledFor: { lte: new Date(Date.now() + EMAIL_EDIT_LOCK_MS) } },
-            // Immediate sends are queued without a schedule; their content
-            // renders at delivery time, so lock them too.
-            { scheduledFor: null },
-          ],
-        },
-        select: { id: true },
-      });
-      if (imminentSend) {
-        throw new BadRequestException(
-          "Email content is locked because an offer email for this campaign is scheduled within 5 minutes",
-        );
-      }
+      await this.assertEmailContentEditable(resolvedKey, this.prisma);
     }
 
     this.validateCampaignWindow({
@@ -233,7 +256,9 @@ export class RecoveryOffersService {
         ...(input.emailHeading !== undefined
           ? { emailHeading: input.emailHeading }
           : {}),
-        ...(input.emailBody !== undefined ? { emailBody: input.emailBody } : {}),
+        ...(input.emailBody !== undefined
+          ? { emailBody: input.emailBody }
+          : {}),
         ...(input.imageUrl !== undefined
           ? { imageUrl: input.imageUrl?.trim() || null }
           : {}),
@@ -246,6 +271,140 @@ export class RecoveryOffersService {
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       },
     });
+  }
+
+  async updateCampaignEmail(
+    key: string,
+    input: UpdateOfferCampaignEmailDto,
+    file?: Express.Multer.File,
+  ) {
+    const resolvedKey = this.normalizeCampaignKey(key, key);
+    const uploadedImage = await this.validateDraftImage(input, file);
+
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.offerCampaign.findUnique({
+        where: { key: resolvedKey },
+      });
+      if (!existing) {
+        throw new NotFoundException("Offer campaign not found");
+      }
+      await this.assertEmailContentEditable(resolvedKey, tx);
+
+      let emailImageId = existing.emailImageId;
+      let imageUrl = existing.imageUrl;
+
+      if (input.imageMode === "UPLOAD" && uploadedImage) {
+        const stored = await tx.offerEmailImage.create({
+          data: {
+            fileName: uploadedImage.fileName,
+            contentType: uploadedImage.contentType,
+            byteSize: uploadedImage.content.length,
+            content: uploadedImage.content,
+            expiresAt: new Date(Date.now() + OFFER_EMAIL_IMAGE_RETENTION_MS),
+          },
+        });
+        emailImageId = stored.id;
+        imageUrl = null;
+      } else if (input.imageMode === "URL") {
+        emailImageId = null;
+        imageUrl = input.imageUrl!.trim();
+      } else if (input.imageMode === "DEFAULT") {
+        emailImageId = null;
+        imageUrl = null;
+      }
+
+      return tx.offerCampaign.update({
+        where: { key: resolvedKey },
+        data: {
+          emailSubject: input.emailSubject,
+          emailHeading: input.emailHeading,
+          emailBody: input.emailBody,
+          emailImageId,
+          imageUrl,
+          ...(input.ctaUrl !== undefined
+            ? { ctaUrl: input.ctaUrl?.trim() || null }
+            : {}),
+          ...(input.ctaLabel !== undefined
+            ? { ctaLabel: input.ctaLabel?.trim() || null }
+            : {}),
+        },
+        include: {
+          emailImage: {
+            select: {
+              id: true,
+              fileName: true,
+              contentType: true,
+              byteSize: true,
+              expiresAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+  }
+
+  async previewCampaignEmail(
+    key: string,
+    input: UpdateOfferCampaignEmailDto,
+    file?: Express.Multer.File,
+  ) {
+    const campaign = await this.getCampaignDefinition(
+      this.normalizeCampaignKey(key, key),
+      { requireActive: false },
+    );
+    const uploadedImage = await this.validateDraftImage(input, file);
+    const heroImageUrl = this.resolveDraftHeroImage(
+      campaign,
+      input,
+      uploadedImage,
+    );
+    const appUrl = this.frontendBaseUrl();
+    const isProductUpdate =
+      campaign.kind === OfferCampaignKind.PRODUCT_UPDATE;
+    const template = isProductUpdate
+      ? "product-update"
+      : campaign.kind === OfferCampaignKind.FESTIVAL
+        ? "festival-offer"
+        : "recovery-offer";
+    const demoUrl =
+      input.ctaUrl?.trim() ||
+      campaign.ctaUrl ||
+      `${appUrl}/jewellery-shop-software#ai-photo-studio`;
+    const html = await this.mail.renderTemplate(template, {
+      firstName: "Shop owner",
+      shopName: "Your jewellery shop",
+      days: campaign.complimentaryDays,
+      claimUrl: isProductUpdate ? demoUrl : "#",
+      demoUrl,
+      catalogUrl: `${appUrl}/dashboard/shop/products`,
+      ctaLabel:
+        input.ctaLabel?.trim() || campaign.ctaLabel || "See it in action",
+      unsubscribeUrl: "#",
+      campaignName: campaign.name,
+      emailSubject: input.emailSubject,
+      emailHeading: input.emailHeading,
+      emailBody: input.emailBody,
+      discountPercent: campaign.discountPercent,
+      saleStartsAt: campaign.startsAt || new Date(),
+      saleEndsAt: campaign.endsAt || new Date(),
+      pricingUrl: "#",
+      brandIconUrl: `${appUrl}/favicon/android-chrome-192x192.png`,
+      heroImageUrl,
+    });
+
+    return { subject: input.emailSubject, html };
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async deleteExpiredEmailImages() {
+    const deleted = await this.prisma.offerEmailImage.deleteMany({
+      where: { expiresAt: { lte: new Date() } },
+    });
+    if (deleted.count > 0) {
+      this.logger.log(`Deleted ${deleted.count} expired offer email image(s)`);
+    }
+    return deleted.count;
   }
 
   async getPublicCampaign(key: string) {
@@ -701,9 +860,7 @@ export class RecoveryOffersService {
     const unsubscribeToken = this.createUnsubscribeToken(offer.userId);
     const unsubscribeUrl = this.unsubscribePageUrl(unsubscribeToken);
     const unsubscribeApiUrl = this.unsubscribeApiUrl(unsubscribeToken);
-    const subject = isFestival || isProductUpdate
-      ? campaign.emailSubject
-      : `We’re sorry about the invoice issue — ${offer.days} days of Orivraa Pro on us`;
+    const subject = campaign.emailSubject;
     const template = isProductUpdate
       ? "product-update"
       : isFestival
@@ -714,6 +871,14 @@ export class RecoveryOffersService {
       : isFestival
         ? "festival_offer"
         : "recovery_offer";
+    const activeEmailImage =
+      campaign.emailImage &&
+      campaign.emailImage.expiresAt.getTime() > Date.now()
+        ? campaign.emailImage
+        : null;
+    const emailImageContentId = activeEmailImage
+      ? `offer-header-${activeEmailImage.id}`
+      : null;
     const delivery = await this.mail.send({
       to: offer.email,
       subject,
@@ -733,6 +898,18 @@ export class RecoveryOffersService {
         "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
+      ...(activeEmailImage && emailImageContentId
+        ? {
+            attachments: [
+              {
+                filename: activeEmailImage.fileName,
+                content: activeEmailImage.content,
+                contentType: activeEmailImage.contentType,
+                contentId: emailImageContentId,
+              },
+            ],
+          }
+        : {}),
       context: {
         firstName: offer.user.firstName || "there",
         shopName: offer.shop.shopName,
@@ -744,6 +921,7 @@ export class RecoveryOffersService {
         unsubscribeUrl,
         offerExpiresAt: offer.expiresAt,
         campaignName: campaign.name,
+        emailSubject: campaign.emailSubject,
         emailHeading: campaign.emailHeading,
         emailBody: campaign.emailBody,
         discountPercent: campaign.discountPercent,
@@ -751,11 +929,12 @@ export class RecoveryOffersService {
         saleEndsAt: campaign.endsAt,
         pricingUrl: `${appUrl}/dashboard/shop/billing?tab=upgrade&offer=${encodeURIComponent(offer.campaignKey)}`,
         brandIconUrl: `${appUrl}/favicon/android-chrome-192x192.png`,
-        heroImageUrl:
-          campaign.imageUrl ||
-          (isProductUpdate
-            ? `${appUrl}/ai-photo-studio-demo.gif`
-            : `${appUrl}/luxury-gold-globe.png`),
+        heroImageUrl: emailImageContentId
+          ? `cid:${emailImageContentId}`
+          : campaign.imageUrl ||
+            (isProductUpdate
+              ? `${appUrl}/ai-photo-studio-demo.gif`
+              : `${appUrl}/luxury-gold-globe.png`),
       },
     });
     if (!delivery.success) {
@@ -810,7 +989,10 @@ export class RecoveryOffersService {
         "email.suppressed",
       ].includes(event.type)
     ) {
-      return { processed: false, reason: "Event is not used by recovery metrics" };
+      return {
+        processed: false,
+        reason: "Event is not used by recovery metrics",
+      };
     }
 
     const emailEvent = event as Extract<
@@ -869,9 +1051,13 @@ export class RecoveryOffersService {
         }
 
         const earlier = (current: Date | null, incoming: Date) =>
-          !current || incoming.getTime() < current.getTime() ? incoming : current;
+          !current || incoming.getTime() < current.getTime()
+            ? incoming
+            : current;
         const later = (current: Date | null, incoming: Date) =>
-          !current || incoming.getTime() > current.getTime() ? incoming : current;
+          !current || incoming.getTime() > current.getTime()
+            ? incoming
+            : current;
         const update: Prisma.RecoveryOfferUpdateInput = {
           ...(offer.deliveryMessageId
             ? {}
@@ -1793,7 +1979,10 @@ export class RecoveryOffersService {
       ALREADY_CONTACTED_STATUSES.includes(input.offerStatus)
     ) {
       if (input.offerStatus === RecoveryOfferStatus.CLAIMED) {
-        return { canSend: false, cannotSendReason: "Offer was already claimed" };
+        return {
+          canSend: false,
+          cannotSendReason: "Offer was already claimed",
+        };
       }
       if (input.offerStatus === RecoveryOfferStatus.CLAIMING) {
         return {
@@ -1823,6 +2012,177 @@ export class RecoveryOffersService {
     return key;
   }
 
+  private async assertEmailContentEditable(
+    campaignKey: string,
+    client: PrismaService | Prisma.TransactionClient,
+  ) {
+    const imminentSend = await client.recoveryOffer.findFirst({
+      where: {
+        campaignKey,
+        status: RecoveryOfferStatus.PREPARED,
+        OR: [
+          { scheduledFor: { lte: new Date(Date.now() + EMAIL_EDIT_LOCK_MS) } },
+          // Immediate sends are queued without a schedule; their content
+          // renders at delivery time, so lock them too.
+          { scheduledFor: null },
+        ],
+      },
+      select: { id: true },
+    });
+    if (imminentSend) {
+      throw new BadRequestException(
+        "Email content is locked because an offer email for this campaign is scheduled within 5 minutes",
+      );
+    }
+  }
+
+  private async validateDraftImage(
+    input: UpdateOfferCampaignEmailDto,
+    file?: Express.Multer.File,
+  ): Promise<ValidatedOfferEmailImage | null> {
+    if (input.imageMode === "UPLOAD" && !file) {
+      throw new BadRequestException("Choose a PNG, JPEG, or GIF to upload");
+    }
+    if (input.imageMode !== "UPLOAD" && file) {
+      throw new BadRequestException(
+        "An uploaded file can only be used with UPLOAD image mode",
+      );
+    }
+    if (input.imageMode === "URL") {
+      const imageUrl = input.imageUrl?.trim() || "";
+      if (!/^https?:\/\/\S+$/i.test(imageUrl)) {
+        throw new BadRequestException("Enter a valid http(s) image URL");
+      }
+    }
+    if (!file) return null;
+    if (file.size < 1 || file.buffer.length < 1) {
+      throw new BadRequestException("The uploaded image is empty");
+    }
+    if (
+      file.size > OFFER_EMAIL_IMAGE_MAX_BYTES ||
+      file.buffer.length > OFFER_EMAIL_IMAGE_MAX_BYTES
+    ) {
+      throw new BadRequestException(
+        "Email header images must be 5 MB or smaller",
+      );
+    }
+
+    const contentType = this.detectOfferEmailImageType(file.buffer);
+    if (!contentType) {
+      throw new BadRequestException(
+        "Only PNG, JPEG, and GIF images are allowed",
+      );
+    }
+
+    try {
+      const metadata = await sharp(file.buffer, {
+        animated: contentType === "image/gif",
+        limitInputPixels: OFFER_EMAIL_IMAGE_MAX_PIXELS,
+      }).metadata();
+      const expectedFormat =
+        contentType === "image/jpeg"
+          ? "jpeg"
+          : contentType === "image/png"
+            ? "png"
+            : "gif";
+      if (
+        metadata.format !== expectedFormat ||
+        !metadata.width ||
+        !metadata.height
+      ) {
+        throw new Error("Image metadata does not match its signature");
+      }
+      if (metadata.width * metadata.height > OFFER_EMAIL_IMAGE_MAX_PIXELS) {
+        throw new Error("Image dimensions are too large");
+      }
+    } catch {
+      throw new BadRequestException(
+        "The uploaded image is invalid or exceeds 40 megapixels",
+      );
+    }
+
+    const extension =
+      contentType === "image/jpeg"
+        ? "jpg"
+        : contentType === "image/png"
+          ? "png"
+          : "gif";
+    const rawName = (file.originalname || "offer-header")
+      .split(/[\\/]/)
+      .pop()!
+      .replace(/\.[^.]+$/, "");
+    const safeStem =
+      rawName
+        .normalize("NFKD")
+        .replace(/[^a-z0-9_-]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80) || "offer-header";
+
+    return {
+      fileName: `${safeStem}.${extension}`,
+      contentType,
+      content: file.buffer,
+    };
+  }
+
+  private detectOfferEmailImageType(
+    content: Buffer,
+  ): ValidatedOfferEmailImage["contentType"] | null {
+    if (
+      content.length >= 8 &&
+      content
+        .subarray(0, 8)
+        .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    ) {
+      return "image/png";
+    }
+    if (
+      content.length >= 3 &&
+      content[0] === 0xff &&
+      content[1] === 0xd8 &&
+      content[2] === 0xff
+    ) {
+      return "image/jpeg";
+    }
+    if (content.length >= 6) {
+      const signature = content.subarray(0, 6).toString("ascii");
+      if (signature === "GIF87a" || signature === "GIF89a") {
+        return "image/gif";
+      }
+    }
+    return null;
+  }
+
+  private resolveDraftHeroImage(
+    campaign: CampaignDefinition,
+    input: UpdateOfferCampaignEmailDto,
+    uploadedImage: ValidatedOfferEmailImage | null,
+  ) {
+    if (input.imageMode === "UPLOAD" && uploadedImage) {
+      return `data:${uploadedImage.contentType};base64,${uploadedImage.content.toString("base64")}`;
+    }
+    if (input.imageMode === "URL") {
+      return input.imageUrl!.trim();
+    }
+    if (input.imageMode === "DEFAULT") {
+      return campaign.kind === OfferCampaignKind.PRODUCT_UPDATE
+        ? `${this.frontendBaseUrl()}/ai-photo-studio-demo.gif`
+        : `${this.frontendBaseUrl()}/luxury-gold-globe.png`;
+    }
+    if (
+      campaign.emailImage &&
+      campaign.emailImage.expiresAt.getTime() > Date.now()
+    ) {
+      return `data:${campaign.emailImage.contentType};base64,${campaign.emailImage.content.toString("base64")}`;
+    }
+    return (
+      campaign.imageUrl ||
+      (campaign.kind === OfferCampaignKind.PRODUCT_UPDATE
+        ? `${this.frontendBaseUrl()}/ai-photo-studio-demo.gif`
+        : `${this.frontendBaseUrl()}/luxury-gold-globe.png`)
+    );
+  }
+
   private async getCampaignDefinition(
     key?: string,
     options: { requireActive?: boolean } = {},
@@ -1830,6 +2190,7 @@ export class RecoveryOffersService {
     const resolvedKey = key || DEFAULT_AUDIENCE_CAMPAIGN_KEY;
     const campaign = await this.prisma.offerCampaign.findUnique({
       where: { key: resolvedKey },
+      include: { emailImage: true },
     });
     if (campaign) {
       if (options.requireActive !== false && !campaign.isActive) {
@@ -1856,6 +2217,7 @@ export class RecoveryOffersService {
           "We fixed the issue, strengthened monitoring, and improved invoice reliability.",
         ctaUrl: null,
         ctaLabel: null,
+        emailImage: null,
       };
     }
     throw new NotFoundException("Offer campaign not found");
@@ -1875,7 +2237,9 @@ export class RecoveryOffersService {
     const startsAt = new Date(input.startsAt);
     const endsAt = new Date(input.endsAt);
     if (startsAt.getTime() >= endsAt.getTime()) {
-      throw new BadRequestException("Offer end time must be after its start time");
+      throw new BadRequestException(
+        "Offer end time must be after its start time",
+      );
     }
     if (input.kind === "FESTIVAL" && input.discountPercent <= 0) {
       throw new BadRequestException(

@@ -3,7 +3,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>{{days}} days of Orivraa Pro on us</title>
+    <title>{{emailSubject}}</title>
   </head>
   <body
     style="margin:0;background:#f5f2ea;color:#172033;font-family:Arial,Helvetica,sans-serif;line-height:1.6"
@@ -83,21 +83,11 @@
                 <h1
                   style="margin:18px 0 12px;color:#13213c;font-family:Georgia,'Times New Roman',serif;font-size:31px;line-height:1.2;font-weight:700"
                 >
-                  We’re sorry about the invoice issue.
+                  {{emailHeading}}
                 </h1>
                 <p style="margin:0 0 18px;font-size:16px;color:#344054">Hi
                   {{firstName}},</p>
-                <p style="margin:0 0 18px;font-size:16px;color:#344054">
-                  Recently, an invoice issue disrupted the experience for some
-                  Orivraa shops. We fixed the issue, strengthened our
-                  monitoring, and made further improvements to invoice
-                  reliability.
-                </p>
-                <p style="margin:0 0 18px;font-size:16px;color:#344054">
-                  I’m genuinely sorry if this interrupted your work. Orivraa
-                  continues to improve, and we would be grateful for the
-                  opportunity to earn back your trust.
-                </p>
+                {{paragraphs emailBody}}
               </td>
             </tr>
             <tr>
@@ -144,14 +134,21 @@
                   offer.
                 </p>
                 <p style="margin:0 0 18px;font-size:14px;color:#667085">
-                  If {{shopName}} is not on Pro, claiming starts {{days}} days
-                  of complimentary Pro from the day you click. It will not renew
-                  automatically.
+                  If
+                  {{shopName}}
+                  is not on Pro, claiming starts
+                  {{days}}
+                  days of complimentary Pro from the day you click. It will not
+                  renew automatically.
                 </p>
                 <p style="margin:0 0 18px;font-size:14px;color:#667085">
-                  If {{shopName}} already has Pro, claiming extends Pro to
-                  {{days}} days from that click. If you already have more than
-                  {{days}} days remaining, your current end date stays the same.
+                  If
+                  {{shopName}}
+                  already has Pro, claiming extends Pro to
+                  {{days}}
+                  days from that click. If you already have more than
+                  {{days}}
+                  days remaining, your current end date stays the same.
                 </p>
                 <p style="margin:0 0 22px;font-size:16px;color:#344054">
                   We will never pretend software cannot fail. What I can promise
