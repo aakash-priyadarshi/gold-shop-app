@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Redirect,
   UploadedFile,
@@ -27,6 +29,7 @@ import {
   PreviewRecoveryOffersDto,
   PreviewRecoveryAudienceDto,
   RecoveryOfferTokenDto,
+  SaveOfferCampaignEmailDesignDto,
   SendRecoveryAudienceDto,
   SendRecoveryOffersDto,
   UpdateOfferCampaignEmailDto,
@@ -138,6 +141,36 @@ export class RecoveryOffersController {
     @UploadedFile() image?: Express.Multer.File,
   ) {
     return this.recoveryOffers.previewCampaignEmail(key, dto, image);
+  }
+
+  @Put("admin/campaigns/:key/email-design")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  updateCampaignEmailDesign(
+    @Param("key") key: string,
+    @Body() dto: SaveOfferCampaignEmailDesignDto,
+  ) {
+    return this.recoveryOffers.updateCampaignEmailDesign(key, dto);
+  }
+
+  @Post("admin/campaigns/:key/email-design/preview")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
+  previewCampaignEmailDesign(
+    @Param("key") key: string,
+    @Body() dto: SaveOfferCampaignEmailDesignDto,
+  ) {
+    return this.recoveryOffers.previewCampaignEmailDesign(key, dto);
+  }
+
+  @Delete("admin/campaigns/:key/email-design")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  clearCampaignEmailDesign(@Param("key") key: string) {
+    return this.recoveryOffers.clearCampaignEmailDesign(key);
   }
 
   @Get("campaigns/:key")

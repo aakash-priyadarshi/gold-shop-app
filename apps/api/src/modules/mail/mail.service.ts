@@ -42,6 +42,9 @@ export interface RenderedEmailOptions {
   from?: string;
   replyTo?: string;
   allowAdminLinks?: boolean;
+  idempotencyKey?: string;
+  tags?: Array<{ name: string; value: string }>;
+  headers?: Record<string, string>;
   attachments?: EmailAttachment[];
 }
 
@@ -264,11 +267,11 @@ export class MailService {
       const to = Array.isArray(options.to) ? options.to : [options.to];
 
       if (this.provider === 'resend' && this.resend) {
-        return this.sendWithResend(from, to, options.subject, options.html, options.replyTo, options.attachments);
+        return this.sendWithResend(from, to, options.subject, options.html, options.replyTo, options.attachments, options.idempotencyKey, options.tags, options.headers);
       }
 
       if (this.provider === 'smtp' && this.transporter) {
-        return this.sendWithSmtp(from, to, options.subject, options.html, options.replyTo, options.attachments);
+        return this.sendWithSmtp(from, to, options.subject, options.html, options.replyTo, options.attachments, options.idempotencyKey, options.headers);
       }
 
       return { success: false, error: 'No email provider available' };
