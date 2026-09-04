@@ -388,6 +388,20 @@ export const inventoryApi = {
       idempotencyKey?: string;
     },
   ) => api.post(`/inventory/shop/${shopId}/generate-description`, data),
+  enhanceImages: (
+    shopId: string,
+    data: {
+      imageUrls: string[];
+      referenceImageUrls?: string[];
+      model?: "nano-banana" | "nano-banana-pro";
+      context?: {
+        name?: string;
+        jewelleryType?: string;
+        metal?: string;
+        purity?: string;
+      };
+    },
+  ) => api.post(`/inventory/shop/${shopId}/images/enhance`, data),
   update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),
   delete: (id: string) => api.delete(`/inventory/${id}`),
   getShopInventory: (shopId: string, params?: any) =>

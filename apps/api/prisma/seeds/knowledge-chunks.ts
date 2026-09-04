@@ -246,7 +246,12 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "product_description_generation",
     content:
-      "On Products (Add/Edit) the description field stays locked until jewellery type, material type, and weight are filled. Gemstones are optional. Free and Pro get Fill from specs — a hardcoded non-AI template you can edit. Pro+ also gets Generate with AI (Gemini 2.5 Flash) which costs 0.25 AI credits. Shopkeeper AI design previews cost 1 credit per Imagen image. The Design Studio / RFQ 5-variation generator charges 5 credits up front (1 per image). Metal totals use live market rates (or the shop's own metal price if set); gemstones use the platform catalog or the shopkeeper's gemstone rates. Customers are not billed credits; they have a daily preview cap. Buy extra credits at Billing → AI Credits (/dashboard/shop/billing?tab=credits). If a generation fails, credits are refunded. The Orivraa AI assistant chat and in-app tooltips/tours are free on every plan. Public chat cannot look up users or shops. A signed-in user only sees their own account/shop data.",
+      "On Products (Add/Edit) the description field stays locked until jewellery type, material type, and weight are filled. Gemstones are optional. Free and Pro get Fill from specs — a hardcoded non-AI template you can edit. Pro+ also gets Generate with AI (Gemini 2.5 Flash) which costs 0.25 AI credits. AI design previews offer Imagen 4 Fast (1 credit), Standard (2 credits), and Ultra (3 credits) per image; a five-design batch costs five times the selected model rate. Metal totals use live market rates (or the shop's own metal price if set); gemstones use the platform catalog or the shopkeeper's gemstone rates. Customers are not billed credits; they have a daily preview cap. Buy extra credits at Billing → AI Credits (/dashboard/shop/billing?tab=credits). If a generation fails, credits are refunded. The Orivraa AI assistant chat and in-app tooltips/tours are free on every plan. Public chat cannot look up users or shops. A signed-in user only sees their own account/shop data.",
+  },
+  {
+    topic: "ai_product_photo_enhancement",
+    content:
+      "Pro+ and Enterprise shops can turn uploaded catalog photos into clean studio-style product images. In Product Catalog → Add or Edit Product, upload up to three photos, then choose Enhance on one photo or Enhance all. The same controls are available for jewelry sets and in mobile POS → Add Product. Nano Banana costs 2 AI credits per target photo; Nano Banana Pro creates a premium 2K result for 7 credits per target photo. Other photos of the same product are sent as non-billable visual references so the AI understands the piece from more angles. Review before and after, then choose Use enhanced to replace the catalog photo or Discard to keep the original. The prompt preserves the exact design, metal, stones, hallmark, and proportions while changing only lighting, background, cleanup, sharpness, and shadow. Failed targets are refunded individually. Buy credits at Billing → AI Credits (/dashboard/shop/billing?tab=credits).",
   },
   {
     topic: "karigar_gold_loss_ledger",
@@ -371,6 +376,7 @@ async function main() {
     "invoice_share_and_bluetooth",
     "mobile_invoice_full_billing",
     "product_description_generation",
+    "ai_product_photo_enhancement",
     "workshop_manufacturing_mode",
     "supply_chain_workspace_views",
     "karigar_gold_loss_ledger",

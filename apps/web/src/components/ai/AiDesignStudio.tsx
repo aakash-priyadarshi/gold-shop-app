@@ -27,11 +27,17 @@ import {
     AiCreditCostHint,
     AiCreditsDepletedNotice,
 } from "@/components/ai/AiCreditsDepletedNotice";
+import { AiImageModelPicker } from "@/components/ai/AiImageModelPicker";
 import { toast } from "@/hooks/use-toast";
 import { getStoredAuthToken } from "@/hooks/useAuth";
 import { getApiUrl } from "@/lib/api";
 import { isInsufficientAiCreditsError } from "@/lib/aiCredits";
-import { AI_CREDIT_COSTS } from "@gold-shop/shared";
+import {
+  AI_IMAGE_MODELS,
+  AI_VARIATION_BATCH_SIZE,
+  DEFAULT_GENERATION_MODEL,
+  type AiGenerationModelId,
+} from "@gold-shop/shared";
 import { variationToDesignPayload } from "@/lib/design/variation-to-design-payload";
 import {
     AlertCircle,
@@ -134,6 +140,9 @@ export function AiDesignStudio({
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [occasion, setOccasion] = useState("");
+  const [model, setModel] = useState<AiGenerationModelId>(
+    DEFAULT_GENERATION_MODEL,
+  );
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState<AiDesignVariation[]>([]);
   const [planLocked, setPlanLocked] = useState(false);
@@ -142,6 +151,8 @@ export function AiDesignStudio({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const [renderingImages, setRenderingImages] = useState(false);
+  const batchCost =
+    AI_IMAGE_MODELS[model].creditsPerImage * AI_VARIATION_BATCH_SIZE;
 
   const reset = () => {
     setVariations([]);
@@ -177,6 +188,7 @@ export function AiDesignStudio({
       currency,
       jewelryType: defaultJewelryType,
       occasion: occasion || undefined,
+      model,
     };
 
     setLoading(true);
@@ -246,6 +258,7 @@ export function AiDesignStudio({
                   { ...spec, id: spec.id || `var-${idx}` },
                   trimmedPrompt,
                   idx,
+                  model,
                 ),
               ),
             });
@@ -455,6 +468,16 @@ export function AiDesignStudio({
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label><T>Preview quality</T></Label>
+                <AiImageModelPicker
+                  capability="generation"
+                  value={model}
+                  onChange={setModel}
+                  imageCount={AI_VARIATION_BATCH_SIZE}
+                />
+              </div>
+
               {error && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
                   <AlertCircle className="h-4 w-4 shrink-0" />
@@ -464,7 +487,7 @@ export function AiDesignStudio({
               {creditsDepleted && (
                 <AiCreditsDepletedNotice
                   action="Generate 5 variations"
-                  required={AI_CREDIT_COSTS.DESIGN_VARIATIONS}
+                  required={batchCost}
                 />
               )}
 
@@ -487,12 +510,11 @@ export function AiDesignStudio({
               </Button>
               <p className="text-center text-xs text-muted-foreground">
                 <T>
-                  5 design previews use 5 AI credits for Pro+ shops (1 credit per
-                  Imagen image). A single design preview uses 1 credit. Customers
-                  have a daily preview limit instead.
+                  Five previews are billed at the selected model&apos;s per-image
+                  rate. Customers have a daily preview limit instead.
                 </T>
               </p>
-              <AiCreditCostHint cost={AI_CREDIT_COSTS.DESIGN_VARIATIONS} />
+              <AiCreditCostHint cost={batchCost} />
             </div>
           ) : (
             <div className="space-y-4">
@@ -521,7 +543,7 @@ export function AiDesignStudio({
               {creditsDepleted && (
                 <AiCreditsDepletedNotice
                   action="Generate 5 variations"
-                  required={AI_CREDIT_COSTS.DESIGN_VARIATIONS}
+                  required={batchCost}
                 />
               )}
 

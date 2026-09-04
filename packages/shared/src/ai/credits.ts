@@ -16,6 +16,10 @@ export function variationBatchRedisKey(userId: string): string {
   return `ai:varbatch:${userId}`;
 }
 
+export function variationBatchModelRedisKey(userId: string): string {
+  return `${variationBatchRedisKey(userId)}:model`;
+}
+
 export function toCreditNumber(value: unknown): number {
   if (value == null) return 0;
   if (

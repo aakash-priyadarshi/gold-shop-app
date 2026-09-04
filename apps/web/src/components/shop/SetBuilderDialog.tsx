@@ -20,10 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
+import { AiPhotoEnhancer } from "@/components/ai/AiPhotoEnhancer";
 import { toast } from "@/hooks/use-toast";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { inventoryApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 const SET_ROLES = [
@@ -181,11 +184,34 @@ export function SetBuilderDialog({
   );
   const [discountValue, setDiscountValue] = useState("5");
   const [locationId, setLocationId] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [availablePieces, setAvailablePieces] = useState<any[]>([]);
   const [components, setComponents] = useState<CompRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [loadingSet, setLoadingSet] = useState(false);
+  const {
+    uploading: uploadingImages,
+    progress: imageProgress,
+    uploadMultiple,
+  } = useImageUpload({
+    type: "product",
+    maxFiles: 3,
+    onSuccess: (result) => {
+      if (!result.url) return;
+      setImages((current) =>
+        current.includes(result.url!)
+          ? current
+          : [...current, result.url!].slice(0, 3),
+      );
+    },
+    onError: (message) =>
+      toast({
+        title: t("Photo upload failed"),
+        description: message,
+        variant: "destructive",
+      }),
+  });
 
   useEffect(() => {
     if (!open || !shopId) return;
@@ -223,6 +249,7 @@ export function SetBuilderDialog({
           );
           setDiscountValue(String(set.setDiscountValue ?? 0));
           setLocationId(set.locationId || "");
+          setImages(Array.isArray(set.images) ? set.images.slice(0, 3) : []);
 
           const links = set.setComponents || [];
           const rows = links.map(mapComponentItemToRow);
@@ -241,6 +268,7 @@ export function SetBuilderDialog({
           setDiscountType("PERCENT");
           setDiscountValue("5");
           setLocationId("");
+          setImages([]);
           setComponents([emptyNewRow("NECKLACE")]);
         }
 
@@ -423,6 +451,7 @@ export function SetBuilderDialog({
           setDiscountType: discountType,
           setDiscountValue: parseFloat(discountValue) || 0,
           locationId: locationId || null,
+          images,
           components: payloadComponents,
         });
         toast({ title: t("Set updated") });
@@ -433,6 +462,7 @@ export function SetBuilderDialog({
           setDiscountType: discountType,
           setDiscountValue: parseFloat(discountValue) || 0,
           locationId: locationId || undefined,
+          images,
           components: payloadComponents,
         });
         toast({ title: t("Set created") });
@@ -512,6 +542,81 @@ export function SetBuilderDialog({
               )}
             </div>
           </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label><T>Set photos</T></Label>
+                <p className="text-xs text-muted-foreground"><T>Upload up to 3 photos of the complete set.</T></p>
+              </div>
+              {images.length ? (
+                <AiPhotoEnhancer
+                  shopId={shopId}
+                  images={images}
+                  onChange={setImages}
+                  context={{ name: nameEn, jewelleryType: "SET" }}
+                />
+              ) : null}
+            </div>
+            <input
+              id="set-photo-upload"
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              disabled={uploadingImages || images.length >= 3}
+              onChange={async (event) => {
+                const files = Array.from(event.target.files || []).slice(
+                  0,
+                  3 - images.length,
+                );
+                if (files.length) await uploadMultiple(files);
+                event.target.value = "";
+              }}
+            />
+            <label
+              htmlFor="set-photo-upload"
+              className={`flex min-h-16 items-center justify-center gap-2 rounded-md border border-dashed px-3 text-sm transition ${
+                uploadingImages || images.length >= 3
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
+              }`}
+            >
+              {uploadingImages ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /><T>Uploading photos…</T> {imageProgress}%</>
+              ) : (
+                <><ImageIcon className="h-4 w-4" /><T>Add set photos</T> <span className="tabular-nums">{images.length}/3</span></>
+              )}
+            </label>
+            {images.length ? (
+              <div className="grid grid-cols-3 gap-2">
+                {images.map((url, index) => (
+                  <div key={url} className="group relative aspect-square overflow-hidden rounded-md border bg-muted">
+                    <Image src={url} alt={t(`Set photo ${index + 1}`)} fill className="object-cover" unoptimized />
+                    <AiPhotoEnhancer
+                      shopId={shopId}
+                      images={images}
+                      targetIndex={index}
+                      trigger="icon"
+                      onChange={setImages}
+                      context={{ name: nameEn, jewelleryType: "SET" }}
+                      className="absolute left-1 top-1 z-10 h-7 w-7 border-amber-300 bg-white/95 text-amber-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 dark:bg-gray-950/95"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute right-1 top-1 z-10 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                      aria-label={t("Remove photo")}
+                      onClick={() => setImages((current) => current.filter((item) => item !== url))}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {locations.length > 0 && (

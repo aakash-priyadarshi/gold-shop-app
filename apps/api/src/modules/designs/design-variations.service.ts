@@ -2,10 +2,12 @@ import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash, randomUUID } from "crypto";
 import {
-  AI_CREDIT_COSTS,
   AI_VARIATION_BATCH_SIZE,
   AI_VARIATION_BATCH_TTL_SEC,
+  resolveGenerationModel,
+  type AiGenerationModelId,
   variationBatchRedisKey,
+  variationBatchModelRedisKey,
 } from "@gold-shop/shared";
 import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -32,6 +34,7 @@ import {
  */
 
 export interface DesignVariationRequest {
+  model?: AiGenerationModelId;
   prompt: string;
   budgetMin?: number;
   budgetMax?: number;
@@ -148,11 +151,13 @@ export class DesignVariationsService {
       );
     }
     const currency = (dto.currency || "INR").toUpperCase();
+    const generationModel = resolveGenerationModel(dto.model);
+    const batchCost = generationModel.creditsPerImage * AI_VARIATION_BATCH_SIZE;
     const debitKey = `design_variations:${userId}:${randomUUID()}`;
     const debit = await this.aiCredits.debitForShopkeeperGeneration({
       userId,
       shopId: opts?.shopId,
-      amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+      amount: batchCost,
       reason: "design_variations",
       referenceId: debitKey,
       idempotencyKey: debitKey,
@@ -162,11 +167,18 @@ export class DesignVariationsService {
       const specs = await this.callGeminiForSpecs(dto, currency);
       const priced = await this.applyLiveCosts(specs, dto, opts?.shopId);
       if (!debit.skipped) {
-        await this.redisService.set(
-          variationBatchRedisKey(userId),
-          String(AI_VARIATION_BATCH_SIZE),
-          AI_VARIATION_BATCH_TTL_SEC,
-        );
+        await Promise.all([
+          this.redisService.set(
+            variationBatchRedisKey(userId),
+            String(AI_VARIATION_BATCH_SIZE),
+            AI_VARIATION_BATCH_TTL_SEC,
+          ),
+          this.redisService.set(
+            variationBatchModelRedisKey(userId),
+            generationModel.id,
+            AI_VARIATION_BATCH_TTL_SEC,
+          ),
+        ]);
       }
       return {
         variations: priced,
@@ -180,7 +192,7 @@ export class DesignVariationsService {
         await this.aiCredits
           .refundCredits({
             userId,
-            amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+            amount: batchCost,
             reason: "design_variations_failed",
             referenceId: debitKey,
             idempotencyKey: `refund:${debitKey}`,
@@ -207,6 +219,8 @@ export class DesignVariationsService {
     }
 
     const currency = (dto.currency || "INR").toUpperCase();
+    const generationModel = resolveGenerationModel(dto.model);
+    const batchCost = generationModel.creditsPerImage * AI_VARIATION_BATCH_SIZE;
     const cacheKey = `${this.CACHE_PREFIX}${this.hashRequest({ ...dto, currency })}`;
 
     // Try cache (specs only — re-attach image URLs from cache too)
@@ -225,17 +239,24 @@ export class DesignVariationsService {
     const debit = await this.aiCredits.debitForShopkeeperGeneration({
       userId,
       shopId: opts?.shopId,
-      amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+      amount: batchCost,
       reason: "design_variations",
       referenceId: debitKey,
       idempotencyKey: debitKey,
     });
     if (!debit.skipped) {
-      await this.redisService.set(
-        variationBatchRedisKey(userId),
-        String(AI_VARIATION_BATCH_SIZE),
-        AI_VARIATION_BATCH_TTL_SEC,
-      );
+      await Promise.all([
+        this.redisService.set(
+          variationBatchRedisKey(userId),
+          String(AI_VARIATION_BATCH_SIZE),
+          AI_VARIATION_BATCH_TTL_SEC,
+        ),
+        this.redisService.set(
+          variationBatchModelRedisKey(userId),
+          generationModel.id,
+          AI_VARIATION_BATCH_TTL_SEC,
+        ),
+      ]);
     }
 
     try {
@@ -252,6 +273,7 @@ export class DesignVariationsService {
       specs.map(async (spec, idx) => {
         try {
           const result = await this.designsService.createDesign(userId, {
+            model: generationModel.id as AiGenerationModelId,
             jewelryType: spec.jewelryType as never,
             buildMethod: spec.buildMethod as never,
             metalType: spec.metalType,
@@ -317,7 +339,7 @@ export class DesignVariationsService {
         await this.aiCredits
           .refundCredits({
             userId,
-            amount: AI_CREDIT_COSTS.DESIGN_VARIATIONS,
+            amount: batchCost,
             reason: "design_variations_failed",
             referenceId: debitKey,
             idempotencyKey: `refund:${debitKey}`,

@@ -1,12 +1,15 @@
 import type { AiDesignVariation } from "@/components/ai/AiDesignStudio";
+import type { AiGenerationModelId } from "@gold-shop/shared";
 
 /** Map an AI variation spec to POST /designs body. */
 export function variationToDesignPayload(
   spec: AiDesignVariation,
   prompt: string,
   variationIndex: number,
+  model?: AiGenerationModelId,
 ) {
   return {
+    model,
     jewelryType: spec.jewelryType,
     buildMethod: spec.buildMethod,
     metalType: spec.metalType,
