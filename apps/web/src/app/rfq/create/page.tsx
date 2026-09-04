@@ -4,6 +4,8 @@ import {
   AiDesignStudio,
   type AiDesignVariation,
 } from "@/components/ai/AiDesignStudio";
+import { AiCreditCostHint } from "@/components/ai/AiCreditsDepletedNotice";
+import { AiImageModelPicker } from "@/components/ai/AiImageModelPicker";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BuyerEducation } from "@/components/pricing/BuyerEducation";
@@ -57,10 +59,13 @@ import {
   type CurrencyCode,
 } from "@/store/preferences";
 import {
+  AI_IMAGE_MODELS,
+  DEFAULT_GENERATION_MODEL,
   fromGrams,
   getCitiesForCountry,
   getStatesForCountry,
   toGrams,
+  type AiGenerationModelId,
 } from "@gold-shop/shared";
 import {
   AlertCircle,
@@ -701,6 +706,9 @@ export default function CreateRfqPage() {
   const [designId, setDesignId] = useState<string | null>(null);
   const [fromDesign, setFromDesign] = useState(false);
   const [regenerationFeedback, setRegenerationFeedback] = useState(""); // For refinement requests
+  const [designModel, setDesignModel] = useState<AiGenerationModelId>(
+    DEFAULT_GENERATION_MODEL,
+  );
 
   // Similar designs suggestions state
   interface SimilarDesign {
@@ -1195,6 +1203,7 @@ export default function CreateRfqPage() {
 
       // Prepare comprehensive design specs
       const designSpecs = {
+        model: designModel,
         jewelryType: formData.jewelleryType,
         buildMethod: formData.buildMethod,
         metalType: resolveMetalTypeFromDescription(
@@ -5283,6 +5292,19 @@ export default function CreateRfqPage() {
                         )}
 
                         {/* Generate Button - Disabled if not signed in or phone not verified */}
+                        <div className="mx-auto w-full max-w-2xl space-y-2">
+                          <Label><T>Preview quality</T></Label>
+                          <AiImageModelPicker
+                            capability="generation"
+                            value={designModel}
+                            onChange={setDesignModel}
+                          />
+                          {user?.role === "SHOPKEEPER" ? (
+                            <AiCreditCostHint
+                              cost={AI_IMAGE_MODELS[designModel].creditsPerImage}
+                            />
+                          ) : null}
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
                           <Tooltip>
                             <TooltipTrigger asChild>

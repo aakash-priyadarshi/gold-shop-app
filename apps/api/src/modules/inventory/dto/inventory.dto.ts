@@ -11,10 +11,16 @@ import {
   MaxLength,
   Min,
   IsObject,
+  ArrayUnique,
   ValidateNested,
 } from 'class-validator';
 import { plainToInstance, Transform, Type } from 'class-transformer';
-import { HALLMARK_ID_MAX_LENGTH, normalizeHallmarkId } from '@gold-shop/shared';
+import {
+  AI_ENHANCEMENT_MODEL_IDS,
+  HALLMARK_ID_MAX_LENGTH,
+  normalizeHallmarkId,
+  type AiEnhancementModelId,
+} from '@gold-shop/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class InventoryGemstoneDto {
@@ -640,6 +646,67 @@ export class GenerateProductDescriptionDto {
   @Type(() => GenerateProductDescriptionGemstoneDto)
   gemstones?: GenerateProductDescriptionGemstoneDto[];
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  idempotencyKey?: string;
+}
+
+export class ImageEnhancementContextDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  jewelleryType?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  metal?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  purity?: string;
+}
+
+export class EnhanceProductImagesDto {
+  @ApiProperty({ type: [String], minItems: 1, maxItems: 5 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @ArrayUnique()
+  @IsString({ each: true })
+  imageUrls: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: 13,
+    description: 'Non-billable sibling photos used only as visual references',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(13)
+  @ArrayUnique()
+  @IsString({ each: true })
+  referenceImageUrls?: string[];
+
+  @ApiPropertyOptional({ enum: AI_ENHANCEMENT_MODEL_IDS })
+  @IsOptional()
+  @IsIn(AI_ENHANCEMENT_MODEL_IDS)
+  model?: AiEnhancementModelId;
+
+  @ApiPropertyOptional({ type: ImageEnhancementContextDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ImageEnhancementContextDto)
+  context?: ImageEnhancementContextDto;
+
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   @MaxLength(120)

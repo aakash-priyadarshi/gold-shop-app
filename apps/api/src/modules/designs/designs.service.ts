@@ -5,7 +5,6 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import {
   BuildMethod,
   DesignImageSource,
@@ -18,15 +17,18 @@ import { DescriptionGeneratorService } from "./description-generator.service";
 import { ImageGenerationService } from "./image-generation.service";
 import { AiCreditsService } from "../core/ai-credits/ai-credits.service";
 import {
-  AI_CREDIT_COSTS,
+  resolveGenerationModel,
+  type AiGenerationModelId,
   variationBatchRedisKey,
+  variationBatchModelRedisKey,
   shouldUsePrepaidVariationSlot,
 } from "@gold-shop/shared";
 import { randomUUID } from "crypto";
 import { RedisService } from "../../common/redis";
-import { signImageWorkerToken } from "../media/image-worker-token";
+import { ImageWorkerUploadService } from "../media/image-worker-upload.service";
 
 interface CreateDesignDto {
+  model?: AiGenerationModelId;
   jewelryType: JewelleryType;
   buildMethod: BuildMethod;
   metalType?: string;
@@ -92,26 +94,21 @@ type SortOption = "popular" | "liked" | "trending" | "newest" | "most_made";
 @Injectable()
 export class DesignsService {
   private readonly logger = new Logger(DesignsService.name);
-  private readonly imageWorkerUrl: string;
 
   constructor(
     private prisma: PrismaService,
     private imageGenService: ImageGenerationService,
     private descriptionGenService: DescriptionGeneratorService,
-    private configService: ConfigService,
     private aiCredits: AiCreditsService,
     private redis: RedisService,
-  ) {
-    // Use existing Cloudflare Worker for image uploads
-    this.imageWorkerUrl =
-      this.configService.get<string>("IMAGE_WORKER_URL") ||
-      "https://images.orivraa.com";
-  }
+    private imageUpload: ImageWorkerUploadService,
+  ) {}
 
   /**
    * Create a new design with AI-generated image
    */
   async createDesign(userId: string, dto: CreateDesignDto) {
+    const generationModel = resolveGenerationModel(dto.model);
     // Generate spec hash for caching - includes description and regeneration feedback
     const specHash = this.imageGenService.generateSpecHash({
       jewelryType: dto.jewelryType,
@@ -129,6 +126,7 @@ export class DesignsService {
       settingStyle: dto.settingStyle,
       // Include additionalSpecs for cache key to generate new images on regeneration
       additionalSpecs: dto.additionalSpecs,
+      model: generationModel.id as AiGenerationModelId,
     });
 
     // Check if identical design already exists
@@ -154,13 +152,14 @@ export class DesignsService {
     const prepaidVariation = await this.consumeVariationSlot(
       userId,
       dto.additionalSpecs,
+      generationModel.id as AiGenerationModelId,
     );
     const debitKey = `image_gen:${userId}:${randomUUID()}`;
     const debit = prepaidVariation
       ? { skipped: true as const }
       : await this.aiCredits.debitForShopkeeperGeneration({
           userId,
-          amount: AI_CREDIT_COSTS.DESIGN_IMAGE,
+          amount: generationModel.creditsPerImage,
           reason: "image_gen",
           referenceId: specHash,
           idempotencyKey: debitKey,
@@ -176,6 +175,7 @@ export class DesignsService {
       imageResult = await this.imageGenService.refineImage(
         dto.referenceImageUrl,
         {
+          model: generationModel.id as AiGenerationModelId,
           jewelryType: dto.jewelryType,
           buildMethod: dto.buildMethod,
           metalType: dto.metalType,
@@ -193,6 +193,7 @@ export class DesignsService {
     } else {
       // Generate from scratch with all enhanced details
       imageResult = await this.imageGenService.generateImage({
+        model: generationModel.id as AiGenerationModelId,
         jewelryType: dto.jewelryType,
         buildMethod: dto.buildMethod,
         metalType: dto.metalType,
@@ -221,7 +222,13 @@ export class DesignsService {
     }
 
     // Upload image to R2
-    const imageUrl = await this.uploadImageToR2(imageResult.imageUrl, specHash);
+    const imageUrl = await this.imageUpload.uploadDataUrl({
+      dataUrl: imageResult.imageUrl,
+      uploadType: "designs",
+      filenamePrefix: `design-${specHash}`,
+      subject: "system:designs",
+      fallbackToDataUrl: true,
+    });
 
     // Get user info for creator name
     const user = await this.prisma.user.findUnique({
@@ -307,7 +314,7 @@ export class DesignsService {
         await this.aiCredits
           .refundCredits({
             userId,
-            amount: AI_CREDIT_COSTS.DESIGN_IMAGE,
+            amount: generationModel.creditsPerImage,
             reason: "image_gen_failed",
             referenceId: specHash,
             idempotencyKey: `refund:var:${debitKey}`,
@@ -321,7 +328,7 @@ export class DesignsService {
         await this.aiCredits
           .refundCredits({
             userId,
-            amount: AI_CREDIT_COSTS.DESIGN_IMAGE,
+            amount: generationModel.creditsPerImage,
             reason: "image_gen_failed",
             referenceId: specHash,
             idempotencyKey: `refund:${debitKey}`,
@@ -343,10 +350,21 @@ export class DesignsService {
   private async consumeVariationSlot(
     userId: string,
     additionalSpecs?: Record<string, unknown>,
+    model?: AiGenerationModelId,
   ): Promise<boolean> {
     if (typeof additionalSpecs?.variationOf !== "string") return false;
+    const batchId =
+      typeof additionalSpecs.variationBatchId === "string" &&
+      /^[A-Za-z0-9_-]{8,80}$/.test(additionalSpecs.variationBatchId)
+        ? additionalSpecs.variationBatchId
+        : undefined;
+    const slotKey = variationBatchRedisKey(userId, batchId);
+    const modelKey = variationBatchModelRedisKey(userId, batchId);
     const current = this.redis.isAvailable()
-      ? await this.redis.get(variationBatchRedisKey(userId))
+      ? await this.redis.get(slotKey)
+      : null;
+    const prepaidModel = this.redis.isAvailable()
+      ? await this.redis.get(modelKey)
       : null;
     const remainingBefore = parseInt(current || "", 10);
     if (
@@ -360,8 +378,9 @@ export class DesignsService {
     ) {
       return false;
     }
+    if (this.redis.isAvailable() && prepaidModel !== model) return false;
     if (!this.redis.isAvailable()) return true;
-    const remaining = await this.redis.decr(variationBatchRedisKey(userId));
+    const remaining = await this.redis.decr(slotKey);
     return remaining >= 0;
   }
 
@@ -372,84 +391,6 @@ export class DesignsService {
     if (!metalType) return undefined;
     const match = metalType.match(/(\d+K)/i);
     return match ? match[1].toUpperCase() : undefined;
-  }
-
-  /**
-   * Upload base64 image to R2 storage via Cloudflare Worker
-   */
-  private async uploadImageToR2(
-    base64DataUrl: string,
-    hash: string,
-  ): Promise<string> {
-    try {
-      // Extract base64 data from data URL
-      const matches = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-      if (!matches) {
-        throw new Error("Invalid base64 image format");
-      }
-
-      const format = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, "base64");
-
-      // Create a blob from buffer
-      const blob = new Blob([buffer], { type: `image/${format}` });
-
-      // Create FormData to upload to worker
-      const formData = new FormData();
-      formData.append("file", blob, `design-${hash}.${format}`);
-
-      const workerSecret = this.configService.get<string>(
-        "IMAGE_WORKER_AUTH_SECRET",
-      );
-      if (!workerSecret) {
-        throw new Error("IMAGE_WORKER_AUTH_SECRET is not configured");
-      }
-      const authorization = signImageWorkerToken(workerSecret, {
-        sub: "system:designs",
-        role: "SYSTEM",
-        op: "upload",
-        uploadType: "designs",
-        maxBytes: 10 * 1024 * 1024,
-      });
-
-      // Upload to the existing Cloudflare Worker
-      const response = await fetch(`${this.imageWorkerUrl}/upload`, {
-        method: "POST",
-        headers: {
-          "X-Upload-Type": "designs",
-          Authorization: `Bearer ${authorization}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(
-          `Worker upload failed: ${response.status} - ${errorText}`,
-        );
-        // Fallback to base64 if worker upload fails
-        return base64DataUrl;
-      }
-
-      const result = (await response.json()) as {
-        success: boolean;
-        url?: string;
-        error?: string;
-      };
-
-      if (result.success && result.url) {
-        this.logger.log(`Image uploaded to R2 via worker: ${result.url}`);
-        return result.url;
-      }
-
-      this.logger.warn(`Worker upload returned success=false: ${result.error}`);
-      return base64DataUrl;
-    } catch (error) {
-      this.logger.error(`Failed to upload image via worker: ${error}`);
-      // Fallback to base64 URL if upload fails
-      return base64DataUrl;
-    }
   }
 
   /**

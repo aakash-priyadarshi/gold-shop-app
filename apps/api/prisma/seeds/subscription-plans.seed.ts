@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { mergePlanFeatures } from "./plan-feature-merge";
 
 const prisma = new PrismaClient();
 
@@ -224,6 +225,7 @@ async function main() {
       priorityListing: true,
       purchasableAiCredits: true,
       aiDesignGeneration: true,
+      aiImageEnhancement: true,
       aiDesignVariations: true,
       aiSmartRecommendations: true,
       aiPriceOptimization: true,
@@ -247,9 +249,14 @@ async function main() {
       mobileTaxReports: true,
       mobileOfflineMode: true,
     };
+    const existing = await prisma.subscriptionPlan.findUnique({
+      where: { name_country: { name: "PRO_PLUS", country: region } },
+    });
     const plan = await prisma.subscriptionPlan.upsert({
       where: { name_country: { name: "PRO_PLUS", country: region } },
-      update: {},
+      update: {
+        features: mergePlanFeatures(existing?.features, featuresObj),
+      },
       create: {
         name: "PRO_PLUS",
         displayName: `Pro+ (${COUNTRY_NAMES[region]})`,
@@ -297,6 +304,7 @@ async function main() {
       priorityListing: true,
       purchasableAiCredits: true,
       aiDesignGeneration: true,
+      aiImageEnhancement: true,
       aiDesignVariations: true,
       aiSmartRecommendations: true,
       aiPriceOptimization: true,
@@ -332,9 +340,14 @@ async function main() {
       mobileTaxReports: true,
       mobileOfflineMode: true,
     };
+    const existing = await prisma.subscriptionPlan.findUnique({
+      where: { name_country: { name: "ENTERPRISE", country: region } },
+    });
     const plan = await prisma.subscriptionPlan.upsert({
       where: { name_country: { name: "ENTERPRISE", country: region } },
-      update: {},
+      update: {
+        features: mergePlanFeatures(existing?.features, featuresObj),
+      },
       create: {
         name: "ENTERPRISE",
         displayName: `Enterprise (${COUNTRY_NAMES[region]})`,

@@ -55,6 +55,7 @@ import {
 import { getImageUrl } from "@/lib/image-upload";
 import { SetBuilderDialog } from "@/components/shop/SetBuilderDialog";
 import { ProductDescriptionGenerator } from "@/components/shop/ProductDescriptionGenerator";
+import { AiPhotoEnhancer } from "@/components/ai/AiPhotoEnhancer";
 import { CertificateUploadField } from "@/components/shop/CertificateUploadField";
 import {
   SellerProductDetailDialog,
@@ -2336,9 +2337,26 @@ export default function ShopProductsPage() {
 
               {/* Images */}
               <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <T>Product Images (max 3)</T>
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <T>Product Images (max 3)</T>
+                  </p>
+                  {user?.shop?.id && formData.images.length > 0 ? (
+                    <AiPhotoEnhancer
+                      shopId={user.shop.id}
+                      images={formData.images}
+                      onChange={(images) =>
+                        setFormData((current) => ({ ...current, images }))
+                      }
+                      context={{
+                        name: formData.nameEn,
+                        jewelleryType: formData.jewelleryType,
+                        metal: formData.metalType,
+                        purity: formData.purity,
+                      }}
+                    />
+                  ) : null}
+                </div>
 
                 {/* File Upload */}
                 <div
@@ -2457,6 +2475,24 @@ export default function ShopProductsPage() {
                             height={80}
                             unoptimized
                           />
+                          {user?.shop?.id ? (
+                            <AiPhotoEnhancer
+                              shopId={user.shop.id}
+                              images={formData.images}
+                              targetIndex={idx}
+                              trigger="icon"
+                              className="absolute right-1 top-1 z-10 h-7 w-7 border-amber-300 bg-white/95 text-amber-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 dark:bg-gray-950/95"
+                              onChange={(images) =>
+                                setFormData((current) => ({ ...current, images }))
+                              }
+                              context={{
+                                name: formData.nameEn,
+                                jewelleryType: formData.jewelleryType,
+                                metal: formData.metalType,
+                                purity: formData.purity,
+                              }}
+                            />
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => removeImage(url)}

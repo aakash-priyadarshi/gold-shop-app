@@ -8,6 +8,7 @@ import {
   hasEnoughAiCredits,
   toCreditNumber,
   variationBatchRedisKey,
+  variationBatchModelRedisKey,
 } from "./credits";
 
 describe("AI credit math", () => {
@@ -30,6 +31,15 @@ describe("AI credit math", () => {
 
   it("keys the prepaid 5-pack in Redis per user", () => {
     expect(variationBatchRedisKey("user-1")).toBe("ai:varbatch:user-1");
+    expect(variationBatchModelRedisKey("user-1")).toBe(
+      "ai:varbatch:user-1:model",
+    );
+    expect(variationBatchRedisKey("user-1", "batch-9")).toBe(
+      "ai:varbatch:user-1:batch-9",
+    );
+    expect(variationBatchModelRedisKey("user-1", "batch-9")).toBe(
+      "ai:varbatch:user-1:batch-9:model",
+    );
     expect(AI_VARIATION_BATCH_SIZE).toBe(5);
     expect(AI_VARIATION_BATCH_TTL_SEC).toBe(1800);
     expect(AI_CREDITS_BILLING_PATH).toContain("tab=credits");

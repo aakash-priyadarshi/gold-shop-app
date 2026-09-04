@@ -2,8 +2,13 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
 import { isSafeUrl } from "../../common/utils/url-validator";
+import {
+  resolveGenerationModel,
+  type AiGenerationModelId,
+} from "@gold-shop/shared";
 
 interface DesignSpecs {
+  model?: AiGenerationModelId;
   jewelryType: string;
   buildMethod: string;
   metalType?: string;
@@ -216,6 +221,7 @@ export class ImageGenerationService {
         null,
       // Bump PROMPT_VERSION above to invalidate all existing cached images
       promptVersion: PROMPT_VERSION,
+      model: resolveGenerationModel(specs.model).id,
     };
 
     return createHash("sha256")
@@ -582,6 +588,7 @@ Forbidden:
     }
 
     const prompt = this.buildPrompt(specs);
+    const model = resolveGenerationModel(specs.model);
     this.logger.log(
       `Generating image with prompt: ${prompt.substring(0, 100)}...`,
     );
@@ -589,7 +596,7 @@ Forbidden:
     try {
       // Use Google Imagen 4 via the predict endpoint
       // Note: API key should be passed as header, not query parameter
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model.apiModelId}:predict`;
       this.logger.debug(`Calling Imagen API at: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
