@@ -43,7 +43,6 @@ async function fetchPageHtml(urlStr: string, timeoutMs = 8000): Promise<string |
             "Accept-Language": "en-US,en;q=0.9",
           },
           timeout: timeoutMs,
-          rejectUnauthorized: false,
         },
         (res) => {
           if (
