@@ -6,7 +6,7 @@
   </head>
   <body style="margin:0;background:#f6f1e6;color:#172033;font-family:Arial,Helvetica,sans-serif;line-height:1.6">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0">
-      Claim {{days}} days of Pro and save {{discountPercent}}% on any paid plan during {{campaignName}}.
+      Claim {{days}} days of Pro for free, then get {{discountPercent}}% off the paid plan you choose during {{campaignName}}.
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
       <tr>
@@ -28,19 +28,19 @@
                 <div style="color:#8a5b13;font-size:12px;font-weight:700;text-transform:uppercase">{{campaignName}}</div>
                 <h1 style="margin:12px 0;color:#13213c;font-family:Georgia,'Times New Roman',serif;font-size:31px">{{emailHeading}}</h1>
                 <p style="font-size:16px;color:#344054">Hi {{firstName}},</p>
-                <p style="font-size:16px;color:#344054">{{emailBody}}</p>
+                {{paragraphs emailBody}}
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background:#fbf7ed;border:1px solid #ead9b6;border-radius:16px">
                   <tr>
                     <td align="center" style="padding:24px">
                       <div style="font-family:Georgia,'Times New Roman',serif;font-size:34px;font-weight:700">{{days}} days Pro free</div>
-                      <div style="font-size:24px;font-weight:700;color:#8a5b13">plus {{discountPercent}}% off every paid plan</div>
-                      <p style="color:#667085">Discount valid from {{formatDate saleStartsAt}} through {{formatDate saleEndsAt}}.</p>
+                      <div style="font-size:24px;font-weight:700;color:#8a5b13">then {{discountPercent}}% off the paid plan you choose</div>
+                      <p style="color:#667085">Your {{discountPercent}}% discount starts when the complimentary days end. Sale runs from {{formatDate saleStartsAt}} through {{formatDate saleEndsAt}}.</p>
                       <a href="{{claimUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#b7791f;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Claim {{days}} free days</a>
-                      <a href="{{pricingUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#172033;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Buy a plan and save {{discountPercent}}%</a>
+                      <a href="{{pricingUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#172033;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Buy a plan with {{discountPercent}}% off</a>
                     </td>
                   </tr>
                 </table>
-                <p style="font-size:13px;color:#667085">The complimentary Pro grant has no card and no automatic renewal. The plan discount applies once per shop while this festival campaign is live.</p>
+                <p style="font-size:13px;color:#667085">The complimentary Pro grant has no card and no automatic renewal. If you claim the free days first, the discounted plan you buy starts as soon as they end — the discount is applied once per shop while this festival campaign is live.</p>
               </td>
             </tr>
             <tr>
