@@ -2028,6 +2028,7 @@ export const sellerSubscriptionsApi = {
     country: string;
     billingCycle?: string;
     offerCampaignKey?: string;
+    planQuoteToken?: string;
   }) => api.post("/seller-subscriptions/subscribe", data),
   cancel: (id: string, data?: { reason?: string; immediate?: boolean }) =>
     api.post(`/seller-subscriptions/${id}/cancel`, data || {}),
@@ -2093,6 +2094,50 @@ export const aiCreditsApi = {
   getCreditStats: () => api.get("/ai-credits/admin/stats"),
   listSellers: (params?: { search?: string; page?: number; limit?: number }) =>
     api.get("/ai-credits/admin/sellers", { params }),
+};
+
+// ─── Plan Quotes API (Enterprise contact sales → admin quotes) ───
+export interface PlanQuoteForShop {
+  token: string;
+  status: "SENT" | "REDEEMED" | "REVOKED";
+  expired: boolean;
+  validUntil: string;
+  monthlyPrice: number | null;
+  annualPrice: number | null;
+  notes: string | null;
+  plan: {
+    id: string;
+    name: string;
+    displayName: string;
+    description: string | null;
+    country: string;
+    currency: string;
+    monthlyPrice: number;
+    annualPrice: number | null;
+    isActive: boolean;
+  };
+}
+
+export const planQuotesApi = {
+  createInquiry: (data: { planName: string; message?: string }) =>
+    api.post("/plan-quotes/inquiry", data),
+  getQuote: (token: string) =>
+    api.get<PlanQuoteForShop>(`/plan-quotes/quotes/${token}`),
+  adminListInquiries: () => api.get("/plan-quotes/admin/inquiries"),
+  adminUpdateInquiry: (id: string, status: "NEW" | "QUOTED" | "CLOSED") =>
+    api.patch(`/plan-quotes/admin/inquiries/${id}`, { status }),
+  adminCreateQuote: (data: {
+    shopId: string;
+    planId: string;
+    inquiryId?: string;
+    monthlyPrice?: number;
+    annualPrice?: number;
+    validityDays: number;
+    notes?: string;
+  }) => api.post("/plan-quotes/admin", data),
+  adminListQuotes: () => api.get("/plan-quotes/admin/quotes"),
+  adminRevokeQuote: (id: string) =>
+    api.patch(`/plan-quotes/admin/quotes/${id}`, { status: "REVOKED" }),
 };
 
 // ─── Payment Gateway API ───
@@ -2375,6 +2420,8 @@ export interface OfferCampaign {
   emailSubject: string;
   emailHeading: string;
   emailBody: string;
+  imageUrl?: string | null;
+  nextScheduledFor?: string | null;
   isActive?: boolean;
 }
 
@@ -2461,7 +2508,7 @@ export const recoveryOffersApi = {
     api.get<OfferCampaign[]>("/recovery-offers/admin/campaigns"),
   createCampaign: (data: Omit<OfferCampaign, "id">) =>
     api.post<OfferCampaign>("/recovery-offers/admin/campaigns", data),
-  updateCampaign: (key: string, data: Omit<OfferCampaign, "id" | "key">) =>
+  updateCampaign: (key: string, data: Partial<Omit<OfferCampaign, "id" | "key">>) =>
     api.patch<OfferCampaign>(
       `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}`,
       data,

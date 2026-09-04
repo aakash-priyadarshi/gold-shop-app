@@ -42,6 +42,7 @@ model User {
   auditLogs            AuditLog[]
   emailLogs            EmailLog[]
   recoveryOffers       RecoveryOffer[]
+  planInquiries        PlanInquiry[]
   notifications        Notification[]
   customerOrders       Order[]                 @relation("CustomerOrders")
   refreshTokens        RefreshToken[]
@@ -449,6 +450,8 @@ model Shop {
   subscriptions                SellerSubscription[]
   recoveryOffers               RecoveryOffer[]
   offerCampaignRedemptions     OfferCampaignRedemption[]
+  planInquiries                PlanInquiry[]
+  planQuotes                   PlanQuote[]
   platformReviews              PlatformReview[]
   referralsMade                Referral[]                @relation("ShopReferralsMade")
   referralsReceived            Referral[]                @relation("ShopReferralsReceived")
@@ -3424,6 +3427,7 @@ model SubscriptionPlan {
   updatedAt DateTime @updatedAt
 
   subscriptions SellerSubscription[]
+  planQuotes    PlanQuote[]
 
   @@unique([name, country])
   @@index([country, isActive])
@@ -3526,6 +3530,7 @@ model OfferCampaign {
   emailSubject      String
   emailHeading      String
   emailBody         String                    @db.Text
+  imageUrl          String?
   isActive          Boolean                   @default(true)
   createdBy         String?
   createdAt         DateTime                  @default(now())
@@ -3534,6 +3539,72 @@ model OfferCampaign {
 
   @@index([kind, isActive, startsAt, endsAt])
   @@index([endsAt])
+}
+
+/// Sales inquiry raised from the billing page ("contact sales" for Pro+ /
+/// Enterprise). Admins answer with a custom PlanQuote.
+model PlanInquiry {
+  id        String            @id @default(cuid())
+  shopId    String
+  userId    String
+  planName  String
+  message   String?           @db.Text
+  status    PlanInquiryStatus @default(NEW)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  shop  Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quote PlanQuote?
+
+  @@unique([id, shopId])
+  @@index([status, createdAt])
+  @@index([shopId])
+}
+
+/// Custom-priced plan quote prepared by an admin and emailed to the shop.
+/// Accepting it runs Stripe Checkout against a one-off Stripe Price created
+/// for the quoted amount.
+model PlanQuote {
+  id                     String          @id @default(cuid())
+  token                  String          @unique
+  shopId                 String
+  planId                 String
+  inquiryId              String?         @unique
+  monthlyPrice           Float?
+  annualPrice            Float?
+  validUntil             DateTime
+  notes                  String?         @db.Text
+  status                 PlanQuoteStatus @default(SENT)
+  monthlyPriceId         String? // Stripe Price for the quoted monthly amount
+  annualPriceId          String? // Stripe Price for the quoted annual amount
+  redeemedAt             DateTime?
+  redeemedSubscriptionId String?
+  createdBy              String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  shop    Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id])
+  // createQuote looks up inquiries by id AND shopId so a quote cannot
+  // attach another shop's inquiry. Prisma cannot model an optional
+  // composite FK while shopId stays required.
+  inquiry PlanInquiry?     @relation(fields: [inquiryId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, status])
+  @@index([status, validUntil])
+}
+
+enum PlanInquiryStatus {
+  NEW
+  QUOTED
+  CLOSED
+}
+
+enum PlanQuoteStatus {
+  SENT
+  REDEEMED
+  REVOKED
 }
 
 model OfferCampaignRedemption {

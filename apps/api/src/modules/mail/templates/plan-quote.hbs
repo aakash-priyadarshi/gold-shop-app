@@ -1,0 +1,63 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Your custom {{planName}} quote from Orivraa</title>
+  </head>
+  <body style="margin:0;background:#f6f1e6;color:#172033;font-family:Arial,Helvetica,sans-serif;line-height:1.6">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        <td align="center" style="padding:28px 14px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#fff;border:1px solid #e6dcc6;border-radius:20px;overflow:hidden">
+            <tr>
+              <td style="background:#0d1830;padding:22px 28px;color:#fff">
+                <strong style="font-size:22px">Orivraa</strong>
+                <div style="margin-top:4px;font-size:13px;color:#cbd2df">A custom plan, prepared for {{shopName}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px">
+                <div style="color:#8a5b13;font-size:12px;font-weight:700;text-transform:uppercase">Custom quote</div>
+                <h1 style="margin:12px 0;color:#13213c;font-family:Georgia,'Times New Roman',serif;font-size:30px">{{planName}} for {{shopName}}</h1>
+                <p style="font-size:16px;color:#344054">Hi {{firstName}},</p>
+                <p style="font-size:16px;color:#344054">
+                  Thank you for talking to us about {{planName}}. Here is the
+                  pricing we prepared for your business — it is valid until
+                  {{formatDate validUntil}}.
+                </p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background:#fbf7ed;border:1px solid #ead9b6;border-radius:16px">
+                  <tr>
+                    <td align="center" style="padding:24px">
+                      {{#if monthlyPrice}}
+                      <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:700">{{currency}} {{monthlyPrice}} / month</div>
+                      {{/if}}
+                      {{#if annualPrice}}
+                      <div style="margin-top:6px;font-size:20px;font-weight:700;color:#8a5b13">{{currency}} {{annualPrice}} / year</div>
+                      {{/if}}
+                      <a href="{{quoteUrl}}" style="display:inline-block;margin-top:14px;border-radius:11px;background:#b7791f;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Accept this quote</a>
+                    </td>
+                  </tr>
+                </table>
+                {{#if notes}}
+                <p style="font-size:14px;color:#344054">{{notes}}</p>
+                {{/if}}
+                <p style="font-size:13px;color:#667085">
+                  Accepting the quote opens a secure checkout for the plan
+                  above. If an active complimentary or trial period is running,
+                  the paid plan starts once it ends. Questions? Just reply to
+                  this email.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#0d1830;padding:22px 30px;text-align:center;color:#cbd2df;font-size:12px">
+                Orivraa — the operating system for gold shops.
+                <br />© {{year}} Orivraa. All rights reserved.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

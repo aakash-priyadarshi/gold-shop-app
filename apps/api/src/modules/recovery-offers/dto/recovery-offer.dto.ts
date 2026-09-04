@@ -11,6 +11,7 @@ import {
   IsOptional,
   IsNumber,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -90,6 +91,14 @@ export class CreateOfferCampaignDto {
   @MinLength(10)
   @MaxLength(4000)
   emailBody: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https?:\/\/\S+$/i, {
+    message: "imageUrl must be an http(s) URL or empty to use the default",
+  })
+  @MaxLength(500)
+  imageUrl?: string | null;
 }
 
 export class UpdateOfferCampaignDto extends PartialType(
