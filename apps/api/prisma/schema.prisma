@@ -3553,8 +3553,8 @@ model PlanInquiry {
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
-  shop Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop  Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   quote PlanQuote?
 
   @@unique([id, shopId])
@@ -3566,30 +3566,30 @@ model PlanInquiry {
 /// Accepting it runs Stripe Checkout against a one-off Stripe Price created
 /// for the quoted amount.
 model PlanQuote {
-  id            String          @id @default(cuid())
-  token         String          @unique
-  shopId        String
-  planId        String
-  inquiryId     String?         @unique
-  monthlyPrice  Float?
-  annualPrice   Float?
-  validUntil    DateTime
-  notes         String?         @db.Text
-  status        PlanQuoteStatus @default(SENT)
-  monthlyPriceId  String? // Stripe Price for the quoted monthly amount
-  annualPriceId   String? // Stripe Price for the quoted annual amount
-  redeemedAt    DateTime?
+  id                     String          @id @default(cuid())
+  token                  String          @unique
+  shopId                 String
+  planId                 String
+  inquiryId              String?         @unique
+  monthlyPrice           Float?
+  annualPrice            Float?
+  validUntil             DateTime
+  notes                  String?         @db.Text
+  status                 PlanQuoteStatus @default(SENT)
+  monthlyPriceId         String? // Stripe Price for the quoted monthly amount
+  annualPriceId          String? // Stripe Price for the quoted annual amount
+  redeemedAt             DateTime?
   redeemedSubscriptionId String?
-  createdBy     String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdBy              String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
-  shop Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  plan SubscriptionPlan @relation(fields: [planId], references: [id])
-  // Prisma cannot model an optional composite FK while shopId stays required.
-  // The migration enforces UNIQUE(PlanInquiry.id, shopId) plus a composite
-  // FK so a quote cannot attach another shop's inquiry.
-  inquiry PlanInquiry?  @relation(fields: [inquiryId], references: [id], onDelete: Restrict)
+  shop    Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id])
+  // createQuote looks up inquiries by id AND shopId so a quote cannot
+  // attach another shop's inquiry. Prisma cannot model an optional
+  // composite FK while shopId stays required.
+  inquiry PlanInquiry?     @relation(fields: [inquiryId], references: [id], onDelete: Restrict)
 
   @@index([shopId, status])
   @@index([status, validUntil])

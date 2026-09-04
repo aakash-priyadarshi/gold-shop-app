@@ -40,9 +40,6 @@ CREATE TABLE "PlanQuote" (
 
 CREATE UNIQUE INDEX "PlanQuote_token_key" ON "PlanQuote"("token");
 CREATE UNIQUE INDEX "PlanQuote_inquiryId_key" ON "PlanQuote"("inquiryId");
--- Composite target so the quote FK also proves the inquiry belongs to the
--- quoted shop. Prisma cannot model that optional composite relation while
--- PlanQuote.shopId stays required.
 CREATE UNIQUE INDEX "PlanInquiry_id_shopId_key" ON "PlanInquiry"("id", "shopId");
 
 CREATE INDEX "PlanInquiry_status_createdAt_idx" ON "PlanInquiry"("status", "createdAt");
@@ -55,5 +52,4 @@ ALTER TABLE "PlanInquiry" ADD CONSTRAINT "PlanInquiry_userId_fkey" FOREIGN KEY (
 
 ALTER TABLE "PlanQuote" ADD CONSTRAINT "PlanQuote_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PlanQuote" ADD CONSTRAINT "PlanQuote_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
--- Composite FK: a quote may only attach an inquiry from the same shop.
-ALTER TABLE "PlanQuote" ADD CONSTRAINT "PlanQuote_inquiryId_shopId_fkey" FOREIGN KEY ("inquiryId", "shopId") REFERENCES "PlanInquiry"("id", "shopId") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PlanQuote" ADD CONSTRAINT "PlanQuote_inquiryId_fkey" FOREIGN KEY ("inquiryId") REFERENCES "PlanInquiry"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
