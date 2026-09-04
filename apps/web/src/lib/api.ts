@@ -420,7 +420,10 @@ export const inventoryApi = {
   createStorageLocation: (shopId: string, data: any) =>
     api.post(`/inventory/shop/${shopId}/storage-locations`, data),
   updateStorageLocation: (shopId: string, locationId: string, data: any) =>
-    api.patch(`/inventory/shop/${shopId}/storage-locations/${locationId}`, data),
+    api.patch(
+      `/inventory/shop/${shopId}/storage-locations/${locationId}`,
+      data,
+    ),
   archiveStorageLocation: (shopId: string, locationId: string) =>
     api.delete(`/inventory/shop/${shopId}/storage-locations/${locationId}`),
   transferLocation: (
@@ -444,7 +447,9 @@ export const inventoryApi = {
   getStockAudit: (shopId: string, auditId: string) =>
     api.get(`/inventory/shop/${shopId}/stock-audits/${auditId}`),
   scanStockAudit: (shopId: string, auditId: string, code: string) =>
-    api.post(`/inventory/shop/${shopId}/stock-audits/${auditId}/scan`, { code }),
+    api.post(`/inventory/shop/${shopId}/stock-audits/${auditId}/scan`, {
+      code,
+    }),
   completeStockAudit: (shopId: string, auditId: string) =>
     api.post(`/inventory/shop/${shopId}/stock-audits/${auditId}/complete`),
   cancelStockAudit: (shopId: string, auditId: string) =>
@@ -500,10 +505,8 @@ export const goldLoansApi = {
     loanDate?: string;
     notes?: string;
   }) => api.post("/gold-loans", data),
-  updateStatus: (
-    id: string,
-    data: { status: string; redeemedDate?: string },
-  ) => api.patch(`/gold-loans/${id}/status`, data),
+  updateStatus: (id: string, data: { status: string; redeemedDate?: string }) =>
+    api.patch(`/gold-loans/${id}/status`, data),
 };
 
 export const chitApi = {
@@ -521,7 +524,11 @@ export const chitApi = {
   }) => api.post("/chit-groups", data),
   addMember: (
     id: string,
-    data: { customerName: string; customerPhone?: string; ticketNumber?: number },
+    data: {
+      customerName: string;
+      customerPhone?: string;
+      ticketNumber?: number;
+    },
   ) => api.post(`/chit-groups/${id}/members`, data),
   openCycle: (id: string, data?: { dueDate?: string }) =>
     api.post(`/chit-groups/${id}/cycles`, data ?? {}),
@@ -598,7 +605,12 @@ export const karigarApi = {
   ) => api.patch(`/karigar/jobs/${jobId}/stages/${stage}`, data),
   createTree: (
     jobId: string,
-    data: { label?: string; issuedGrams: number; allowedWastagePercent?: number; purity?: string },
+    data: {
+      label?: string;
+      issuedGrams: number;
+      allowedWastagePercent?: number;
+      purity?: string;
+    },
   ) => api.post(`/karigar/jobs/${jobId}/trees`, data),
   updateTree: (
     jobId: string,
@@ -683,7 +695,12 @@ export const karigarApi = {
   recordMetalReturn: (
     workshopId: string,
     data: {
-      type: "RETURN_FINISHED" | "RETURN_UNUSED" | "RETURN_SPRUE" | "SCRAP" | "DUST";
+      type:
+        | "RETURN_FINISHED"
+        | "RETURN_UNUSED"
+        | "RETURN_SPRUE"
+        | "SCRAP"
+        | "DUST";
       weightGrams: number;
       metalKey: string;
       jobId?: string;
@@ -912,10 +929,21 @@ export const adminApi = {
   getSystemNotifications: () => api.get("/admin/notifications/system"),
 
   // Email settings
-  getEmailLogs: (params?: { page?: number; limit?: number; type?: string; direction?: string }) =>
-    api.get("/admin/emails", { params }),
-  aiComposeEmail: (data: { prompt: string; recipientName?: string; recipientRole?: string }) =>
-    api.post<{ success: boolean; subject: string; message: string }>("/admin/messages/ai-compose", data),
+  getEmailLogs: (params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    direction?: string;
+  }) => api.get("/admin/emails", { params }),
+  aiComposeEmail: (data: {
+    prompt: string;
+    recipientName?: string;
+    recipientRole?: string;
+  }) =>
+    api.post<{ success: boolean; subject: string; message: string }>(
+      "/admin/messages/ai-compose",
+      data,
+    ),
   getEmailTriggers: () => api.get("/admin/email/triggers"),
   getEmailTemplates: () => api.get("/admin/email/templates"),
   getEmailTemplate: (id: string) => api.get(`/admin/email/templates/${id}`),
@@ -923,16 +951,22 @@ export const adminApi = {
     api.post("/admin/email/templates", data),
   updateEmailTemplate: (id: string, data: Record<string, any>) =>
     api.patch(`/admin/email/templates/${id}`, data),
-  deleteEmailTemplate: (id: string) => api.delete(`/admin/email/templates/${id}`),
+  deleteEmailTemplate: (id: string) =>
+    api.delete(`/admin/email/templates/${id}`),
   previewEmailTemplate: (id: string, context?: Record<string, any>) =>
     api.post(`/admin/email/templates/${id}/preview`, { context }),
   previewEmailTemplateDraft: (data: Record<string, any>) =>
     api.post("/admin/email/templates/preview", data),
   searchUsers: (q: string) =>
-    api.get<{ users: { id: string; firstName: string; lastName: string; email: string; role: string }[] }>(
-      "/admin/users/search",
-      { params: { q } },
-    ),
+    api.get<{
+      users: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        role: string;
+      }[];
+    }>("/admin/users/search", { params: { q } }),
   sendMessage: (data: {
     recipientId?: string;
     recipientEmail?: string;
@@ -940,7 +974,11 @@ export const adminApi = {
     content: string;
     subject?: string;
     threadId?: string;
-  }) => api.post<{ success: boolean; messageId?: string; threadId: string }>("/admin/messages/send", data),
+  }) =>
+    api.post<{ success: boolean; messageId?: string; threadId: string }>(
+      "/admin/messages/send",
+      data,
+    ),
   getEmailStatus: () => api.get("/admin/email/status"),
 
   sendTestEmail: (email: string) => api.post("/admin/email/test", { email }),
@@ -1067,8 +1105,7 @@ export const shopQuotesApi = {
       reference?: string;
       idempotencyKey?: string;
     },
-  ) =>
-    api.post(`/shop-quotes/${id}/payment`, data),
+  ) => api.post(`/shop-quotes/${id}/payment`, data),
 
   checkout: (
     id: string,
@@ -1281,7 +1318,8 @@ export const sellerPerformanceApi = {
       adminNote?: string;
       months?: number;
     },
-  ) => api.post(`/seller-performance/admin/referral-payouts/${id}/resolve`, data),
+  ) =>
+    api.post(`/seller-performance/admin/referral-payouts/${id}/resolve`, data),
   adminGrantReferralPro: (
     shopId: string,
     data: { months?: number; adminNote?: string },
@@ -1762,8 +1800,7 @@ export const ticketsApi = {
     sessionId: string,
     data: { leadStatus?: string; leadNotes?: string | null },
   ) => api.patch(`/tickets/ai-chat/leads/${sessionId}`, data),
-  getLeadAlertSettings: () =>
-    api.get("/tickets/ai-chat/leads/alert-settings"),
+  getLeadAlertSettings: () => api.get("/tickets/ai-chat/leads/alert-settings"),
   updateLeadAlertSettings: (data: {
     emails: string[];
     digestEnabled?: boolean;
@@ -1999,17 +2036,29 @@ export const posApi = {
     api.patch(`/pos/registers/${id}`, data),
 
   // Shifts & Z-Report
-  openShift: (data: { registerId: string; openingCash?: number; notes?: string }) =>
-    api.post("/pos/shifts/open", data),
+  openShift: (data: {
+    registerId: string;
+    openingCash?: number;
+    notes?: string;
+  }) => api.post("/pos/shifts/open", data),
   getCurrentShift: (registerId?: string) =>
-    api.get("/pos/shifts/current", { params: registerId ? { registerId } : {} }),
+    api.get("/pos/shifts/current", {
+      params: registerId ? { registerId } : {},
+    }),
   closeShift: (id: string, data: { closingCash: number; notes?: string }) =>
     api.post(`/pos/shifts/${id}/close`, data),
   getZReport: (id: string) => api.get(`/pos/shifts/${id}/z-report`),
-  authorizeDrawerOpen: (data: { reason?: string; registerId?: string; managerPin?: string }) =>
-    api.post("/pos/drawer/authorize", data),
-  auditDrawerOpen: (data: { reason?: string; registerId?: string; success?: boolean; error?: string }) =>
-    api.post("/pos/drawer/open", data),
+  authorizeDrawerOpen: (data: {
+    reason?: string;
+    registerId?: string;
+    managerPin?: string;
+  }) => api.post("/pos/drawer/authorize", data),
+  auditDrawerOpen: (data: {
+    reason?: string;
+    registerId?: string;
+    success?: boolean;
+    error?: string;
+  }) => api.post("/pos/drawer/open", data),
 
   // Pricing Preview
   previewPricing: (data: {
@@ -2053,7 +2102,11 @@ export const posApi = {
       providerTransactionId?: string;
       notes?: string;
     } = {},
-  ) => api.post(`/pos/returns/${returnId}/refunds/${refundPaymentId}/confirm`, data),
+  ) =>
+    api.post(
+      `/pos/returns/${returnId}/refunds/${refundPaymentId}/confirm`,
+      data,
+    ),
   processExchange: (data: {
     invoiceNumber: string;
     returnLines: Array<{
@@ -2071,7 +2124,11 @@ export const posApi = {
       unitPrice?: number;
     }>;
     paymentMethod?: string;
-    paymentSplits?: Array<{ method: string; amount: number; reference?: string }>;
+    paymentSplits?: Array<{
+      method: string;
+      amount: number;
+      reference?: string;
+    }>;
     idempotencyKey: string;
     notes?: string;
     managerPin?: string;
@@ -2081,7 +2138,9 @@ export const posApi = {
   getCustomerPicks: (customerId: string) =>
     api.get(`/pos/customer-picks/${customerId}`),
   getActiveSession: (registerId?: string) =>
-    api.get("/pos/session/active", { params: registerId ? { registerId } : {} }),
+    api.get("/pos/session/active", {
+      params: registerId ? { registerId } : {},
+    }),
   createSession: (data: {
     customerId?: string;
     conversationId?: string;
@@ -2519,10 +2578,8 @@ export const crashReportApi = {
     api.patch(`/crash-reports/${id}`, data),
 
   /** Update several reports from the admin triage queue */
-  updateMany: (
-    ids: string[],
-    data: { status: string; adminNotes?: string },
-  ) => api.patch("/crash-reports/bulk/status", { ids, ...data }),
+  updateMany: (ids: string[], data: { status: string; adminNotes?: string }) =>
+    api.patch("/crash-reports/bulk/status", { ids, ...data }),
 
   /** Delete a crash report */
   remove: (id: string) => api.delete(`/crash-reports/${id}`),
@@ -2595,8 +2652,42 @@ export interface OfferCampaign {
   emailHeading: string;
   emailBody: string;
   imageUrl?: string | null;
+  emailImage?: {
+    id: string;
+    fileName: string;
+    contentType: "image/png" | "image/jpeg" | "image/gif";
+    byteSize: number;
+    expiresAt: string;
+    createdAt: string;
+  } | null;
   nextScheduledFor?: string | null;
   isActive?: boolean;
+}
+
+export type OfferEmailImageMode = "KEEP" | "DEFAULT" | "URL" | "UPLOAD";
+
+export interface OfferCampaignEmailDraft {
+  emailSubject: string;
+  emailHeading: string;
+  emailBody: string;
+  imageMode: OfferEmailImageMode;
+  imageUrl?: string;
+  image?: File | null;
+}
+
+function offerCampaignEmailFormData(data: OfferCampaignEmailDraft) {
+  const formData = new FormData();
+  formData.append("emailSubject", data.emailSubject);
+  formData.append("emailHeading", data.emailHeading);
+  formData.append("emailBody", data.emailBody);
+  formData.append("imageMode", data.imageMode);
+  if (data.imageUrl !== undefined) {
+    formData.append("imageUrl", data.imageUrl);
+  }
+  if (data.image) {
+    formData.append("image", data.image);
+  }
+  return formData;
 }
 
 export type FestivalReligion =
@@ -2682,10 +2773,23 @@ export const recoveryOffersApi = {
     api.get<OfferCampaign[]>("/recovery-offers/admin/campaigns"),
   createCampaign: (data: Omit<OfferCampaign, "id">) =>
     api.post<OfferCampaign>("/recovery-offers/admin/campaigns", data),
-  updateCampaign: (key: string, data: Partial<Omit<OfferCampaign, "id" | "key">>) =>
+  updateCampaign: (
+    key: string,
+    data: Partial<Omit<OfferCampaign, "id" | "key">>,
+  ) =>
     api.patch<OfferCampaign>(
       `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}`,
       data,
+    ),
+  updateCampaignEmail: (key: string, data: OfferCampaignEmailDraft) =>
+    api.patch<OfferCampaign>(
+      `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email`,
+      offerCampaignEmailFormData(data),
+    ),
+  previewCampaignEmail: (key: string, data: OfferCampaignEmailDraft) =>
+    api.post<{ subject: string; html: string }>(
+      `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email/preview`,
+      offerCampaignEmailFormData(data),
     ),
   getCampaign: (key: string) =>
     api.get<OfferCampaign>(

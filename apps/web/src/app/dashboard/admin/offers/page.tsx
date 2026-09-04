@@ -2,6 +2,13 @@
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { T } from "@/components/ui/T";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -10,6 +17,8 @@ import {
   type FestivalCalendarResult,
   type FestivalReligion,
   type OfferCampaign,
+  type OfferCampaignEmailDraft,
+  type OfferEmailImageMode,
   type RecoveryAudiencePreview,
   type RecoveryCampaignMetrics,
 } from "@/lib/api";
@@ -27,6 +36,8 @@ import {
   Gift,
   Globe2,
   Eye,
+  ImageUp,
+  Link2,
   LogIn,
   Loader2,
   Mail,
@@ -78,6 +89,14 @@ const FESTIVAL_RELIGION_STYLES: Record<FestivalReligion, string> = {
 };
 
 const CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const EMAIL_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const EMAIL_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/gif",
+]);
 
 const SEGMENT_LABELS: Record<Recipient["activitySegment"], string> = {
   recent: "Recently active",
@@ -91,6 +110,21 @@ function formatDateTime(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatFileSize(bytes: number) {
+  return bytes >= 1024 * 1024
+    ? { value: (bytes / (1024 * 1024)).toFixed(1), unit: "MB" }
+    : { value: String(Math.max(1, Math.round(bytes / 1024))), unit: "KB" };
+}
+
+function FormattedFileSize({ bytes }: { bytes: number }) {
+  const { value, unit } = formatFileSize(bytes);
+  return (
+    <>
+      {value} <T>{unit}</T>
+    </>
+  );
 }
 
 function formatLastActive(value?: string | null) {
@@ -197,8 +231,7 @@ function recipientStatusClass(status: ReturnType<typeof recipientStatus>) {
       "bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-200",
     expired:
       "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
-    "not-sent":
-      "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
+    "not-sent": "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
   };
   return classes[status];
 }
@@ -219,6 +252,14 @@ export default function OffersAdminPage() {
     "create" | "edit" | "email"
   >("create");
   const [savingCampaign, setSavingCampaign] = useState(false);
+  const [emailImageMode, setEmailImageMode] =
+    useState<OfferEmailImageMode>("DEFAULT");
+  const [emailImageFile, setEmailImageFile] = useState<File | null>(null);
+  const [previewingEmail, setPreviewingEmail] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<{
+    subject: string;
+    html: string;
+  } | null>(null);
   const [campaignDraft, setCampaignDraft] = useState({
     key: "",
     name: "",
@@ -341,12 +382,18 @@ export default function OffersAdminPage() {
   const selectedCampaign = campaigns.find(
     (item) => item.key === selectedCampaignKey,
   );
+  const editingCampaign = campaigns.find(
+    (item) => item.key === editingCampaignKey,
+  );
+  const lockCampaign =
+    showCampaignForm && campaignFormMode === "create"
+      ? undefined
+      : editingCampaign || selectedCampaign;
   // Email copy and artwork lock 5 minutes before the campaign's earliest
   // scheduled send so queued emails render the same content they were
   // previewed with.
-  const emailLockAt = selectedCampaign?.nextScheduledFor
-    ? new Date(selectedCampaign.nextScheduledFor).getTime() -
-      5 * 60 * 1000
+  const emailLockAt = lockCampaign?.nextScheduledFor
+    ? new Date(lockCampaign.nextScheduledFor).getTime() - 5 * 60 * 1000
     : null;
   const [emailLockReached, setEmailLockReached] = useState(false);
   useEffect(() => {
@@ -364,6 +411,99 @@ export default function OffersAdminPage() {
     return () => window.clearTimeout(timer);
   }, [emailLockAt]);
   const emailEditLocked = emailLockAt !== null && emailLockReached;
+
+  const setImageStateFromCampaign = (campaign: OfferCampaign) => {
+    setEmailImageFile(null);
+    setEmailImageMode(
+      campaign.emailImage ? "KEEP" : campaign.imageUrl ? "URL" : "DEFAULT",
+    );
+  };
+
+  const buildEmailDraft = (): OfferCampaignEmailDraft | null => {
+    if (emailImageMode === "UPLOAD" && !emailImageFile) {
+      toast({
+        title: t("Choose an image to upload"),
+        description: t("Use a PNG, JPEG, or GIF up to 5 MB."),
+        variant: "destructive",
+      });
+      return null;
+    }
+    if (emailImageMode === "URL") {
+      try {
+        const parsed = new URL(campaignDraft.imageUrl.trim());
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          throw new Error("Unsupported protocol");
+        }
+      } catch {
+        toast({
+          title: t("Enter a valid image link"),
+          description: t("The image link must start with http:// or https://."),
+          variant: "destructive",
+        });
+        return null;
+      }
+    }
+    return {
+      emailSubject: campaignDraft.emailSubject,
+      emailHeading: campaignDraft.emailHeading,
+      emailBody: campaignDraft.emailBody,
+      imageMode: emailImageMode,
+      ...(emailImageMode === "URL"
+        ? { imageUrl: campaignDraft.imageUrl.trim() }
+        : {}),
+      ...(emailImageMode === "UPLOAD" ? { image: emailImageFile } : {}),
+    };
+  };
+
+  const selectEmailImage = (file?: File) => {
+    if (!file) return;
+    const extensionAllowed = /\.(png|jpe?g|gif)$/i.test(file.name);
+    if ((file.type && !EMAIL_IMAGE_TYPES.has(file.type)) || !extensionAllowed) {
+      toast({
+        title: t("This image type is not supported"),
+        description: t("Choose a PNG, JPEG, or GIF file."),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > EMAIL_IMAGE_MAX_BYTES) {
+      toast({
+        title: t("The image is too large"),
+        description: t("Choose an image that is 5 MB or smaller."),
+        variant: "destructive",
+      });
+      return;
+    }
+    setEmailImageFile(file);
+    setEmailImageMode("UPLOAD");
+  };
+
+  const previewCampaignEmail = async () => {
+    if (!editingCampaignKey) return;
+    const draft = buildEmailDraft();
+    if (!draft) return;
+    setPreviewingEmail(true);
+    try {
+      const response = await recoveryOffersApi.previewCampaignEmail(
+        editingCampaignKey,
+        draft,
+      );
+      setEmailPreview(response.data);
+    } catch (error) {
+      toast({
+        title: t("Email preview could not be created"),
+        description: t(
+          apiErrorMessage(
+            error,
+            "Check the email content and image, then try again.",
+          ),
+        ),
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewingEmail(false);
+    }
+  };
 
   const saveFestivalCampaign = async () => {
     const startsAt = toIsoFromLocal(campaignDraft.startsAt);
@@ -396,9 +536,11 @@ export default function OffersAdminPage() {
       };
       let response: { data: { key: string } };
       if (campaignFormMode === "email" && editingCampaignKey) {
-        response = await recoveryOffersApi.updateCampaign(
+        const draft = buildEmailDraft();
+        if (!draft) return;
+        response = await recoveryOffersApi.updateCampaignEmail(
           editingCampaignKey,
-          emailContent,
+          draft,
         );
       } else if (editingCampaignKey) {
         // Email content is omitted from the payload while locked; the API
@@ -458,9 +600,7 @@ export default function OffersAdminPage() {
   };
 
   const editSelectedCampaign = () => {
-    const campaign = campaigns.find(
-      (item) => item.key === selectedCampaignKey,
-    );
+    const campaign = campaigns.find((item) => item.key === selectedCampaignKey);
     if (!campaign?.startsAt || !campaign.endsAt) return;
     setCampaignDraft({
       key: campaign.key,
@@ -474,15 +614,14 @@ export default function OffersAdminPage() {
       emailBody: campaign.emailBody,
       imageUrl: campaign.imageUrl || "",
     });
+    setImageStateFromCampaign(campaign);
     setEditingCampaignKey(campaign.key);
     setCampaignFormMode("edit");
     setShowCampaignForm(true);
   };
 
   const editSelectedCampaignEmail = () => {
-    const campaign = campaigns.find(
-      (item) => item.key === selectedCampaignKey,
-    );
+    const campaign = campaigns.find((item) => item.key === selectedCampaignKey);
     if (!campaign) return;
     setCampaignDraft({
       key: campaign.key,
@@ -496,6 +635,7 @@ export default function OffersAdminPage() {
       emailBody: campaign.emailBody,
       imageUrl: campaign.imageUrl || "",
     });
+    setImageStateFromCampaign(campaign);
     setEditingCampaignKey(campaign.key);
     setCampaignFormMode("email");
     setShowCampaignForm(true);
@@ -519,6 +659,7 @@ export default function OffersAdminPage() {
         emailBody: existingCampaign.emailBody,
         imageUrl: existingCampaign.imageUrl || "",
       });
+      setImageStateFromCampaign(existingCampaign);
       setEditingCampaignKey(existingCampaign.key);
       setCampaignFormMode("edit");
       setShowCampaignForm(true);
@@ -547,6 +688,8 @@ export default function OffersAdminPage() {
       emailBody: `Celebrate ${event.name} with Orivraa. Claim ${complimentaryDays} complimentary days of Pro — no card, no automatic renewal.\n\nOnce the complimentary days end, the Pro plan you buy starts with ${discountPercent}% off your first payment. Claim your free days now, then upgrade with the festival discount.`,
       imageUrl: "",
     });
+    setEmailImageFile(null);
+    setEmailImageMode("DEFAULT");
     setEditingCampaignKey(null);
     setCampaignFormMode("create");
     setShowCampaignForm(true);
@@ -623,7 +766,10 @@ export default function OffersAdminPage() {
         return false;
       }
       if (accountKind === "no-shop" && recipient.hasShop) return false;
-      if (accountKind === "pending" && recipient.accountStatus !== "PENDING_VERIFICATION") {
+      if (
+        accountKind === "pending" &&
+        recipient.accountStatus !== "PENDING_VERIFICATION"
+      ) {
         return false;
       }
       if (accountKind === "paid" && !recipient.hasPaidPlan) return false;
@@ -639,10 +785,17 @@ export default function OffersAdminPage() {
         if (deliveryStatus === "not-sent" && status !== "not-sent") {
           return false;
         }
-        if (deliveryStatus === "sent" && !["sent", "opened", "activated", "claiming"].includes(status)) {
+        if (
+          deliveryStatus === "sent" &&
+          !["sent", "opened", "activated", "claiming"].includes(status)
+        ) {
           return false;
         }
-        if (deliveryStatus === "opened" && status !== "opened" && status !== "activated") {
+        if (
+          deliveryStatus === "opened" &&
+          status !== "opened" &&
+          status !== "activated"
+        ) {
           return false;
         }
         if (deliveryStatus === "activated" && status !== "activated") {
@@ -1159,6 +1312,8 @@ export default function OffersAdminPage() {
                   onClick={() => {
                     setEditingCampaignKey(null);
                     setCampaignFormMode("create");
+                    setEmailImageFile(null);
+                    setEmailImageMode("DEFAULT");
                     setShowCampaignForm((value) => !value);
                   }}
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-amber-700"
@@ -1313,6 +1468,9 @@ export default function OffersAdminPage() {
                       }))
                     }
                     disabled={emailEditLocked}
+                    required
+                    minLength={3}
+                    maxLength={180}
                     className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
                     placeholder={t("Celebrate with 14 days Pro and 10% off")}
                   />
@@ -1328,8 +1486,13 @@ export default function OffersAdminPage() {
                       }))
                     }
                     disabled={emailEditLocked}
+                    required
+                    minLength={3}
+                    maxLength={180}
                     className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
-                    placeholder={t("A festival offer for your jewellery business")}
+                    placeholder={t(
+                      "A festival offer for your jewellery business",
+                    )}
                   />
                 </label>
                 <div className="md:col-span-2">
@@ -1344,37 +1507,183 @@ export default function OffersAdminPage() {
                         }))
                       }
                       disabled={emailEditLocked}
+                      required
+                      minLength={10}
+                      maxLength={4000}
                       rows={6}
                       className="mt-1 w-full rounded-lg border bg-white px-3 py-2 disabled:opacity-60 dark:bg-gray-950"
                     />
                   </label>
                   <span className="mt-1 block text-[11px] text-muted-foreground">
-                    <T>Blank lines start a new paragraph; line breaks are kept.</T>
-                  </span>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium">
-                    <T>Email image URL</T>
-                    <input
-                      value={campaignDraft.imageUrl}
-                      onChange={(event) =>
-                        setCampaignDraft((current) => ({
-                          ...current,
-                          imageUrl: event.target.value,
-                        }))
-                      }
-                      disabled={emailEditLocked}
-                      className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
-                      placeholder={t("https://www.orivraa.com/luxury-gold-globe.png")}
-                    />
-                  </label>
-                  <span className="mt-1 block text-[11px] text-muted-foreground">
                     <T>
-                      Leave empty to use the default Orivraa artwork. Locked 5
-                      minutes before a scheduled send.
+                      Blank lines start a new paragraph; line breaks are kept.
                     </T>
                   </span>
                 </div>
+                {campaignFormMode === "email" ? (
+                  <div className="space-y-3 md:col-span-2">
+                    <div>
+                      <p className="text-xs font-medium">
+                        <T>Email header image</T>
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        <T>
+                          Use an image link or upload a PNG, JPEG, or animated
+                          GIF up to 5 MB. Uploads are embedded inside the email
+                          and deleted from Railway after 30 days.
+                        </T>
+                      </p>
+                    </div>
+                    <label className="block text-xs font-medium">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Link2 className="h-3.5 w-3.5" />
+                        <T>Image link</T>
+                      </span>
+                      <input
+                        type="url"
+                        value={campaignDraft.imageUrl}
+                        onChange={(event) => {
+                          const imageUrl = event.target.value;
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            imageUrl,
+                          }));
+                          setEmailImageFile(null);
+                          setEmailImageMode(
+                            imageUrl.trim()
+                              ? "URL"
+                              : editingCampaign?.emailImage
+                                ? "KEEP"
+                                : "DEFAULT",
+                          );
+                        }}
+                        disabled={emailEditLocked}
+                        maxLength={500}
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
+                        placeholder={t(
+                          "https://www.orivraa.com/luxury-gold-globe.png",
+                        )}
+                      />
+                    </label>
+                    <div className="rounded-lg border border-dashed bg-white p-3 dark:bg-gray-950">
+                      <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-gray-50 focus-within:ring-2 focus-within:ring-violet-500 focus-within:ring-offset-2 dark:hover:bg-gray-900">
+                        <ImageUp className="h-4 w-4" />
+                        <T>Choose image to upload</T>
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif"
+                          aria-label={t("Upload email header image")}
+                          disabled={emailEditLocked}
+                          className="sr-only"
+                          onChange={(event) => {
+                            selectEmailImage(event.target.files?.[0]);
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {emailImageMode === "UPLOAD" && emailImageFile ? (
+                          <p className="break-all">
+                            <span className="font-semibold text-foreground">
+                              {emailImageFile.name}
+                            </span>{" "}
+                            · <FormattedFileSize bytes={emailImageFile.size} />{" "}
+                            · <T>ready to upload</T>
+                          </p>
+                        ) : emailImageMode === "KEEP" &&
+                          editingCampaign?.emailImage ? (
+                          <p className="break-all">
+                            <span className="font-semibold text-foreground">
+                              {editingCampaign.emailImage.fileName}
+                            </span>{" "}
+                            ·{" "}
+                            <FormattedFileSize
+                              bytes={editingCampaign.emailImage.byteSize}
+                            />{" "}
+                            · <T>deletes</T>{" "}
+                            {formatDateTime(
+                              editingCampaign.emailImage.expiresAt,
+                            )}
+                          </p>
+                        ) : emailImageMode === "URL" ? (
+                          <p>
+                            <T>The email will load the image from the link.</T>
+                          </p>
+                        ) : (
+                          <p>
+                            <T>The default Orivraa artwork will be used.</T>
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {editingCampaign?.emailImage &&
+                          emailImageMode !== "KEEP" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEmailImageFile(null);
+                                setCampaignDraft((current) => ({
+                                  ...current,
+                                  imageUrl: "",
+                                }));
+                                setEmailImageMode("KEEP");
+                              }}
+                              disabled={emailEditLocked}
+                              className="min-h-9 rounded-md border px-3 text-xs font-semibold disabled:opacity-50"
+                            >
+                              <T>Keep current upload</T>
+                            </button>
+                          )}
+                        {emailImageMode !== "DEFAULT" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEmailImageFile(null);
+                              setCampaignDraft((current) => ({
+                                ...current,
+                                imageUrl: "",
+                              }));
+                              setEmailImageMode("DEFAULT");
+                            }}
+                            disabled={emailEditLocked}
+                            className="min-h-9 rounded-md border px-3 text-xs font-semibold disabled:opacity-50"
+                          >
+                            <T>Use default artwork</T>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium">
+                      <T>Email image URL</T>
+                      <input
+                        type="url"
+                        value={campaignDraft.imageUrl}
+                        onChange={(event) =>
+                          setCampaignDraft((current) => ({
+                            ...current,
+                            imageUrl: event.target.value,
+                          }))
+                        }
+                        disabled={emailEditLocked}
+                        maxLength={500}
+                        className="mt-1 min-h-10 w-full rounded-lg border bg-white px-3 disabled:opacity-60 dark:bg-gray-950"
+                        placeholder={t(
+                          "https://www.orivraa.com/luxury-gold-globe.png",
+                        )}
+                      />
+                    </label>
+                    <span className="mt-1 block text-[11px] text-muted-foreground">
+                      <T>
+                        Leave empty to use the default Orivraa artwork. Open
+                        “Edit email content” after saving to upload an inline
+                        image.
+                      </T>
+                    </span>
+                  </div>
+                )}
                 {emailEditLocked && (
                   <p className="text-xs font-medium text-orange-700 dark:text-orange-300 md:col-span-2">
                     <T>
@@ -1383,23 +1692,43 @@ export default function OffersAdminPage() {
                     </T>
                   </p>
                 )}
-                <button
-                  type="button"
-                  onClick={() => void saveFestivalCampaign()}
-                  disabled={savingCampaign || (campaignFormMode === "email" && emailEditLocked)}
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-700 px-4 font-semibold text-white disabled:opacity-50 md:col-span-2"
-                >
-                  {savingCampaign ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  {campaignFormMode === "email" ? (
-                    <T>Update email content</T>
-                  ) : editingCampaignKey ? (
-                    <T>Update festival campaign</T>
-                  ) : (
-                    <T>Save festival campaign</T>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end md:col-span-2">
+                  {campaignFormMode === "email" && (
+                    <button
+                      type="button"
+                      onClick={() => void previewCampaignEmail()}
+                      disabled={previewingEmail || savingCampaign}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border bg-white px-4 font-semibold hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-950 dark:hover:bg-gray-900"
+                    >
+                      {previewingEmail ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      <T>Preview email</T>
+                    </button>
                   )}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => void saveFestivalCampaign()}
+                    disabled={
+                      savingCampaign ||
+                      (campaignFormMode === "email" && emailEditLocked)
+                    }
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg bg-violet-700 px-4 font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
+                  >
+                    {savingCampaign ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {campaignFormMode === "email" ? (
+                      <T>Update email content</T>
+                    ) : editingCampaignKey ? (
+                      <T>Update festival campaign</T>
+                    ) : (
+                      <T>Save festival campaign</T>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </section>
@@ -1897,13 +2226,19 @@ export default function OffersAdminPage() {
                         {t("Complimentary Pro")}
                       </option>
                       <option value="paid">{t("Already on Pro")}</option>
-                      <option value="unverified">{t("Email not verified")}</option>
-                      <option value="pending">{t("Pending verification")}</option>
+                      <option value="unverified">
+                        {t("Email not verified")}
+                      </option>
+                      <option value="pending">
+                        {t("Pending verification")}
+                      </option>
                       <option value="no-shop">{t("No shop yet")}</option>
                     </select>
                     <select
                       value={deliveryStatus}
-                      onChange={(event) => setDeliveryStatus(event.target.value)}
+                      onChange={(event) =>
+                        setDeliveryStatus(event.target.value)
+                      }
                       className="min-h-11 rounded-lg border bg-white px-3 text-sm dark:bg-gray-950"
                     >
                       <option value="all">{t("All send statuses")}</option>
@@ -2034,10 +2369,10 @@ export default function OffersAdminPage() {
                                   </span>
                                 )}
                                 {recipient.offerStatus === "PREPARED" && (
-                                    <span className="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
-                                      <T>Scheduled</T>
-                                    </span>
-                                  )}
+                                  <span className="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
+                                    <T>Scheduled</T>
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-3 py-3">
@@ -2196,7 +2531,6 @@ export default function OffersAdminPage() {
                   </ul>
                 </details>
               )}
-
             </div>
 
             <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
@@ -2394,6 +2728,37 @@ export default function OffersAdminPage() {
           </div>
         </div>
       </DashboardLayout>
+      <Dialog
+        open={Boolean(emailPreview)}
+        onOpenChange={(open) => {
+          if (!open) setEmailPreview(null);
+        }}
+      >
+        <DialogContent className="flex h-[92vh] w-[min(960px,96vw)] max-w-none flex-col gap-3 p-4 sm:p-5">
+          <DialogHeader className="pr-8">
+            <DialogTitle>
+              <T>Email preview</T>
+            </DialogTitle>
+            <DialogDescription className="break-words text-left">
+              {emailPreview?.subject}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-white">
+            <iframe
+              title={t("Rendered email preview")}
+              sandbox=""
+              srcDoc={emailPreview?.html || ""}
+              className="h-full min-h-[520px] w-full bg-white"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <T>
+              This uses the production email template with your unsaved changes.
+              Links are disabled in preview.
+            </T>
+          </p>
+        </DialogContent>
+      </Dialog>
     </AdminGuard>
   );
 }

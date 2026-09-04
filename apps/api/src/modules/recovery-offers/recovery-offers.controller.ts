@@ -9,8 +9,12 @@ import {
   Post,
   Query,
   Redirect,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiBody, ApiConsumes, type ApiBodyOptions } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -25,10 +29,36 @@ import {
   RecoveryOfferTokenDto,
   SendRecoveryAudienceDto,
   SendRecoveryOffersDto,
+  UpdateOfferCampaignEmailDto,
   UpdateOfferCampaignDto,
 } from "./dto/recovery-offer.dto";
 import { FestivalCalendarService } from "./festival-calendar.service";
-import { RecoveryOffersService } from "./recovery-offers.service";
+import {
+  OFFER_EMAIL_IMAGE_MAX_BYTES,
+  RecoveryOffersService,
+} from "./recovery-offers.service";
+
+const offerEmailImageUpload = FileInterceptor("image", {
+  limits: { fileSize: OFFER_EMAIL_IMAGE_MAX_BYTES, files: 1 },
+});
+
+const offerEmailMultipartBody: ApiBodyOptions = {
+  schema: {
+    type: "object",
+    required: ["emailSubject", "emailHeading", "emailBody", "imageMode"],
+    properties: {
+      emailSubject: { type: "string" },
+      emailHeading: { type: "string" },
+      emailBody: { type: "string" },
+      imageMode: {
+        type: "string",
+        enum: ["KEEP", "DEFAULT", "URL", "UPLOAD"],
+      },
+      imageUrl: { type: "string" },
+      image: { type: "string", format: "binary" },
+    },
+  },
+};
 
 function asSingleQueryValue(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
@@ -76,6 +106,36 @@ export class RecoveryOffersController {
     @Body() dto: UpdateOfferCampaignDto,
   ) {
     return this.recoveryOffers.updateCampaign(key, dto);
+  }
+
+  @Patch("admin/campaigns/:key/email")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @UseInterceptors(offerEmailImageUpload)
+  @ApiConsumes("multipart/form-data")
+  @ApiBody(offerEmailMultipartBody)
+  updateCampaignEmail(
+    @Param("key") key: string,
+    @Body() dto: UpdateOfferCampaignEmailDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.recoveryOffers.updateCampaignEmail(key, dto, image);
+  }
+
+  @Post("admin/campaigns/:key/email/preview")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
+  @UseInterceptors(offerEmailImageUpload)
+  @ApiConsumes("multipart/form-data")
+  @ApiBody(offerEmailMultipartBody)
+  previewCampaignEmail(
+    @Param("key") key: string,
+    @Body() dto: UpdateOfferCampaignEmailDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.recoveryOffers.previewCampaignEmail(key, dto, image);
   }
 
   @Get("campaigns/:key")
