@@ -402,7 +402,7 @@ export default function OffersAdminPage() {
   // audience, preview, and schedule panels always describe a visible campaign.
   useEffect(() => {
     if (activeTab === "product") {
-      if (selectedCampaign && selectedCampaign.kind !== "PRODUCT_UPDATE") {
+      if (!selectedCampaign || selectedCampaign.kind !== "PRODUCT_UPDATE") {
         const firstProduct = campaigns.find(
           (campaign) => campaign.kind === "PRODUCT_UPDATE",
         );
@@ -1559,7 +1559,7 @@ export default function OffersAdminPage() {
               )}
             {activeTab === "product" &&
               selectedCampaign?.kind === "PRODUCT_UPDATE" &&
-              (selectedCampaign.emailDesign?.length || 0) > 0 && (
+              (selectedCampaign.emailDesign?.blocks.length || 0) > 0 && (
                 <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100">
                   <T>
                     Advanced design active — emails render from your block

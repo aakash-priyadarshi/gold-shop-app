@@ -151,16 +151,19 @@ describe("EmailDesignRendererService", () => {
     expect(html).toContain("&lt;script&gt;");
   });
 
-  it("keeps http: links out of rendered rich text", () => {
+  it("does not linkify non-https markdown links", () => {
     const { html } = renderer.render(
       parseOfferEmailDesign({
         blocks: [
-          { type: "text", text: "See [the demo](https://www.orivraa.com/demo)." },
+          {
+            type: "text",
+            text: "See [the demo](http://www.orivraa.com/demo).",
+          },
         ],
       }).blocks,
       baseOptions,
     );
-    expect(html).toContain('href="https://www.orivraa.com/demo"');
+    expect(html).not.toContain('href="http://www.orivraa.com/demo"');
   });
 
   it("emits @keyframes only for animated blocks", () => {

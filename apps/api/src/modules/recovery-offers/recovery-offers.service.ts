@@ -435,7 +435,7 @@ export class RecoveryOffersService {
       const rendered = this.renderDesignOrThrow(
         design.blocks,
         existing.name,
-        existing.emailSubject,
+        input.emailSubject,
       );
       if (rendered.bytes > OFFER_EMAIL_DESIGN_HTML_SOFT_LIMIT_BYTES) {
         this.logger.warn(
@@ -513,9 +513,10 @@ export class RecoveryOffersService {
         );
       }
       await this.assertEmailContentEditable(resolvedKey, tx);
+      // DbNull stores a SQL NULL so the column keeps IS NULL semantics.
       return tx.offerCampaign.update({
         where: { key: resolvedKey },
-        data: { emailDesign: Prisma.JsonNull },
+        data: { emailDesign: Prisma.DbNull },
         include: {
           emailImage: {
             select: {

@@ -27,9 +27,11 @@ because every kind is sent through the same queue and metrics.
 
 ### 2. Block-based email design (product updates only)
 
-- `OfferCampaign.emailDesign Json?` — normalized block list
-  (`heading | text | image | video | button | divider | spacer`, optional
-  `fadeIn`/`slideUp` per block). `apps/api/src/modules/recovery-offers/email-design.ts`
+- `OfferCampaign.emailDesign Json?` — normalized block list stored as
+  `{ blocks: [...] }` with types `heading | text | image | video | button |
+divider | spacer`. Optional `fadeIn`/`slideUp` entrance animation is
+  accepted on `heading`, `text`, `image`, and `video` blocks only (buttons,
+  dividers, and spacers render statically). `apps/api/src/modules/recovery-offers/email-design.ts`
   validates every field (https-only URLs, length caps, ≤40 blocks).
 - `EmailDesignRendererService` renders table-based, inline-styled 640px HTML
   in the Orivraa visual language. Text blocks support `**bold**`, `*italic*`,
@@ -84,6 +86,10 @@ server HTML with a Gmail-size warning. Festival editor untouched.
 2. Deploy the Cloudflare images worker (`email` upload type).
 3. Deploy web; optionally do one manual send to a Gmail and an Apple Mail
    inbox to eyeball the design render before a real campaign.
-4. Rollback: `DELETE .../email-design` per campaign (or set
-   `emailDesign = null`) instantly reverts to the template path; the
-   migration column is nullable so a code rollback is safe.
+4. Rollback: `DELETE .../email-design` per campaign reverts to the template
+   path — note the endpoint honors the 5-minute pre-send content lock, so it
+   succeeds only while no offer for the campaign is queued for immediate or
+   imminent delivery. Do not clear the column directly in the database as an
+   emergency procedure; wait out the lock window instead (a nullable column
+   also makes a full code rollback safe, since the design path only activates
+   on campaigns that explicitly saved a design).

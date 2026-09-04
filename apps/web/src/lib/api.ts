@@ -2651,7 +2651,8 @@ export interface OfferCampaign {
   emailSubject: string;
   emailHeading: string;
   emailBody: string;
-  emailDesign?: OfferEmailBlock[] | null;
+  /** Persisted block design; matches the backend's { blocks: [...] } shape. */
+  emailDesign?: { blocks: OfferEmailBlock[] } | null;
   imageUrl?: string | null;
   ctaUrl?: string | null;
   ctaLabel?: string | null;

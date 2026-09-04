@@ -110,9 +110,10 @@ export function EmailBlockEditor({
     if (!open) return;
     setSubject(campaign.emailSubject);
     setPreview(null);
+    const savedBlocks = campaign.emailDesign?.blocks;
     setBlocks(
-      campaign.emailDesign && campaign.emailDesign.length > 0
-        ? campaign.emailDesign.map((block) => ({ ...block }))
+      savedBlocks && savedBlocks.length > 0
+        ? savedBlocks.map((block) => ({ ...block }))
         : EMAIL_BLOCK_PRESETS[0].blocks.map((block) => ({ ...block })),
     );
   }, [campaign, open]);
@@ -207,6 +208,13 @@ export function EmailBlockEditor({
         if (block.alt.trim().length < 1) {
           return `Block ${index + 1}: describe the image for accessibility (alt text).`;
         }
+        if (
+          block.linkUrl &&
+          block.linkUrl.trim().length > 0 &&
+          !block.linkUrl.trim().startsWith("https://")
+        ) {
+          return `Block ${index + 1}: the click link must start with https://`;
+        }
       }
       if (block.type === "video") {
         if (!block.posterUrl.trim().startsWith("https://")) {
@@ -222,6 +230,12 @@ export function EmailBlockEditor({
         }
         if (!block.url.trim().startsWith("https://")) {
           return `Block ${index + 1}: the button link must start with https://`;
+        }
+      }
+      if (block.type === "spacer") {
+        const size = block.size ?? 24;
+        if (!Number.isInteger(size) || size < 8 || size > 120) {
+          return `Block ${index + 1}: spacer height must be between 8 and 120.`;
         }
       }
     }
@@ -422,7 +436,7 @@ export function EmailBlockEditor({
                 </div>
               </div>
 
-              {campaign.emailDesign && campaign.emailDesign.length > 0 && (
+              {(campaign.emailDesign?.blocks.length || 0) > 0 && (
                 <button
                   type="button"
                   onClick={() => void resetDesign()}
@@ -464,7 +478,7 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Move block up")}
                         onClick={() => moveBlock(index, -1)}
-                        disabled={index === 0}
+                        disabled={locked || index === 0}
                         className="rounded-md border p-1.5 disabled:opacity-30"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
@@ -473,7 +487,7 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Move block down")}
                         onClick={() => moveBlock(index, 1)}
-                        disabled={index === blocks.length - 1}
+                        disabled={locked || index === blocks.length - 1}
                         className="rounded-md border p-1.5 disabled:opacity-30"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
@@ -482,7 +496,8 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Duplicate block")}
                         onClick={() => duplicateBlock(index)}
-                        className="rounded-md border p-1.5"
+                        disabled={locked}
+                        className="rounded-md border p-1.5 disabled:opacity-30"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
@@ -490,7 +505,8 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Remove block")}
                         onClick={() => removeBlock(index)}
-                        className="rounded-md border p-1.5 text-red-600 dark:text-red-400"
+                        disabled={locked}
+                        className="rounded-md border p-1.5 text-red-600 disabled:opacity-30 dark:text-red-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -762,15 +778,21 @@ export function EmailBlockEditor({
                           type="number"
                           min={8}
                           max={120}
-                          value={block.size || 24}
-                          onChange={(event) =>
+                          value={block.size ?? 24}
+                          onChange={(event) => {
+                            const raw = event.target.value;
+                            const parsed =
+                              raw.trim() === "" ? undefined : Number(raw);
                             updateBlock(index, {
-                              size: Number(event.target.value),
-                            } as Partial<OfferEmailBlock>)
-                          }
+                              size: parsed,
+                            } as Partial<OfferEmailBlock>);
+                          }}
                           disabled={locked}
                           className={inputClass}
                         />
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
+                          <T>Empty resets to a 24 px gap.</T>
+                        </span>
                       </label>
                     )}
 

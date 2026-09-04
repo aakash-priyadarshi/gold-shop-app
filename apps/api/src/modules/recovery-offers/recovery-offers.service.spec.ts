@@ -48,7 +48,11 @@ describe("RecoveryOffersService", () => {
     emailLog: { create: jest.fn() },
     $transaction: jest.fn(),
   };
-  const mail: any = { send: jest.fn(), renderTemplate: jest.fn() };
+  const mail: any = {
+    send: jest.fn(),
+    sendHtml: jest.fn(),
+    renderTemplate: jest.fn(),
+  };
   const config: any = {
     get: jest.fn((_key: string, fallback: string) => fallback),
   };
@@ -2407,7 +2411,7 @@ describe("RecoveryOffersService", () => {
       isActive: true,
       emailImage: null,
     });
-    mail.sendHtml = jest.fn().mockResolvedValue({
+    mail.sendHtml.mockResolvedValue({
       success: true,
       messageId: "message-design",
     });
@@ -2475,7 +2479,7 @@ describe("RecoveryOffersService", () => {
       isActive: true,
       emailImage: null,
     });
-    mail.send = jest.fn().mockResolvedValue({
+    mail.send.mockResolvedValue({
       success: true,
       messageId: "message-fallback",
     });

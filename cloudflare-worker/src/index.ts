@@ -326,7 +326,8 @@ export default {
         path.startsWith("/kyc/") ||
         path.startsWith("/chat/") ||
         path.startsWith("/certificate/") ||
-        path.startsWith("/review-proof/")
+        path.startsWith("/review-proof/") ||
+        path.startsWith("/email/")
       ) {
         const key = decodeURIComponent(path.substring(1)); // Remove leading slash
         return handleServe(key, env, corsHeaders, request);
