@@ -809,6 +809,39 @@ describe("OffersAdminPage", () => {
     expect(screen.queryByLabelText("Email subject")).not.toBeInTheDocument();
   });
 
+  it("keeps a new festival email editable when the selected campaign is locked", async () => {
+    mocks.listCampaigns.mockResolvedValue({
+      data: [
+        {
+          id: "campaign-winback",
+          key: "customer-winback-2026-09",
+          name: "Customer win-back",
+          kind: "RECOVERY",
+          complimentaryDays: 50,
+          discountPercent: 0,
+          startsAt: null,
+          endsAt: null,
+          emailSubject: "Recovery subject",
+          emailHeading: "Recovery heading",
+          emailBody: "Recovery email body content.",
+          imageUrl: null,
+          nextScheduledFor: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
+          isActive: true,
+        },
+      ],
+    });
+
+    await renderLoadedPage();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create festival offer" }),
+    );
+
+    expect(screen.getByLabelText("Email subject")).toBeEnabled();
+    expect(screen.getByLabelText("Email heading")).toBeEnabled();
+    expect(screen.getByLabelText("Email message")).toBeEnabled();
+  });
+
   it("locks an open email form when the lock time arrives", async () => {
     const winbackCampaign = {
       id: "campaign-winback",

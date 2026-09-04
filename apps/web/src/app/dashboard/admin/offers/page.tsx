@@ -114,8 +114,17 @@ function formatDateTime(value?: string | null) {
 
 function formatFileSize(bytes: number) {
   return bytes >= 1024 * 1024
-    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    ? { value: (bytes / (1024 * 1024)).toFixed(1), unit: "MB" }
+    : { value: String(Math.max(1, Math.round(bytes / 1024))), unit: "KB" };
+}
+
+function FormattedFileSize({ bytes }: { bytes: number }) {
+  const { value, unit } = formatFileSize(bytes);
+  return (
+    <>
+      {value} <T>{unit}</T>
+    </>
+  );
 }
 
 function formatLastActive(value?: string | null) {
@@ -376,11 +385,15 @@ export default function OffersAdminPage() {
   const editingCampaign = campaigns.find(
     (item) => item.key === editingCampaignKey,
   );
+  const lockCampaign =
+    showCampaignForm && campaignFormMode === "create"
+      ? undefined
+      : editingCampaign || selectedCampaign;
   // Email copy and artwork lock 5 minutes before the campaign's earliest
   // scheduled send so queued emails render the same content they were
   // previewed with.
-  const emailLockAt = selectedCampaign?.nextScheduledFor
-    ? new Date(selectedCampaign.nextScheduledFor).getTime() - 5 * 60 * 1000
+  const emailLockAt = lockCampaign?.nextScheduledFor
+    ? new Date(lockCampaign.nextScheduledFor).getTime() - 5 * 60 * 1000
     : null;
   const [emailLockReached, setEmailLockReached] = useState(false);
   useEffect(() => {
@@ -1574,8 +1587,8 @@ export default function OffersAdminPage() {
                             <span className="font-semibold text-foreground">
                               {emailImageFile.name}
                             </span>{" "}
-                            · {formatFileSize(emailImageFile.size)} ·{" "}
-                            <T>ready to upload</T>
+                            · <FormattedFileSize bytes={emailImageFile.size} />{" "}
+                            · <T>ready to upload</T>
                           </p>
                         ) : emailImageMode === "KEEP" &&
                           editingCampaign?.emailImage ? (
@@ -1584,9 +1597,9 @@ export default function OffersAdminPage() {
                               {editingCampaign.emailImage.fileName}
                             </span>{" "}
                             ·{" "}
-                            {formatFileSize(
-                              editingCampaign.emailImage.byteSize,
-                            )}{" "}
+                            <FormattedFileSize
+                              bytes={editingCampaign.emailImage.byteSize}
+                            />{" "}
                             · <T>deletes</T>{" "}
                             {formatDateTime(
                               editingCampaign.emailImage.expiresAt,

@@ -14,10 +14,14 @@ CREATE TABLE "OfferEmailImage" (
 
 ALTER TABLE "OfferCampaign" ADD COLUMN "emailImageId" TEXT;
 
+-- OfferCampaign is a small configuration table, and this newly added nullable
+-- column contains only NULL values during this migration. Keep the index in
+-- Prisma's migration transaction; CONCURRENTLY is not valid there.
 CREATE UNIQUE INDEX "OfferCampaign_emailImageId_key" ON "OfferCampaign"("emailImageId");
 CREATE INDEX "OfferEmailImage_expiresAt_idx" ON "OfferEmailImage"("expiresAt");
 
 ALTER TABLE "OfferCampaign"
 ADD CONSTRAINT "OfferCampaign_emailImageId_fkey"
 FOREIGN KEY ("emailImageId") REFERENCES "OfferEmailImage"("id")
-ON DELETE SET NULL ON UPDATE CASCADE;
+ON DELETE SET NULL ON UPDATE CASCADE
+NOT VALID;
