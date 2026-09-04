@@ -105,6 +105,9 @@ export function EmailBlockEditor({
     bytes: number;
   } | null>(null);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  // While an upload is pending its handler writes into a captured block
+  // index, so every list-mutating control must wait for it to settle.
+  const uploadPending = uploadingKey !== null;
 
   useEffect(() => {
     if (!open) return;
@@ -390,7 +393,7 @@ export function EmailBlockEditor({
               <button
                 type="button"
                 onClick={() => void save()}
-                disabled={saving || locked}
+                disabled={uploadPending || saving || locked}
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-700 px-4 font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
@@ -422,7 +425,7 @@ export function EmailBlockEditor({
                       key={preset.id}
                       type="button"
                       onClick={() => applyPreset(preset.id)}
-                      disabled={locked}
+                      disabled={uploadPending || locked}
                       className="w-full rounded-lg border bg-white px-3 py-2 text-left text-xs hover:border-violet-400 disabled:opacity-50 dark:bg-gray-950"
                     >
                       <span className="block font-semibold">
@@ -478,7 +481,7 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Move block up")}
                         onClick={() => moveBlock(index, -1)}
-                        disabled={locked || index === 0}
+                        disabled={uploadPending || locked || index === 0}
                         className="rounded-md border p-1.5 disabled:opacity-30"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
@@ -487,7 +490,9 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Move block down")}
                         onClick={() => moveBlock(index, 1)}
-                        disabled={locked || index === blocks.length - 1}
+                        disabled={
+                          uploadPending || locked || index === blocks.length - 1
+                        }
                         className="rounded-md border p-1.5 disabled:opacity-30"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
@@ -496,7 +501,7 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Duplicate block")}
                         onClick={() => duplicateBlock(index)}
-                        disabled={locked}
+                        disabled={uploadPending || locked}
                         className="rounded-md border p-1.5 disabled:opacity-30"
                       >
                         <Copy className="h-3.5 w-3.5" />
@@ -505,7 +510,7 @@ export function EmailBlockEditor({
                         type="button"
                         aria-label={t("Remove block")}
                         onClick={() => removeBlock(index)}
-                        disabled={locked}
+                        disabled={uploadPending || locked}
                         className="rounded-md border p-1.5 text-red-600 disabled:opacity-30 dark:text-red-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -825,7 +830,7 @@ export function EmailBlockEditor({
                       key={type}
                       type="button"
                       onClick={() => addBlock(type)}
-                      disabled={locked}
+                      disabled={uploadPending || locked}
                       className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border bg-white px-3 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-950 dark:hover:bg-gray-900"
                     >
                       <Icon className="h-3.5 w-3.5" />
@@ -851,7 +856,7 @@ export function EmailBlockEditor({
               <button
                 type="button"
                 onClick={() => void runPreview()}
-                disabled={previewing || saving || locked}
+                disabled={uploadPending || previewing || saving || locked}
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg border bg-white px-4 font-semibold hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-950 dark:hover:bg-gray-900"
               >
                 {previewing ? (
@@ -864,7 +869,7 @@ export function EmailBlockEditor({
               <button
                 type="button"
                 onClick={() => void save()}
-                disabled={saving || previewing || locked}
+                disabled={uploadPending || saving || previewing || locked}
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-violet-700 px-4 font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
               >
                 {saving ? (
