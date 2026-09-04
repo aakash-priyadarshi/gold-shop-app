@@ -89,6 +89,12 @@ const VARIANTS: Record<string, ImageVariant[]> = {
     { suffix: "_medium", maxWidth: 800, maxHeight: 800, quality: 90 },
     { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 85 },
   ],
+  // Campaign email media (advanced product-update builder). Animated GIFs and
+  // videos must be stored byte-exact — the upload path never re-encodes, and
+  // the client bypasses canvas compression for these formats.
+  email: [
+    { suffix: "", maxWidth: 1600, maxHeight: 1600, quality: 90 },
+  ],
 };
 
 // Allowed MIME types — images, videos, and documents
@@ -166,6 +172,8 @@ const SUPPORTED_DEMO_LANGS = [
 
 // Upload types that allow video and document files
 const MEDIA_UPLOAD_TYPES = ["chat"];
+// Campaign email media: images and videos, but no documents
+const EMAIL_MEDIA_UPLOAD_TYPES = ["email"];
 const CERTIFICATE_UPLOAD_TYPES = ["certificate"];
 
 // Generate a unique filename
@@ -503,6 +511,16 @@ async function handleUpload(
         JSON.stringify({
           success: false,
           error: `Invalid file type: ${detectedType || file.type}. Allowed: images, videos (MP4/WebM), documents (PDF/DOC/DOCX)`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+  } else if (EMAIL_MEDIA_UPLOAD_TYPES.includes(uploadType)) {
+    if (!isImage && !isVideo) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Invalid file type: ${detectedType || file.type}. Allowed: images (JPEG/PNG/WebP/GIF/AVIF) and videos (MP4/WebM)`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

@@ -355,6 +355,9 @@ async function renderLoadedPage() {
 
 describe("OffersAdminPage", () => {
   beforeEach(() => {
+    // Tab clicks write ?tab= via history.replaceState; jsdom keeps that URL
+    // across tests, so reset it to the default festival tab before each test.
+    window.history.replaceState(null, "", "/");
     vi.clearAllMocks();
     mocks.previewAudience.mockResolvedValue({ data: preview });
     mocks.metrics.mockImplementation((campaignKey?: string) =>
@@ -398,7 +401,10 @@ describe("OffersAdminPage", () => {
     expect(screen.getAllByText("Activated").length).toBeGreaterThan(0);
     expect(screen.getByText("Repeat Gold")).toBeInTheDocument();
     expect(screen.getByText("0 account(s) selected")).toBeInTheDocument();
-    expect(screen.getByText("All offers performance")).toBeInTheDocument();
+
+    // Analytics live on the dedicated Performance tab.
+    fireEvent.click(screen.getByRole("button", { name: "Performance" }));
+    expect(await screen.findByText("All offers performance")).toBeInTheDocument();
     expect(screen.getByText("Offer-wise performance")).toBeInTheDocument();
     expect(screen.getAllByText("Rejoined").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("37.5% of sent")).toBeInTheDocument();
@@ -677,6 +683,8 @@ describe("OffersAdminPage", () => {
     });
 
     await renderLoadedPage();
+    // Product-update actions live on the Product updates tab.
+    fireEvent.click(screen.getByRole("button", { name: "Product updates" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Create product update" }),
     );

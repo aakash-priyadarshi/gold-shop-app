@@ -2290,11 +2290,21 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
   ],
   "/dashboard/admin/offers": [
     {
+      element: "[data-tour='offers-tabs']",
+      popover: {
+        title: "Festival offers, product updates, performance",
+        description:
+          "Festival offers covers discount and recovery campaigns with claim links. Product updates is where you announce new features with images, GIFs, and demo videos. Performance shows delivery, open, click, and claim funnels for every campaign.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
       element: "[data-tour='offers-campaigns']",
       popover: {
         title: "Recovery, festival, and product updates",
         description:
-          "Switch between the 50-day recovery campaign, festival sale campaigns, and product-update announcements. Product updates email registered shops only, with a demo GIF and a link to the live Framer Motion demo — they do not grant Pro.",
+          "This panel shows the campaigns of the active tab. On Product updates, use Design email to build the announcement from blocks — hero GIFs, demo video posters, buttons, and light animations. Product updates email registered shops only and never grant Pro.",
         side: "bottom",
         align: "center",
       },
