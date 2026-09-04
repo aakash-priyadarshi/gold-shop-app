@@ -44,8 +44,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { OutreachCampaignModal } from "./OutreachCampaignModal";
+import { LeadChatDrawer } from "./LeadChatDrawer";
+import { WhatsAppCampaignModal } from "./WhatsAppCampaignModal";
 
 type LeadStatus = "NEW" | "CONTACTED" | "WON" | "LOST";
 
@@ -93,6 +95,11 @@ export default function AdminLeadsPage() {
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [outreachModalOpen, setOutreachModalOpen] = useState(false);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+
+  // WhatsApp & Chat Drawer state
+  const [chatLead, setChatLead] = useState<LeadItem | null>(null);
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
 
   // Row expansion & notes
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -274,6 +281,17 @@ export default function AdminLeadsPage() {
 
               <Button
                 size="sm"
+                onClick={() => setWhatsappModalOpen(true)}
+                disabled={selectedIds.size === 0}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+              >
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                <T>WhatsApp</T>
+                {selectedIds.size > 0 && ` (${selectedIds.size})`}
+              </Button>
+
+              <Button
+                size="sm"
                 onClick={() => setOutreachModalOpen(true)}
                 disabled={selectedIds.size === 0}
                 className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-sm"
@@ -420,11 +438,20 @@ export default function AdminLeadsPage() {
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
+                      onClick={() => setWhatsappModalOpen(true)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                      <T>WhatsApp Campaign</T>
+                    </Button>
+
+                    <Button
+                      size="sm"
                       onClick={() => setOutreachModalOpen(true)}
                       className="bg-amber-600 hover:bg-amber-700 text-white h-8"
                     >
                       <Send className="h-3.5 w-3.5 mr-1" />
-                      Send Festival Outreach
+                      <T>Send Email Outreach</T>
                     </Button>
 
                     <Select onValueChange={(val) => handleBulkStatusChange(val as LeadStatus)}>
@@ -495,12 +522,12 @@ export default function AdminLeadsPage() {
                       const isSelected = selectedIds.has(lead.id);
 
                       return (
-                        <tr
-                          key={lead.id}
-                          className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors ${
-                            isSelected ? "bg-amber-50/30 dark:bg-amber-950/20" : ""
-                          }`}
-                        >
+                        <Fragment key={lead.id}>
+                          <tr
+                            className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors ${
+                              isSelected ? "bg-amber-50/30 dark:bg-amber-950/20" : ""
+                            }`}
+                          >
                           <td className="p-3 text-center">
                             <Checkbox
                               checked={isSelected}
@@ -555,13 +582,31 @@ export default function AdminLeadsPage() {
                               <div className="flex items-center gap-1.5 text-xs">
                                 <Phone className="h-3 w-3 text-slate-400" />
                                 <span>{lead.phone}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setChatLead(lead);
+                                    setChatDrawerOpen(true);
+                                  }}
+                                  className="text-[10px] bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                  title="Open Twilio WhatsApp Chat & AI Bot drawer"
+                                >
+                                  <MessageSquare className="h-2.5 w-2.5" />
+                                  <span>Chat</span>
+                                  {lead._count?.messages ? (
+                                    <span className="bg-emerald-600 text-white rounded-full px-1 text-[9px] font-bold">
+                                      {lead._count.messages}
+                                    </span>
+                                  ) : null}
+                                </button>
                                 <a
                                   href={whatsappLink(lead.phone)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1 py-0.5 rounded hover:opacity-80"
+                                  className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                  title="Open external WhatsApp Web"
                                 >
-                                  WhatsApp
+                                  <ExternalLink className="h-2.5 w-2.5" />
                                 </a>
                               </div>
                             )}
@@ -636,6 +681,26 @@ export default function AdminLeadsPage() {
                           </td>
 
                           <td className="p-3 text-right space-x-1">
+                            {lead.phone && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 text-xs gap-1"
+                                onClick={() => {
+                                  setChatLead(lead);
+                                  setChatDrawerOpen(true);
+                                }}
+                                title="Open WhatsApp Chat & AI Bot"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                {lead._count?.messages ? (
+                                  <span className="bg-emerald-600 text-white rounded-full px-1 text-[9px] font-bold">
+                                    {lead._count.messages}
+                                  </span>
+                                ) : null}
+                              </Button>
+                            )}
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -659,8 +724,97 @@ export default function AdminLeadsPage() {
                             </Button>
                           </td>
                         </tr>
-                      );
-                    })
+                        {isExpanded && (
+                          <tr className="bg-slate-50/50 dark:bg-slate-900/40 border-b">
+                            <td colSpan={8} className="p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                <div className="space-y-2">
+                                  <div className="font-semibold text-slate-700 dark:text-slate-300">
+                                    <T>Lead Details &amp; Location</T>
+                                  </div>
+                                  <div className="text-slate-600 dark:text-slate-400 space-y-1">
+                                    {lead.address && (
+                                      <div>
+                                        <strong><T>Address:</T></strong> {lead.address}
+                                      </div>
+                                    )}
+                                    {lead.city && (
+                                      <div>
+                                        <strong><T>City/State:</T></strong> {lead.city}
+                                        {lead.state ? `, ${lead.state}` : ""}
+                                      </div>
+                                    )}
+                                    {lead.phone && (
+                                      <div>
+                                        <strong><T>Phone:</T></strong> {lead.phone}
+                                      </div>
+                                    )}
+                                    {lead.email && (
+                                      <div>
+                                        <strong><T>Email:</T></strong> {lead.email}
+                                      </div>
+                                    )}
+                                    {lead.customerServiceWindowExpiresAt && (
+                                      <div className="text-emerald-700 dark:text-emerald-400 font-medium">
+                                        <strong><T>24h Service Window:</T></strong>{" "}
+                                        Active until {new Date(lead.customerServiceWindowExpiresAt).toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {lead.phone && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs h-7 gap-1.5"
+                                      onClick={() => {
+                                        setChatLead(lead);
+                                        setChatDrawerOpen(true);
+                                      }}
+                                    >
+                                      <MessageSquare className="h-3.5 w-3.5" />
+                                      <T>Open WhatsApp Thread</T>
+                                    </Button>
+                                  )}
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                      <T>Internal Notes</T>
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-6 text-[11px] px-2"
+                                      disabled={savingId === lead.id}
+                                      onClick={() => handleSaveNotes(lead.id)}
+                                    >
+                                      {savingId === lead.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                      ) : null}
+                                      <T>Save Notes</T>
+                                    </Button>
+                                  </div>
+                                  <Textarea
+                                    rows={3}
+                                    placeholder="Add notes about conversations, preferences, requirements..."
+                                    value={noteDrafts[lead.id] || ""}
+                                    onChange={(e) =>
+                                      setNoteDrafts((prev) => ({
+                                        ...prev,
+                                        [lead.id]: e.target.value,
+                                      }))
+                                    }
+                                    className="text-xs"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
                   )}
                 </tbody>
               </table>
@@ -703,6 +857,23 @@ export default function AdminLeadsPage() {
             loadLeads();
             setSelectedIds(new Set());
           }}
+        />
+
+        <WhatsAppCampaignModal
+          open={whatsappModalOpen}
+          onOpenChange={setWhatsappModalOpen}
+          selectedLeads={selectedLeadsList}
+          onSuccess={() => {
+            loadLeads();
+            setSelectedIds(new Set());
+          }}
+        />
+
+        <LeadChatDrawer
+          leadId={chatLead?.id || null}
+          isOpen={chatDrawerOpen}
+          onClose={() => setChatDrawerOpen(false)}
+          onLeadUpdated={loadLeads}
         />
       </DashboardLayout>
     </AdminGuard>

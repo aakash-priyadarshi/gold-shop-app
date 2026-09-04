@@ -189,3 +189,36 @@ export class PreviewOutreachDto {
   @IsInt()
   offerTrialDays?: number = 60;
 }
+
+export class SendWhatsAppMessageDto {
+  @IsString()
+  @IsNotEmpty()
+  body: string;
+
+  @IsOptional()
+  @IsString()
+  mediaUrl?: string;
+}
+
+export class SendWhatsAppCampaignDto {
+  @IsArray()
+  @IsString({ each: true })
+  leadIds: string[];
+
+  @IsString()
+  @IsNotEmpty()
+  templateText: string;
+
+  @IsOptional()
+  @IsString()
+  mediaUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  festivalName?: string;
+}
+
+export class ToggleAiBotDto {
+  @IsNotEmpty()
+  paused: boolean;
+}

@@ -1777,11 +1777,42 @@ export interface LeadItem {
   outreachCount: number;
   lastEmailedAt?: string | null;
   lastCampaignKey?: string | null;
+  whatsappOptOut?: boolean;
+  aiBotPaused?: boolean;
+  customerServiceWindowExpiresAt?: string | null;
+  lastMessageAt?: string | null;
+  _count?: { messages: number };
   botSessionId?: string | null;
   convertedUserId?: string | null;
   convertedShopId?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LeadMessage {
+  id: string;
+  leadId: string;
+  direction: "INBOUND" | "OUTBOUND";
+  channel: "WHATSAPP" | "SMS";
+  sender: "LEAD" | "AI_BOT" | "ADMIN" | "SYSTEM";
+  body: string;
+  mediaUrl?: string | null;
+  status: "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED" | "RECEIVED";
+  createdAt: string;
+}
+
+export interface LeadMessagesResponse {
+  lead: {
+    id: string;
+    shopName: string;
+    phone?: string | null;
+    city?: string | null;
+    country?: string | null;
+    aiBotPaused: boolean;
+    whatsappOptOut: boolean;
+    customerServiceWindowExpiresAt?: string | null;
+  };
+  messages: LeadMessage[];
 }
 
 export interface LeadsResult {
@@ -1839,6 +1870,26 @@ export const leadsAdminApi = {
     api.patch<{ count: number; status: string }>("/leads/bulk/status", { ids, status }),
 
   deleteLead: (id: string) => api.delete(`/leads/${id}`),
+
+  getMessages: (leadId: string) => api.get<LeadMessagesResponse>(`/leads/${leadId}/messages`),
+
+  sendWhatsAppMessage: (leadId: string, data: { body: string; mediaUrl?: string }) =>
+    api.post<{ success: boolean; messageId?: string }>(`/leads/${leadId}/whatsapp`, data),
+
+  toggleAiBot: (leadId: string, paused: boolean) =>
+    api.patch<{ id: string; aiBotPaused: boolean }>(`/leads/${leadId}/ai-bot`, { paused }),
+
+  sendWhatsAppCampaign: (data: {
+    leadIds: string[];
+    templateText: string;
+    mediaUrl?: string;
+    festivalName?: string;
+  }) =>
+    api.post<{
+      sent: number;
+      skipped: number;
+      failed: number;
+    }>("/leads/whatsapp/campaign", data),
 
   getPresets: () => api.get<{ templates: OutreachTemplate[] }>("/leads/outreach/presets"),
 

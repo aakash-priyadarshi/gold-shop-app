@@ -60,9 +60,14 @@ export class LeadsService {
     const [leads, total, stats] = await Promise.all([
       this.prisma.lead.findMany({
         where,
-        orderBy: [{ createdAt: "desc" }],
+        orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
         skip,
         take: limit,
+        include: {
+          _count: {
+            select: { messages: true },
+          },
+        },
       }),
       this.prisma.lead.count({ where }),
       this.computeLeadStats(),
@@ -211,4 +216,43 @@ export class LeadsService {
     }
     return this.prisma.lead.delete({ where: { id } });
   }
+
+  async getLeadMessages(leadId: string) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+    if (!lead) {
+      throw new NotFoundException("Lead not found");
+    }
+    return {
+      lead: {
+        id: lead.id,
+        shopName: lead.shopName,
+        phone: lead.phone,
+        city: lead.city,
+        country: lead.country,
+        aiBotPaused: lead.aiBotPaused,
+        whatsappOptOut: lead.whatsappOptOut,
+        customerServiceWindowExpiresAt: lead.customerServiceWindowExpiresAt,
+      },
+      messages: lead.messages,
+    };
+  }
+
+  async toggleAiBot(leadId: string, paused: boolean) {
+    const existing = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!existing) {
+      throw new NotFoundException("Lead not found");
+    }
+    return this.prisma.lead.update({
+      where: { id: leadId },
+      data: { aiBotPaused: paused },
+    });
+  }
 }
+

@@ -106,6 +106,41 @@ async function launchBrowser(chromium: any, headless: boolean) {
   }
 }
 
+function normalizeLeadPhone(rawPhone?: string, countryHint: string = "NP"): string | undefined {
+  if (!rawPhone) return undefined;
+  const cleaned = rawPhone.trim();
+  const digits = cleaned.replace(/\D/g, "");
+  if (!digits) return cleaned;
+  if (cleaned.startsWith("+")) return `+${digits}`;
+
+  // 10 digits national format
+  if (digits.length === 10) {
+    if (countryHint === "NP" && (digits.startsWith("98") || digits.startsWith("97"))) {
+      return `+977${digits}`;
+    }
+    if (countryHint === "IN" && /^[6-9]/.test(digits)) {
+      return `+91${digits}`;
+    }
+    if (countryHint === "US") {
+      return `+1${digits}`;
+    }
+    if (countryHint === "UK" && digits.startsWith("7")) {
+      return `+44${digits}`;
+    }
+  }
+  // UK 11 digits starting with 07
+  if (countryHint === "UK" && digits.length === 11 && digits.startsWith("07")) {
+    return `+44${digits.slice(1)}`;
+  }
+  // UAE 9 digits starting with 5
+  if (countryHint === "AE" && digits.length === 9 && digits.startsWith("5")) {
+    return `+971${digits}`;
+  }
+
+  return cleaned;
+}
+}
+
 export async function scrapeGoogleMaps(options: ScraperOptions): Promise<EnrichedShopLead[]> {
   const {
     query,
@@ -213,7 +248,8 @@ export async function scrapeGoogleMaps(options: ScraperOptions): Promise<Enriche
         let phone: string | undefined;
         const phoneBtn = page.locator('button[data-item-id^="phone:tel:"]').first();
         if (await phoneBtn.isVisible()) {
-          phone = (await phoneBtn.getAttribute("aria-label"))?.replace(/^Phone:\s*/i, "").trim();
+          const rawPhone = (await phoneBtn.getAttribute("aria-label"))?.replace(/^Phone:\s*/i, "").trim();
+          phone = normalizeLeadPhone(rawPhone, countryHint);
         }
 
         let website: string | undefined;
@@ -292,6 +328,8 @@ export async function scrapeGoogleMaps(options: ScraperOptions): Promise<Enriche
 
   console.log(`\n🎉 Scraping completed! Gathered ${leads.length} leads.`);
   const withEmails = leads.filter((l) => Boolean(l.email)).length;
+  const withPhones = leads.filter((l) => Boolean(l.phone)).length;
   console.log(`   📊 Leads with valid emails: ${withEmails}/${leads.length}`);
+  console.log(`   📱 Leads with valid phone numbers (Twilio WhatsApp ready): ${withPhones}/${leads.length}`);
   return leads;
 }

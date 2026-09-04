@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { MessageSender } from "@prisma/client";
+import { Public } from "../auth/decorators/public.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
@@ -19,10 +21,14 @@ import {
   ImportLeadsDto,
   PreviewOutreachDto,
   SendOutreachCampaignDto,
+  SendWhatsAppCampaignDto,
+  SendWhatsAppMessageDto,
+  ToggleAiBotDto,
   UpdateLeadDto,
 } from "./dto/lead.dto";
 import { LeadsOutreachService } from "./leads-outreach.service";
 import { LeadsService } from "./leads.service";
+import { LeadsWhatsAppService } from "./leads-whatsapp.service";
 
 @ApiTags("Leads Management")
 @Controller("leads")
@@ -33,6 +39,7 @@ export class LeadsController {
   constructor(
     private readonly leadsService: LeadsService,
     private readonly outreachService: LeadsOutreachService,
+    private readonly whatsAppService: LeadsWhatsAppService
   ) {}
 
   @Get()
@@ -51,6 +58,39 @@ export class LeadsController {
   @ApiOperation({ summary: "Admin — bulk update status for multiple leads" })
   async bulkUpdateStatus(@Body() dto: BulkUpdateLeadStatusDto) {
     return this.leadsService.bulkUpdateStatus(dto);
+  }
+
+  @Get(":id/messages")
+  @ApiOperation({ summary: "Admin — get WhatsApp message thread for a lead" })
+  async getLeadMessages(@Param("id") id: string) {
+    return this.leadsService.getLeadMessages(id);
+  }
+
+  @Patch(":id/ai-bot")
+  @ApiOperation({ summary: "Admin — toggle AI chatbot pause state for a lead" })
+  async toggleAiBot(@Param("id") id: string, @Body() dto: ToggleAiBotDto) {
+    return this.leadsService.toggleAiBot(id, dto.paused);
+  }
+
+  @Post(":id/whatsapp")
+  @ApiOperation({ summary: "Admin — send manual WhatsApp reply to a lead via Twilio" })
+  async sendManualWhatsApp(
+    @Param("id") id: string,
+    @Body() dto: SendWhatsAppMessageDto
+  ) {
+    return this.whatsAppService.sendMessage(id, dto.body, {
+      mediaUrl: dto.mediaUrl,
+      sender: MessageSender.ADMIN,
+    });
+  }
+
+  @Post("whatsapp/campaign")
+  @ApiOperation({ summary: "Admin — send bulk WhatsApp outreach campaign" })
+  async sendWhatsAppCampaign(@Body() dto: SendWhatsAppCampaignDto) {
+    return this.whatsAppService.sendCampaign(dto.leadIds, dto.templateText, {
+      mediaUrl: dto.mediaUrl,
+      festivalName: dto.festivalName,
+    });
   }
 
   @Patch(":id")
@@ -89,4 +129,12 @@ export class LeadsController {
   async sendOutreach(@Body() dto: SendOutreachCampaignDto) {
     return this.outreachService.sendOutreach(dto);
   }
+
+  @Post("whatsapp/webhook")
+  @Public()
+  @ApiOperation({ summary: "Twilio — incoming WhatsApp webhook receiver" })
+  async handleTwilioWhatsAppWebhook(@Body() payload: Record<string, any>) {
+    return this.whatsAppService.handleIncomingWebhook(payload);
+  }
 }
+
