@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from "class-validator";
@@ -165,6 +166,8 @@ export class SendOutreachCampaignDto {
 
   @IsOptional()
   @IsInt()
+  @Min(14)
+  @Max(90)
   offerTrialDays?: number = 60;
 }
 

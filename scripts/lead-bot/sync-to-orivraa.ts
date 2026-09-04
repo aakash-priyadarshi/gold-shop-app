@@ -40,6 +40,23 @@ export async function syncLeadsToOrivraa(
 
   const postData = JSON.stringify({ leads: payload });
   const parsedUrl = new URL(endpoint);
+
+  const isLocal =
+    parsedUrl.hostname === "localhost" ||
+    parsedUrl.hostname === "127.0.0.1" ||
+    parsedUrl.hostname.endsWith(".local");
+
+  if (!isLocal && parsedUrl.protocol !== "https:") {
+    console.error(`❌ Security Error: Remote sync endpoint must use HTTPS (${endpoint})`);
+    return {
+      success: false,
+      imported: 0,
+      updated: 0,
+      skipped: leads.length,
+      message: "Remote sync endpoint must use HTTPS to prevent cleartext exposure.",
+    };
+  }
+
   const client = parsedUrl.protocol === "https:" ? https : http;
 
   return new Promise((resolve) => {

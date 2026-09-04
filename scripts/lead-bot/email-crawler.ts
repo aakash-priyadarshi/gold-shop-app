@@ -26,10 +26,33 @@ function normalizeUrl(rawUrl: string): string {
   return url;
 }
 
+function isBlockedTarget(parsed: URL): boolean {
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "169.254.169.254" ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host.startsWith("10.") ||
+    host.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 async function fetchPageHtml(urlStr: string, timeoutMs = 8000): Promise<string | null> {
   return new Promise((resolve) => {
     try {
       const parsed = new URL(urlStr);
+      if (isBlockedTarget(parsed)) {
+        resolve(null);
+        return;
+      }
+
       const isHttps = parsed.protocol === "https:";
       const client = isHttps ? https : http;
 
@@ -52,9 +75,13 @@ async function fetchPageHtml(urlStr: string, timeoutMs = 8000): Promise<string |
             res.headers.location
           ) {
             try {
-              const redirectUrl = new URL(res.headers.location, urlStr).toString();
+              const redirectUrl = new URL(res.headers.location, urlStr);
               req.destroy();
-              fetchPageHtml(redirectUrl, timeoutMs - 2000).then(resolve);
+              if (isBlockedTarget(redirectUrl)) {
+                resolve(null);
+                return;
+              }
+              fetchPageHtml(redirectUrl.toString(), timeoutMs - 2000).then(resolve);
               return;
             } catch {
               resolve(null);

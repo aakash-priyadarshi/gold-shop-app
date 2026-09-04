@@ -44,7 +44,13 @@ Examples:
   console.log("==================================================");
 
   const query = getArg("--query", "jewellery shops New Road Kathmandu");
-  const limit = parseInt(getArg("--limit", "15") || "15", 10);
+  const rawLimit = getArg("--limit", "15");
+  const parsedLimit = parseInt(rawLimit || "15", 10);
+  if (isNaN(parsedLimit) || parsedLimit <= 0) {
+    console.error(`❌ Error: --limit must be a positive number. Received: "${rawLimit}"`);
+    process.exit(1);
+  }
+  const limit = Math.min(parsedLimit, 200);
   const country = getArg("--country", "NP");
   const headed = hasFlag("--headed");
   const noEmail = hasFlag("--no-email");

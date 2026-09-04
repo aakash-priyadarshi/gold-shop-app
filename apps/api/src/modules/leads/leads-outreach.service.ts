@@ -395,7 +395,7 @@ export class LeadsOutreachService {
           });
         } else {
           failed++;
-          this.logger.warn(`Failed sending outreach to ${lead.email}: ${sendResult.error}`);
+          this.logger.warn(`Failed sending outreach to lead ${lead.id}: ${sendResult.error}`);
         }
       } catch (err: any) {
         failed++;

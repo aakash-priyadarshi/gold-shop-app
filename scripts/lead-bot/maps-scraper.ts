@@ -52,9 +52,11 @@ export function parseLocationFromAddress(
   }
 
   if (parts.length >= 2) {
-    if (parts.length >= 3) {
+    if (parts.length >= 4) {
       city = parts[parts.length - 3] || parts[parts.length - 2];
       state = parts[parts.length - 2];
+    } else if (parts.length === 3) {
+      city = parts[1];
     } else {
       city = parts[0];
     }

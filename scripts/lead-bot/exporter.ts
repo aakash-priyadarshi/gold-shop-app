@@ -4,7 +4,12 @@ import { EnrichedShopLead } from "./types";
 
 function escapeCsv(val?: string | number | null): string {
   if (val === undefined || val === null) return '""';
-  const str = String(val).replace(/"/g, '""');
+  let str = String(val);
+  // Mitigate CSV Formula Injection (DDE)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  str = str.replace(/"/g, '""');
   return `"${str}"`;
 }
 

@@ -300,7 +300,11 @@ export function OutreachCampaignModal({
                     min={14}
                     max={90}
                     value={trialDays}
-                    onChange={(e) => setTrialDays(parseInt(e.target.value, 10) || 60)}
+                    onChange={(e) =>
+                      setTrialDays(
+                        Math.min(90, Math.max(14, parseInt(e.target.value, 10) || 60)),
+                      )
+                    }
                     className="w-24"
                   />
                   <span className="text-xs text-slate-600 dark:text-slate-400">
@@ -359,7 +363,7 @@ export function OutreachCampaignModal({
                     title="Email Preview"
                     srcDoc={previewHtml}
                     className="w-full h-[400px] border-0"
-                    sandbox="allow-same-origin"
+                    sandbox=""
                   />
                 </div>
               </div>
