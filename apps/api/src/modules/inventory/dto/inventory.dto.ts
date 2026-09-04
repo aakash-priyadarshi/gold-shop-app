@@ -705,4 +705,10 @@ export class EnhanceProductImagesDto {
   @ValidateNested()
   @Type(() => ImageEnhancementContextDto)
   context?: ImageEnhancementContextDto;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  idempotencyKey?: string;
 }

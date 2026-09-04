@@ -29,6 +29,7 @@ describe("AI image model catalog", () => {
   });
 
   it("resolves generation models with a safe default", () => {
+    expect(DEFAULT_GENERATION_MODEL).toBe("imagen-standard");
     expect(resolveGenerationModel("imagen-ultra").apiModelId).toBe(
       "imagen-4.0-ultra-generate-001",
     );
@@ -60,5 +61,17 @@ describe("AI image model catalog", () => {
     expect(AI_IMAGE_MODELS["nano-banana"].maxReferenceImages).toBe(2);
     expect(AI_IMAGE_MODELS["nano-banana-pro"].maxReferenceImages).toBe(13);
     expect(AI_IMAGE_MODELS["imagen-fast"].maxReferenceImages).toBe(0);
+  });
+
+  it("ignores inherited object keys when validating model ids", () => {
+    expect(isAiGenerationModelId("constructor")).toBe(false);
+    expect(isAiGenerationModelId("toString")).toBe(false);
+    expect(isAiEnhancementModelId("__proto__")).toBe(false);
+    expect(resolveGenerationModel("constructor").id).toBe(
+      DEFAULT_GENERATION_MODEL,
+    );
+    expect(resolveEnhancementModel("toString").id).toBe(
+      DEFAULT_ENHANCEMENT_MODEL,
+    );
   });
 });

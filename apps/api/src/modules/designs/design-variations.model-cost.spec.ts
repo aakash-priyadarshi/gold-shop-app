@@ -57,5 +57,10 @@ describe("DesignVariationsService model credit cost", () => {
     expect(aiCredits.debitForShopkeeperGeneration).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 15 }),
     );
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.stringMatching(/^ai:varbatch:user-1:[0-9a-f-]{36}$/i),
+      "5",
+      1800,
+    );
   });
 });

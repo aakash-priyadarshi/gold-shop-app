@@ -400,6 +400,7 @@ export const inventoryApi = {
         metal?: string;
         purity?: string;
       };
+      idempotencyKey?: string;
     },
   ) => api.post(`/inventory/shop/${shopId}/images/enhance`, data),
   update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),

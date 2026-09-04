@@ -153,6 +153,64 @@ describe("ImageEnhancementService", () => {
     );
   });
 
+  it("reuses a caller idempotency key for the debit", async () => {
+    await Promise.all([
+      service.enhance({
+        userId: "user-1",
+        shopId: "shop-1",
+        idempotencyKey: "retry-1",
+        imageUrls: ["https://images.orivraa.com/product/target.jpg"],
+      }),
+      service.enhance({
+        userId: "user-1",
+        shopId: "shop-1",
+        idempotencyKey: "retry-1",
+        imageUrls: ["https://images.orivraa.com/product/target.jpg"],
+      }),
+    ]);
+
+    expect(aiCredits.debitForShopkeeperGeneration).toHaveBeenCalledTimes(1);
+    expect(aiCredits.debitForShopkeeperGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: "img_enh:user-1:retry-1",
+      }),
+    );
+  });
+
+  it("keeps processing later targets when a refund fails", async () => {
+    imageUpload.uploadDataUrl.mockRejectedValue(new Error("worker unavailable"));
+    aiCredits.refundCredits
+      .mockRejectedValueOnce(new Error("ledger unavailable"))
+      .mockResolvedValue({ balanceAfter: 88 });
+
+    const result = await service.enhance({
+      userId: "user-1",
+      shopId: "shop-1",
+      model: "nano-banana",
+      imageUrls: [
+        "https://images.orivraa.com/product/1-a.jpg",
+        "https://images.orivraa.com/product/2-b.jpg",
+      ],
+    });
+
+    expect(aiCredits.refundCredits).toHaveBeenCalledTimes(2);
+    expect(result.results.map((item) => item.status)).toEqual(["failed", "failed"]);
+    expect(result.creditsRefunded).toBe(2);
+  });
+
+  it("aborts stalled source and Gemini fetches", async () => {
+    await service.enhance({
+      userId: "user-1",
+      shopId: "shop-1",
+      imageUrls: ["https://images.orivraa.com/product/target.jpg"],
+    });
+
+    const calls = (global.fetch as jest.Mock).mock.calls;
+    expect(calls.some((call) => call[1]?.signal instanceof AbortSignal)).toBe(
+      true,
+    );
+  });
+
   it.each([
     "http://images.orivraa.com/product/a.jpg",
     "https://example.com/product/a.jpg",

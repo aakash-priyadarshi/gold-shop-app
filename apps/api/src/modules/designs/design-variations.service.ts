@@ -144,6 +144,7 @@ export class DesignVariationsService {
     budgetMin?: number;
     budgetMax?: number;
     currency: string;
+    prepaidBatchId?: string;
   }> {
     if (!dto.prompt || dto.prompt.trim().length < 5) {
       throw new BadRequestException(
@@ -154,6 +155,7 @@ export class DesignVariationsService {
     const generationModel = resolveGenerationModel(dto.model);
     const batchCost = generationModel.creditsPerImage * AI_VARIATION_BATCH_SIZE;
     const debitKey = `design_variations:${userId}:${randomUUID()}`;
+    const prepaidBatchId = randomUUID();
     const debit = await this.aiCredits.debitForShopkeeperGeneration({
       userId,
       shopId: opts?.shopId,
@@ -169,12 +171,12 @@ export class DesignVariationsService {
       if (!debit.skipped) {
         await Promise.all([
           this.redisService.set(
-            variationBatchRedisKey(userId),
+            variationBatchRedisKey(userId, prepaidBatchId),
             String(AI_VARIATION_BATCH_SIZE),
             AI_VARIATION_BATCH_TTL_SEC,
           ),
           this.redisService.set(
-            variationBatchModelRedisKey(userId),
+            variationBatchModelRedisKey(userId, prepaidBatchId),
             generationModel.id,
             AI_VARIATION_BATCH_TTL_SEC,
           ),
@@ -186,6 +188,7 @@ export class DesignVariationsService {
         budgetMin: dto.budgetMin,
         budgetMax: dto.budgetMax,
         currency,
+        prepaidBatchId: debit.skipped ? undefined : prepaidBatchId,
       };
     } catch (error) {
       if (!debit.skipped) {
@@ -236,6 +239,7 @@ export class DesignVariationsService {
     }
 
     const debitKey = `design_variations:${userId}:${randomUUID()}`;
+    const prepaidBatchId = randomUUID();
     const debit = await this.aiCredits.debitForShopkeeperGeneration({
       userId,
       shopId: opts?.shopId,
@@ -247,12 +251,12 @@ export class DesignVariationsService {
     if (!debit.skipped) {
       await Promise.all([
         this.redisService.set(
-          variationBatchRedisKey(userId),
+          variationBatchRedisKey(userId, prepaidBatchId),
           String(AI_VARIATION_BATCH_SIZE),
           AI_VARIATION_BATCH_TTL_SEC,
         ),
         this.redisService.set(
-          variationBatchModelRedisKey(userId),
+          variationBatchModelRedisKey(userId, prepaidBatchId),
           generationModel.id,
           AI_VARIATION_BATCH_TTL_SEC,
         ),
@@ -294,6 +298,7 @@ export class DesignVariationsService {
             gemstones: spec.gemstones,
             additionalSpecs: {
               variationOf: dto.prompt,
+              ...(debit.skipped ? {} : { variationBatchId: prepaidBatchId }),
               variationIndex: idx,
               styleSummary: spec.styleSummary,
               description: spec.description,

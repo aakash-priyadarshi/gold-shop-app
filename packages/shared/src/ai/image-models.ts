@@ -94,7 +94,8 @@ export type AiEnhancementModelId = Extract<
   "nano-banana" | "nano-banana-pro"
 >;
 
-export const DEFAULT_GENERATION_MODEL: AiGenerationModelId = "imagen-fast";
+export const DEFAULT_GENERATION_MODEL: AiGenerationModelId =
+  "imagen-standard";
 export const DEFAULT_ENHANCEMENT_MODEL: AiEnhancementModelId = "nano-banana";
 
 export const AI_GENERATION_MODEL_IDS: AiGenerationModelId[] = [
@@ -109,7 +110,10 @@ export const AI_ENHANCEMENT_MODEL_IDS: AiEnhancementModelId[] = [
 ];
 
 export function isAiImageModelId(value: unknown): value is AiImageModelId {
-  return typeof value === "string" && value in AI_IMAGE_MODELS;
+  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(AI_IMAGE_MODELS, value)
+  );
 }
 
 export function isAiEnhancementModelId(

@@ -12,12 +12,18 @@ export const AI_CREDIT_COSTS = {
 export const AI_VARIATION_BATCH_SIZE = 5;
 export const AI_VARIATION_BATCH_TTL_SEC = 30 * 60;
 
-export function variationBatchRedisKey(userId: string): string {
-  return `ai:varbatch:${userId}`;
+export function variationBatchRedisKey(
+  userId: string,
+  batchId?: string,
+): string {
+  return batchId ? `ai:varbatch:${userId}:${batchId}` : `ai:varbatch:${userId}`;
 }
 
-export function variationBatchModelRedisKey(userId: string): string {
-  return `${variationBatchRedisKey(userId)}:model`;
+export function variationBatchModelRedisKey(
+  userId: string,
+  batchId?: string,
+): string {
+  return `${variationBatchRedisKey(userId, batchId)}:model`;
 }
 
 export function toCreditNumber(value: unknown): number {

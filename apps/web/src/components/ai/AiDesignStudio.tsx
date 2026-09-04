@@ -233,6 +233,10 @@ export function AiDesignStudio({
         ? specsData.variations
         : [];
       if (!specs.length) throw new Error("AI returned no variations. Try again.");
+      const prepaidBatchId =
+        typeof specsData?.prepaidBatchId === "string"
+          ? specsData.prepaidBatchId
+          : undefined;
 
       const placeholders = specs.map((s, idx) => ({
         ...s,
@@ -259,6 +263,7 @@ export function AiDesignStudio({
                   trimmedPrompt,
                   idx,
                   model,
+                  prepaidBatchId,
                 ),
               ),
             });

@@ -11,6 +11,10 @@ import { ImageWorkerUploadService } from "../media/image-worker-upload.service";
 
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_MIME = /^image\/(?:jpe?g|png|webp|gif|avif)$/i;
+const SOURCE_FETCH_TIMEOUT_MS = 15_000;
+const GEMINI_TIMEOUT_MS = 60_000;
+const RESULT_CACHE_TTL_MS = 10 * 60 * 1000;
+const RESULT_CACHE_LIMIT = 200;
 
 type SourceImage = {
   url: string;
@@ -25,10 +29,19 @@ export type ImageEnhancementResult = {
   error?: string;
 };
 
+type EnhancementResponse = {
+  model: string;
+  creditsCharged: number;
+  creditsRefunded: number;
+  balanceAfter?: number;
+  results: ImageEnhancementResult[];
+};
+
 @Injectable()
 export class ImageEnhancementService {
   private readonly logger = new Logger(ImageEnhancementService.name);
   private readonly apiKey: string;
+  private readonly inFlight = new Map<string, Promise<EnhancementResponse>>();
 
   constructor(
     configService: ConfigService,
@@ -44,13 +57,14 @@ export class ImageEnhancementService {
     imageUrls: string[];
     referenceImageUrls?: string[];
     model?: AiEnhancementModelId;
+    idempotencyKey?: string;
     context?: {
       name?: string;
       jewelleryType?: string;
       metal?: string;
       purity?: string;
     };
-  }) {
+  }): Promise<EnhancementResponse> {
     if (!this.apiKey) {
       throw new BadRequestException("AI image enhancement is not configured");
     }
@@ -61,7 +75,46 @@ export class ImageEnhancementService {
     );
     const model = resolveEnhancementModel(opts.model);
     const totalCost = enhancementCreditCost(model, targets.length);
-    const debitKey = `img_enh:${opts.userId}:${randomUUID()}`;
+    const callerKey = opts.idempotencyKey?.trim();
+    const debitKey = callerKey
+      ? `img_enh:${opts.userId}:${callerKey}`
+      : `img_enh:${opts.userId}:${randomUUID()}`;
+    const cached = this.inFlight.get(debitKey);
+    if (cached) return cached;
+
+    const pending = this.enhanceOnce({
+      ...opts,
+      targets,
+      references,
+      model,
+      totalCost,
+      debitKey,
+    });
+    this.inFlight.set(debitKey, pending);
+    setTimeout(() => this.inFlight.delete(debitKey), RESULT_CACHE_TTL_MS).unref?.();
+    if (this.inFlight.size > RESULT_CACHE_LIMIT) {
+      const oldest = this.inFlight.keys().next().value;
+      if (oldest) this.inFlight.delete(oldest);
+    }
+    return pending;
+  }
+
+  private async enhanceOnce(opts: {
+    userId: string;
+    shopId: string;
+    targets: string[];
+    references: string[];
+    model: ReturnType<typeof resolveEnhancementModel>;
+    totalCost: number;
+    debitKey: string;
+    context?: {
+      name?: string;
+      jewelleryType?: string;
+      metal?: string;
+      purity?: string;
+    };
+  }): Promise<EnhancementResponse> {
+    const { targets, references, model, totalCost, debitKey } = opts;
     const debit = await this.aiCredits.debitForShopkeeperGeneration({
       userId: opts.userId,
       shopId: opts.shopId,
@@ -119,16 +172,22 @@ export class ImageEnhancementService {
           `Enhancement failed for target ${index + 1}: ${(error as Error).message}`,
         );
         if (!debit.skipped) {
-          const refund = await this.aiCredits.refundCredits({
-            userId: opts.userId,
-            shopId: opts.shopId,
-            amount: model.creditsPerImage,
-            reason: `product_image_enhancement_failed:${model.id}`,
-            referenceId: debitKey,
-            idempotencyKey: `refund:${debitKey}:${index}`,
-          });
-          balanceAfter = refund.balanceAfter;
-          creditsRefunded += model.creditsPerImage;
+          try {
+            const refund = await this.aiCredits.refundCredits({
+              userId: opts.userId,
+              shopId: opts.shopId,
+              amount: model.creditsPerImage,
+              reason: `product_image_enhancement_failed:${model.id}`,
+              referenceId: debitKey,
+              idempotencyKey: `refund:${debitKey}:${index}`,
+            });
+            balanceAfter = refund.balanceAfter;
+            creditsRefunded += model.creditsPerImage;
+          } catch (refundError) {
+            this.logger.error(
+              `Failed to refund enhancement credits for target ${index + 1}: ${(refundError as Error).message}`,
+            );
+          }
         }
         results.push({
           sourceUrl: targetUrl,
@@ -190,7 +249,10 @@ export class ImageEnhancementService {
     }
     const safeUrl = new URL("https://images.orivraa.com/product/");
     safeUrl.pathname += encodeURIComponent(productKey);
-    const response = await fetch(safeUrl, { redirect: "error" });
+    const response = await fetch(safeUrl, {
+      redirect: "error",
+      signal: AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS),
+    });
     if (!response.ok) throw new Error(`Source image fetch failed (${response.status})`);
     const mimeType = (response.headers.get("content-type") || "")
       .split(";")[0]
@@ -274,6 +336,7 @@ export class ImageEnhancementService {
           contents: [{ role: "user", parts }],
           generationConfig,
         }),
+        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
       },
     );
     if (!response.ok) {

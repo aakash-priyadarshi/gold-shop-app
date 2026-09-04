@@ -353,11 +353,18 @@ export class DesignsService {
     model?: AiGenerationModelId,
   ): Promise<boolean> {
     if (typeof additionalSpecs?.variationOf !== "string") return false;
+    const batchId =
+      typeof additionalSpecs.variationBatchId === "string" &&
+      /^[A-Za-z0-9_-]{8,80}$/.test(additionalSpecs.variationBatchId)
+        ? additionalSpecs.variationBatchId
+        : undefined;
+    const slotKey = variationBatchRedisKey(userId, batchId);
+    const modelKey = variationBatchModelRedisKey(userId, batchId);
     const current = this.redis.isAvailable()
-      ? await this.redis.get(variationBatchRedisKey(userId))
+      ? await this.redis.get(slotKey)
       : null;
     const prepaidModel = this.redis.isAvailable()
-      ? await this.redis.get(variationBatchModelRedisKey(userId))
+      ? await this.redis.get(modelKey)
       : null;
     const remainingBefore = parseInt(current || "", 10);
     if (
@@ -373,7 +380,7 @@ export class DesignsService {
     }
     if (this.redis.isAvailable() && prepaidModel !== model) return false;
     if (!this.redis.isAvailable()) return true;
-    const remaining = await this.redis.decr(variationBatchRedisKey(userId));
+    const remaining = await this.redis.decr(slotKey);
     return remaining >= 0;
   }
 

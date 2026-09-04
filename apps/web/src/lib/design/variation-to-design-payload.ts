@@ -7,6 +7,7 @@ export function variationToDesignPayload(
   prompt: string,
   variationIndex: number,
   model?: AiGenerationModelId,
+  prepaidBatchId?: string,
 ) {
   return {
     model,
@@ -30,6 +31,7 @@ export function variationToDesignPayload(
     gemstones: spec.gemstones,
     additionalSpecs: {
       variationOf: prompt,
+      ...(prepaidBatchId ? { variationBatchId: prepaidBatchId } : {}),
       variationIndex,
       styleSummary: spec.styleSummary,
       description: spec.description,

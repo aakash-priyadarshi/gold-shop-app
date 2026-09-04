@@ -280,6 +280,7 @@ export class InventoryController {
       referenceImageUrls: dto.referenceImageUrls,
       model: dto.model,
       context: dto.context,
+      idempotencyKey: dto.idempotencyKey,
     });
   }
 

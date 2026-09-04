@@ -3,6 +3,8 @@ import { ConfigService } from "@nestjs/config";
 import { signImageWorkerToken } from "./image-worker-token";
 
 type ImageUploadType = "designs" | "product";
+const DEFAULT_WORKER_URL = "https://images.orivraa.com";
+const UPLOAD_TIMEOUT_MS = 20_000;
 
 @Injectable()
 export class ImageWorkerUploadService {
@@ -10,10 +12,26 @@ export class ImageWorkerUploadService {
   private readonly workerUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.workerUrl = (
-      this.configService.get<string>("IMAGE_WORKER_URL") ||
-      "https://images.orivraa.com"
-    ).replace(/\/+$/, "");
+    this.workerUrl = this.resolveWorkerUrl(
+      this.configService.get<string>("IMAGE_WORKER_URL"),
+    );
+  }
+
+  private resolveWorkerUrl(raw?: string): string {
+    const value = (raw || DEFAULT_WORKER_URL).replace(/\/+$/, "");
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol !== "https:") {
+        this.logger.error(
+          "IMAGE_WORKER_URL must use https; falling back to the default CDN",
+        );
+        return DEFAULT_WORKER_URL;
+      }
+      return value;
+    } catch {
+      this.logger.error("IMAGE_WORKER_URL is invalid; falling back to the default CDN");
+      return DEFAULT_WORKER_URL;
+    }
   }
 
   async uploadDataUrl(opts: {
@@ -69,6 +87,7 @@ export class ImageWorkerUploadService {
           Authorization: `Bearer ${authorization}`,
         },
         body: formData,
+        signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
       });
       const body = (await response.json().catch(() => null)) as {
         success?: boolean;

@@ -16,8 +16,23 @@ vi.mock("@/components/ui/T", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div>{children}</div> : null,
+  Dialog: ({
+    open,
+    onOpenChange,
+    children,
+  }: {
+    open: boolean;
+    onOpenChange?: (open: boolean) => void;
+    children: React.ReactNode;
+  }) =>
+    open ? (
+      <div>
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          Close dialog
+        </button>
+        {children}
+      </div>
+    ) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -146,5 +161,43 @@ describe("AiPhotoEnhancer", () => {
     expect(await screen.findByRole("button", { name: "Use enhanced" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(screen.getByText("Could not enhance this photo. Try again.")).toBeInTheDocument();
+  });
+
+  it("discards an in-flight result after the dialog is closed", async () => {
+    let resolveEnhance: ((value: unknown) => void) | undefined;
+    vi.mocked(inventoryApi.enhanceImages).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveEnhance = resolve;
+        }) as never,
+    );
+    render(
+      <AiPhotoEnhancer shopId="shop-1" images={images} onChange={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Enhance all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Enhance and review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+    resolveEnhance?.({
+      data: {
+        results: [
+          {
+            sourceUrl: images[0],
+            status: "success",
+            enhancedUrl: "https://images.orivraa.com/product/enhanced.jpg",
+          },
+        ],
+      },
+    });
+
+    await waitFor(() =>
+      fireEvent.click(screen.getByRole("button", { name: "Enhance all" })),
+    );
+    expect(
+      screen.getByRole("button", { name: "Enhance and review" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Use enhanced" }),
+    ).not.toBeInTheDocument();
   });
 });

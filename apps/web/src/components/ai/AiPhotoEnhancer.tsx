@@ -35,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type EnhancementResult = {
   sourceUrl: string;
@@ -80,6 +80,7 @@ export function AiPhotoEnhancer({
   const [creditsDepleted, setCreditsDepleted] = useState(false);
   const [results, setResults] = useState<EnhancementResult[]>([]);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const requestIdRef = useRef(0);
 
   const targets = useMemo(
     () =>
@@ -109,6 +110,11 @@ export function AiPhotoEnhancer({
     }
     setBusy(true);
     setCreditsDepleted(false);
+    const requestId = ++requestIdRef.current;
+    const idempotencyKey =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     try {
       const response = await inventoryApi.enhanceImages(shopId, {
         imageUrls: requestedTargets,
@@ -118,7 +124,9 @@ export function AiPhotoEnhancer({
             : undefined,
         model,
         context,
+        idempotencyKey,
       });
+      if (requestId !== requestIdRef.current) return;
       const nextResults = (response.data?.results || []) as EnhancementResult[];
       setResults((current) => {
         const requested = new Set(requestedTargets);
@@ -148,6 +156,7 @@ export function AiPhotoEnhancer({
         });
       }
     } catch (error: unknown) {
+      if (requestId !== requestIdRef.current) return;
       if (isInsufficientAiCreditsError(error)) {
         setCreditsDepleted(true);
         return;
@@ -161,7 +170,7 @@ export function AiPhotoEnhancer({
         description: message || t("Check the photo and try again."),
       });
     } finally {
-      setBusy(false);
+      if (requestId === requestIdRef.current) setBusy(false);
     }
   };
 
@@ -224,7 +233,11 @@ export function AiPhotoEnhancer({
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
-          if (!next) window.setTimeout(resetDialog, 200);
+          if (!next) {
+            requestIdRef.current += 1;
+            setBusy(false);
+            window.setTimeout(resetDialog, 200);
+          }
         }}
       >
         <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">

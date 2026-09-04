@@ -249,7 +249,7 @@ export function SetBuilderDialog({
           );
           setDiscountValue(String(set.setDiscountValue ?? 0));
           setLocationId(set.locationId || "");
-          setImages(Array.isArray(set.images) ? set.images.slice(0, 3) : []);
+          setImages(Array.isArray(set.images) ? set.images : []);
 
           const links = set.setComponents || [];
           const rows = links.map(mapComponentItemToRow);
