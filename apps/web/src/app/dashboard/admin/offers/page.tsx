@@ -401,8 +401,12 @@ export default function OffersAdminPage() {
         emailHeading: campaignDraft.emailHeading,
         emailBody: campaignDraft.emailBody,
         imageUrl: campaignDraft.imageUrl,
-        ctaUrl: campaignDraft.ctaUrl || null,
-        ctaLabel: campaignDraft.ctaLabel || null,
+        ...(isProductUpdate
+          ? {
+              ctaUrl: campaignDraft.ctaUrl || null,
+              ctaLabel: campaignDraft.ctaLabel || null,
+            }
+          : {}),
       };
       const kind = isProductUpdate ? "PRODUCT_UPDATE" : "FESTIVAL";
       const offerValues = isProductUpdate
@@ -1531,7 +1535,11 @@ export default function OffersAdminPage() {
                   {campaignFormMode === "email" ? (
                     <T>Update email content</T>
                   ) : editingCampaignKey ? (
-                    <T>Update campaign</T>
+                    campaignDraft.kind === "PRODUCT_UPDATE" ? (
+                      <T>Update product update</T>
+                    ) : (
+                      <T>Update festival campaign</T>
+                    )
                   ) : campaignDraft.kind === "PRODUCT_UPDATE" ? (
                     <T>Save product update</T>
                   ) : (
