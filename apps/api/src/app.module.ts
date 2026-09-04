@@ -60,6 +60,7 @@ import { SellerAiModule } from "./modules/seller-ai/seller-ai.module";
 import { ShopQuotesModule } from "./modules/core/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
 import { SubscriptionPlansModule } from "./modules/core/subscriptions/subscription-plans.module";
+import { LeadsModule } from "./modules/leads/leads.module";
 import { SupportModule } from "./modules/support/support.module";
 import { TaxReportsModule } from "./modules/core/tax-reports/tax-reports.module";
 import { TestingModule } from "./modules/testing/testing.module";
@@ -175,6 +176,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     GoldLoansModule,
     KarigarModule,
     SupportModule,
+    LeadsModule,
     ProductVariantsModule,
     PosModule,
     SubscriptionPlansModule,

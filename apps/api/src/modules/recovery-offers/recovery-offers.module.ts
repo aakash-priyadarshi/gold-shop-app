@@ -19,6 +19,6 @@ import { FestivalCalendarService } from "./festival-calendar.service";
     RecoveryOfferProcessor,
     FestivalCalendarService,
   ],
-  exports: [RecoveryOffersService],
+  exports: [RecoveryOffersService, FestivalCalendarService],
 })
 export class RecoveryOffersModule {}
