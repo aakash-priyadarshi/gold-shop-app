@@ -55,6 +55,8 @@ const offerEmailMultipartBody: ApiBodyOptions = {
         enum: ["KEEP", "DEFAULT", "URL", "UPLOAD"],
       },
       imageUrl: { type: "string" },
+      ctaUrl: { type: "string" },
+      ctaLabel: { type: "string" },
       image: { type: "string", format: "binary" },
     },
   },

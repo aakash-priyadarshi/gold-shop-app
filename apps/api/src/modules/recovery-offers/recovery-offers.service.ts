@@ -114,6 +114,8 @@ type CampaignDefinition = {
   emailHeading: string;
   emailBody: string;
   imageUrl?: string | null;
+  ctaUrl?: string | null;
+  ctaLabel?: string | null;
   emailImage?: {
     id: string;
     fileName: string;
@@ -192,6 +194,8 @@ export class RecoveryOffersService {
         startsAt: new Date(input.startsAt),
         endsAt: new Date(input.endsAt),
         imageUrl: input.imageUrl?.trim() || null,
+        ctaUrl: input.ctaUrl?.trim() || null,
+        ctaLabel: input.ctaLabel?.trim() || null,
         createdBy: adminId,
       },
     });
@@ -210,7 +214,9 @@ export class RecoveryOffersService {
       input.emailSubject !== undefined ||
       input.emailHeading !== undefined ||
       input.emailBody !== undefined ||
-      input.imageUrl !== undefined;
+      input.imageUrl !== undefined ||
+      input.ctaUrl !== undefined ||
+      input.ctaLabel !== undefined;
     if (emailContentTouched) {
       await this.assertEmailContentEditable(resolvedKey, this.prisma);
     }
@@ -219,7 +225,10 @@ export class RecoveryOffersService {
       startsAt: input.startsAt ?? existing.startsAt.toISOString(),
       endsAt: input.endsAt ?? existing.endsAt.toISOString(),
       kind: input.kind ?? existing.kind,
+      complimentaryDays:
+        input.complimentaryDays ?? existing.complimentaryDays,
       discountPercent: input.discountPercent ?? existing.discountPercent,
+      ctaUrl: input.ctaUrl !== undefined ? input.ctaUrl : existing.ctaUrl,
     });
 
     return this.prisma.offerCampaign.update({
@@ -252,6 +261,12 @@ export class RecoveryOffersService {
           : {}),
         ...(input.imageUrl !== undefined
           ? { imageUrl: input.imageUrl?.trim() || null }
+          : {}),
+        ...(input.ctaUrl !== undefined
+          ? { ctaUrl: input.ctaUrl?.trim() || null }
+          : {}),
+        ...(input.ctaLabel !== undefined
+          ? { ctaLabel: input.ctaLabel?.trim() || null }
           : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       },
@@ -306,6 +321,12 @@ export class RecoveryOffersService {
           emailBody: input.emailBody,
           emailImageId,
           imageUrl,
+          ...(input.ctaUrl !== undefined
+            ? { ctaUrl: input.ctaUrl?.trim() || null }
+            : {}),
+          ...(input.ctaLabel !== undefined
+            ? { ctaLabel: input.ctaLabel?.trim() || null }
+            : {}),
         },
         include: {
           emailImage: {
@@ -339,15 +360,26 @@ export class RecoveryOffersService {
       uploadedImage,
     );
     const appUrl = this.frontendBaseUrl();
-    const template =
-      campaign.kind === OfferCampaignKind.FESTIVAL
+    const isProductUpdate =
+      campaign.kind === OfferCampaignKind.PRODUCT_UPDATE;
+    const template = isProductUpdate
+      ? "product-update"
+      : campaign.kind === OfferCampaignKind.FESTIVAL
         ? "festival-offer"
         : "recovery-offer";
+    const demoUrl =
+      input.ctaUrl?.trim() ||
+      campaign.ctaUrl ||
+      `${appUrl}/jewellery-shop-software#ai-photo-studio`;
     const html = await this.mail.renderTemplate(template, {
       firstName: "Shop owner",
       shopName: "Your jewellery shop",
       days: campaign.complimentaryDays,
-      claimUrl: "#",
+      claimUrl: isProductUpdate ? demoUrl : "#",
+      demoUrl,
+      catalogUrl: `${appUrl}/dashboard/shop/products`,
+      ctaLabel:
+        input.ctaLabel?.trim() || campaign.ctaLabel || "See it in action",
       unsubscribeUrl: "#",
       campaignName: campaign.name,
       emailSubject: input.emailSubject,
@@ -815,13 +847,30 @@ export class RecoveryOffersService {
       requireActive: false,
     });
     const isFestival = campaign.kind === OfferCampaignKind.FESTIVAL;
-    const claimUrl = isFestival
-      ? `${appUrl}/offers/${encodeURIComponent(offer.campaignKey)}#token=${encodeURIComponent(job.rawToken)}`
-      : `${appUrl}/recovery/pro#token=${encodeURIComponent(job.rawToken)}`;
+    const isProductUpdate =
+      campaign.kind === OfferCampaignKind.PRODUCT_UPDATE;
+    const demoUrl =
+      campaign.ctaUrl ||
+      `${appUrl}/jewellery-shop-software#ai-photo-studio`;
+    const claimUrl = isProductUpdate
+      ? demoUrl
+      : isFestival
+        ? `${appUrl}/offers/${encodeURIComponent(offer.campaignKey)}#token=${encodeURIComponent(job.rawToken)}`
+        : `${appUrl}/recovery/pro#token=${encodeURIComponent(job.rawToken)}`;
     const unsubscribeToken = this.createUnsubscribeToken(offer.userId);
     const unsubscribeUrl = this.unsubscribePageUrl(unsubscribeToken);
     const unsubscribeApiUrl = this.unsubscribeApiUrl(unsubscribeToken);
     const subject = campaign.emailSubject;
+    const template = isProductUpdate
+      ? "product-update"
+      : isFestival
+        ? "festival-offer"
+        : "recovery-offer";
+    const category = isProductUpdate
+      ? "product_update"
+      : isFestival
+        ? "festival_offer"
+        : "recovery_offer";
     const activeEmailImage =
       campaign.emailImage &&
       campaign.emailImage.expiresAt.getTime() > Date.now()
@@ -833,14 +882,14 @@ export class RecoveryOffersService {
     const delivery = await this.mail.send({
       to: offer.email,
       subject,
-      template: isFestival ? "festival-offer" : "recovery-offer",
+      template,
       from: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
       replyTo: EMAIL_SENDERS.SUPPORT,
       idempotencyKey: `recovery-offer/${offer.id}/${tokenHash}`,
       tags: [
         {
           name: "category",
-          value: isFestival ? "festival_offer" : "recovery_offer",
+          value: category,
         },
         { name: "offer_id", value: offer.id },
         { name: "campaign", value: offer.campaignKey },
@@ -866,6 +915,9 @@ export class RecoveryOffersService {
         shopName: offer.shop.shopName,
         days: offer.days,
         claimUrl,
+        demoUrl,
+        catalogUrl: `${appUrl}/dashboard/shop/products`,
+        ctaLabel: campaign.ctaLabel || "See it in action",
         unsubscribeUrl,
         offerExpiresAt: offer.expiresAt,
         campaignName: campaign.name,
@@ -879,7 +931,10 @@ export class RecoveryOffersService {
         brandIconUrl: `${appUrl}/favicon/android-chrome-192x192.png`,
         heroImageUrl: emailImageContentId
           ? `cid:${emailImageContentId}`
-          : campaign.imageUrl || `${appUrl}/luxury-gold-globe.png`,
+          : campaign.imageUrl ||
+            (isProductUpdate
+              ? `${appUrl}/ai-photo-studio-demo.gif`
+              : `${appUrl}/luxury-gold-globe.png`),
       },
     });
     if (!delivery.success) {
@@ -906,13 +961,15 @@ export class RecoveryOffersService {
           fromAddress: `Aakash from Orivraa <${EMAIL_SENDERS.SUPPORT}>`,
           toAddress: offer.email,
           subject,
-          body: isFestival
-            ? `${campaign.name}: ${offer.days} days of PRO and ${campaign.discountPercent}% off during the campaign window.`
-            : `Service recovery offer: ${offer.days} days of PRO; no card or automatic renewal.`,
+          body: isProductUpdate
+            ? `${campaign.name}: ${campaign.emailHeading}`
+            : isFestival
+              ? `${campaign.name}: ${offer.days} days of PRO and ${campaign.discountPercent}% off during the campaign window.`
+              : `Service recovery offer: ${offer.days} days of PRO; no card or automatic renewal.`,
           userId: offer.userId,
           adminId: offer.createdBy,
           messageId: delivery.messageId,
-          templateKey: isFestival ? "festival_offer" : "recovery_offer",
+          templateKey: category,
           threadId: offer.id,
         },
       });
@@ -1152,6 +1209,16 @@ export class RecoveryOffersService {
           );
         }
 
+        const campaign = await tx.offerCampaign.findUnique({
+          where: { key: offer.campaignKey },
+          select: { kind: true },
+        });
+        if (campaign?.kind === OfferCampaignKind.PRODUCT_UPDATE) {
+          throw new BadRequestException(
+            "This announcement does not include a claimable offer",
+          );
+        }
+
         const claimant = await tx.user.findUnique({
           where: { id: userId },
           select: { emailVerified: true, status: true },
@@ -1190,10 +1257,6 @@ export class RecoveryOffersService {
           );
         }
 
-        const campaign = await tx.offerCampaign.findUnique({
-          where: { key: offer.campaignKey },
-          select: { kind: true },
-        });
         const { subscription, outcome } = await this.grantEntitlement(
           tx,
           offer,
@@ -1571,7 +1634,8 @@ export class RecoveryOffersService {
     const candidates: Candidate[] = [];
     const excluded: Exclusion[] = [];
     const marketingBlockedUserIds =
-      campaignKind === OfferCampaignKind.FESTIVAL
+      campaignKind === OfferCampaignKind.FESTIVAL ||
+      campaignKind === OfferCampaignKind.PRODUCT_UPDATE
         ? new Set(
             (
               await this.prisma.recoveryOffer.findMany({
@@ -1613,7 +1677,10 @@ export class RecoveryOffersService {
         user.shops.find((candidate) => candidate.id === user.activeShopId) ||
         user.shops[0];
       const country = this.marketFromUser(user, shop?.country);
-      if (!proCountries.has(country)) {
+      if (
+        campaignKind !== OfferCampaignKind.PRODUCT_UPDATE &&
+        !proCountries.has(country)
+      ) {
         excluded.push({
           userId: user.id,
           email: user.email,
@@ -2098,7 +2165,9 @@ export class RecoveryOffersService {
       return input.imageUrl!.trim();
     }
     if (input.imageMode === "DEFAULT") {
-      return `${this.frontendBaseUrl()}/luxury-gold-globe.png`;
+      return campaign.kind === OfferCampaignKind.PRODUCT_UPDATE
+        ? `${this.frontendBaseUrl()}/ai-photo-studio-demo.gif`
+        : `${this.frontendBaseUrl()}/luxury-gold-globe.png`;
     }
     if (
       campaign.emailImage &&
@@ -2107,7 +2176,10 @@ export class RecoveryOffersService {
       return `data:${campaign.emailImage.contentType};base64,${campaign.emailImage.content.toString("base64")}`;
     }
     return (
-      campaign.imageUrl || `${this.frontendBaseUrl()}/luxury-gold-globe.png`
+      campaign.imageUrl ||
+      (campaign.kind === OfferCampaignKind.PRODUCT_UPDATE
+        ? `${this.frontendBaseUrl()}/ai-photo-studio-demo.gif`
+        : `${this.frontendBaseUrl()}/luxury-gold-globe.png`)
     );
   }
 
@@ -2143,6 +2215,9 @@ export class RecoveryOffersService {
         emailHeading: "We’re sorry about the invoice issue.",
         emailBody:
           "We fixed the issue, strengthened monitoring, and improved invoice reliability.",
+        ctaUrl: null,
+        ctaLabel: null,
+        emailImage: null,
       };
     }
     throw new NotFoundException("Offer campaign not found");
@@ -2151,7 +2226,12 @@ export class RecoveryOffersService {
   private validateCampaignWindow(
     input: Pick<
       CreateOfferCampaignDto,
-      "startsAt" | "endsAt" | "kind" | "discountPercent"
+      | "startsAt"
+      | "endsAt"
+      | "kind"
+      | "complimentaryDays"
+      | "discountPercent"
+      | "ctaUrl"
     >,
   ) {
     const startsAt = new Date(input.startsAt);
@@ -2164,6 +2244,23 @@ export class RecoveryOffersService {
     if (input.kind === "FESTIVAL" && input.discountPercent <= 0) {
       throw new BadRequestException(
         "Festival campaigns require a positive discount",
+      );
+    }
+    if (input.kind === "PRODUCT_UPDATE") {
+      if (input.complimentaryDays !== 0 || input.discountPercent !== 0) {
+        throw new BadRequestException(
+          "Product-update campaigns cannot include complimentary days or a plan discount",
+        );
+      }
+      const ctaUrl = input.ctaUrl?.trim() || "";
+      if (ctaUrl && !/^https:\/\/\S+$/i.test(ctaUrl)) {
+        throw new BadRequestException(
+          "Product-update campaigns need an https demo URL",
+        );
+      }
+    } else if (input.complimentaryDays < 1) {
+      throw new BadRequestException(
+        "Recovery and festival campaigns need at least one complimentary day",
       );
     }
   }

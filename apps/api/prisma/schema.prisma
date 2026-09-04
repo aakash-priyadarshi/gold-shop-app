@@ -3531,6 +3531,8 @@ model OfferCampaign {
   emailHeading      String
   emailBody         String                    @db.Text
   imageUrl          String?
+  ctaUrl            String?
+  ctaLabel          String?
   emailImageId      String?                   @unique
   isActive          Boolean                   @default(true)
   createdBy         String?
@@ -3702,6 +3704,7 @@ enum RecoveryOfferStatus {
 enum OfferCampaignKind {
   RECOVERY
   FESTIVAL
+  PRODUCT_UPDATE
 }
 
 enum OfferCampaignRedemptionStatus {

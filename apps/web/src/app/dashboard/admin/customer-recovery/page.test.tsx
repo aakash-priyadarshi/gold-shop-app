@@ -671,6 +671,34 @@ describe("OffersAdminPage", () => {
     expect(mocks.createCampaign).not.toHaveBeenCalled();
   });
 
+  it("creates a product-update campaign with demo CTA fields and no complimentary days", async () => {
+    mocks.createCampaign.mockResolvedValue({
+      data: { key: "whats-new-ai-photo-2026-09" },
+    });
+
+    await renderLoadedPage();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create product update" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save product update" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.createCampaign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: "whats-new-ai-photo-2026-09",
+          kind: "PRODUCT_UPDATE",
+          complimentaryDays: 0,
+          discountPercent: 0,
+          ctaUrl:
+            "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+          ctaLabel: "See it in action",
+        }),
+      );
+    });
+  });
+
   it("edits only the email content from the email editor", async () => {
     const winbackCampaign = {
       id: "campaign-winback",

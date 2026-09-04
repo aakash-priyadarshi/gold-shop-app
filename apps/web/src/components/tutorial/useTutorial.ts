@@ -2292,9 +2292,9 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='offers-campaigns']",
       popover: {
-        title: "Recovery and festival offers",
+        title: "Recovery, festival, and product updates",
         description:
-          "Switch between the 50-day recovery campaign and festival campaigns. Festival offers have their own sale window, complimentary Pro days, discount, subject, and message.",
+          "Switch between the 50-day recovery campaign, festival sale campaigns, and product-update announcements. Product updates email registered shops only, with a demo GIF and a link to the live Framer Motion demo — they do not grant Pro.",
         side: "bottom",
         align: "center",
       },

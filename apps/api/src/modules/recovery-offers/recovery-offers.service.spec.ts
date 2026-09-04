@@ -105,6 +105,121 @@ describe("RecoveryOffersService", () => {
     });
   });
 
+  it("creates a product-update campaign without complimentary days or discount", async () => {
+    prisma.offerCampaign.create.mockResolvedValue({
+      id: "campaign-2",
+      key: "whats-new-ai-photo-2026-09",
+    });
+
+    await service.createCampaign(
+      {
+        key: "whats-new-ai-photo-2026-09",
+        name: "AI product photo studio",
+        kind: "PRODUCT_UPDATE",
+        complimentaryDays: 0,
+        discountPercent: 0,
+        startsAt: "2026-09-04T00:00:00.000Z",
+        endsAt: "2026-12-04T00:00:00.000Z",
+        emailSubject: "New: studio photos from your catalog",
+        emailHeading: "Turn shop photos into listing-ready images",
+        emailBody:
+          "Open Product Catalog, choose a photo, and tap Enhance. Watch the live demo first if you want to see the click.",
+        ctaUrl: "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+        ctaLabel: "See it in action",
+        imageUrl: "https://www.orivraa.com/ai-photo-studio-demo.gif",
+      },
+      "admin-1",
+    );
+
+    expect(prisma.offerCampaign.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        key: "whats-new-ai-photo-2026-09",
+        kind: OfferCampaignKind.PRODUCT_UPDATE,
+        complimentaryDays: 0,
+        discountPercent: 0,
+        ctaUrl:
+          "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+        createdBy: "admin-1",
+      }),
+    });
+  });
+
+  it("rejects a product-update campaign that includes complimentary days", async () => {
+    await expect(
+      service.createCampaign(
+        {
+          key: "whats-new-bad",
+          name: "Bad update",
+          kind: "PRODUCT_UPDATE",
+          complimentaryDays: 14,
+          discountPercent: 0,
+          startsAt: "2026-09-04T00:00:00.000Z",
+          endsAt: "2026-12-04T00:00:00.000Z",
+          emailSubject: "Update",
+          emailHeading: "Heading",
+          emailBody: "Body copy for the announcement email.",
+        },
+        "admin-1",
+      ),
+    ).rejects.toThrow(/cannot include complimentary days/i);
+    expect(prisma.offerCampaign.create).not.toHaveBeenCalled();
+  });
+
+  it("queues a product-update email even when no PRO plan exists for the country", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      name: "AI product photo studio",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      complimentaryDays: 0,
+      discountPercent: 0,
+      startsAt: new Date("2026-09-04T00:00:00.000Z"),
+      endsAt: new Date("2026-12-04T00:00:00.000Z"),
+      emailSubject: "New: studio photos from your catalog",
+      emailHeading: "Turn shop photos into listing-ready images",
+      emailBody: "Open Product Catalog and tap Enhance.",
+      isActive: true,
+    });
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: "user-1",
+        email: "owner@example.com",
+        firstName: "Owner",
+        role: UserRole.SHOPKEEPER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true,
+        activeShopId: "shop-1",
+        lastLoginAt: null,
+        webSessions: [],
+        recoveryOffers: [],
+        shops: [
+          {
+            id: "shop-1",
+            shopName: "Owner Gold",
+            country: "NP",
+            subscriptions: [],
+          },
+        ],
+      },
+    ]);
+    prisma.crashReport.findMany.mockResolvedValue([]);
+    prisma.subscriptionPlan.findMany.mockResolvedValue([]);
+    prisma.recoveryOffer.findMany.mockResolvedValue([]);
+    prisma.recoveryOffer.findUnique.mockResolvedValue(null);
+    prisma.recoveryOffer.create.mockResolvedValue({ id: "offer-1" });
+    queue.add.mockResolvedValue({ id: "job-1" });
+
+    const result = await service.sendAudience({
+      userIds: ["user-1"],
+      campaignKey: "whats-new-ai-photo-2026-09",
+      confirmed: true,
+      adminId: "admin-1",
+      deliveryTiming: "IMMEDIATE",
+    });
+
+    expect(result.queued).toBe(1);
+    expect(result.excluded).toEqual([]);
+  });
+
   it("updates only supplied festival campaign fields", async () => {
     prisma.offerCampaign.findUnique.mockResolvedValue({
       key: "festival-dashain-2026",
@@ -2060,5 +2175,85 @@ describe("RecoveryOffersService", () => {
         subject: "Celebrate with Orivraa",
       }),
     );
+  });
+
+  it("delivers a product-update email without a claim grant", async () => {
+    const rawToken = "delivery-token";
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    prisma.recoveryOffer.findUnique.mockResolvedValueOnce({
+      id: "offer-1",
+      campaignKey: "whats-new-ai-photo-2026-09",
+      userId: "user-1",
+      email: "owner@example.com",
+      tokenHash,
+      days: 0,
+      status: RecoveryOfferStatus.PREPARED,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: "admin-1",
+      user: { firstName: "Owner", marketingUnsubscribedAt: null },
+      shop: { shopName: "Owner Gold" },
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "whats-new-ai-photo-2026-09",
+      name: "AI product photo studio",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+      complimentaryDays: 0,
+      discountPercent: 0,
+      startsAt: new Date("2026-09-04T00:00:00.000Z"),
+      endsAt: new Date("2026-12-04T00:00:00.000Z"),
+      emailSubject: "New: studio photos from your catalog",
+      emailHeading: "Turn shop photos into listing-ready images",
+      emailBody: "Open Product Catalog and tap Enhance.",
+      ctaUrl:
+        "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+      ctaLabel: "See it in action",
+      imageUrl: "https://www.orivraa.com/ai-photo-studio-demo.gif",
+      isActive: true,
+      emailImage: null,
+    });
+    mail.send.mockResolvedValue({ success: true, messageId: "message-1" });
+    prisma.recoveryOffer.updateMany.mockResolvedValue({ count: 1 });
+    prisma.emailLog.create.mockResolvedValue({ id: "log-1" });
+
+    const result = await service.deliverQueuedOffer({
+      offerId: "offer-1",
+      rawToken,
+    });
+
+    expect(result).toEqual({ skipped: false });
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: "product-update",
+        subject: "New: studio photos from your catalog",
+        context: expect.objectContaining({
+          demoUrl:
+            "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+          catalogUrl: "https://www.orivraa.com/dashboard/shop/products",
+          ctaLabel: "See it in action",
+        }),
+      }),
+    );
+  });
+
+  it("refuses to claim a product-update campaign", async () => {
+    prisma.recoveryOffer.findUnique.mockResolvedValue({
+      id: "offer-1",
+      campaignKey: "whats-new-ai-photo-2026-09",
+      userId: "user-1",
+      shopId: "shop-1",
+      days: 0,
+      status: RecoveryOfferStatus.SENT,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      claimedAt: null,
+    });
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+    });
+
+    await expect(service.claim("g".repeat(32), "user-1")).rejects.toThrow(
+      "does not include a claimable offer",
+    );
+    expect(prisma.recoveryOffer.updateMany).not.toHaveBeenCalled();
+    expect(prisma.sellerSubscription.create).not.toHaveBeenCalled();
   });
 });

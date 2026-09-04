@@ -2643,7 +2643,7 @@ export interface OfferCampaign {
   id?: string;
   key: string;
   name: string;
-  kind: "RECOVERY" | "FESTIVAL";
+  kind: "RECOVERY" | "FESTIVAL" | "PRODUCT_UPDATE";
   complimentaryDays: number;
   discountPercent: number;
   startsAt: string | null;
@@ -2652,6 +2652,8 @@ export interface OfferCampaign {
   emailHeading: string;
   emailBody: string;
   imageUrl?: string | null;
+  ctaUrl?: string | null;
+  ctaLabel?: string | null;
   emailImage?: {
     id: string;
     fileName: string;
@@ -2673,6 +2675,8 @@ export interface OfferCampaignEmailDraft {
   imageMode: OfferEmailImageMode;
   imageUrl?: string;
   image?: File | null;
+  ctaUrl?: string;
+  ctaLabel?: string;
 }
 
 function offerCampaignEmailFormData(data: OfferCampaignEmailDraft) {
@@ -2686,6 +2690,12 @@ function offerCampaignEmailFormData(data: OfferCampaignEmailDraft) {
   }
   if (data.image) {
     formData.append("image", data.image);
+  }
+  if (data.ctaUrl !== undefined) {
+    formData.append("ctaUrl", data.ctaUrl);
+  }
+  if (data.ctaLabel !== undefined) {
+    formData.append("ctaLabel", data.ctaLabel);
   }
   return formData;
 }
@@ -2755,7 +2765,7 @@ export interface RecoveryCampaignMetrics {
   byCampaign: Array<{
     campaignKey: string;
     name: string;
-    kind: "RECOVERY" | "FESTIVAL";
+    kind: "RECOVERY" | "FESTIVAL" | "PRODUCT_UPDATE";
     totals: RecoveryCampaignMetrics["totals"];
     rates: RecoveryCampaignMetrics["rates"];
   }>;

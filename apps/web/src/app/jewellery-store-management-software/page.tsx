@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
+import { AiPhotoStudioSpotlight } from "@/components/marketing/AiPhotoStudioSpotlight";
 import {
     BUYER_COUNTRY_COUNT,
     RegionalPricingSnapshot,
@@ -44,6 +45,7 @@ const jsonLd = {
         "GST/VAT invoicing",
         "Customer management",
         "Digital catalogues",
+        "AI product photo enhancement",
         "Analytics and reports",
         "Marketplace listing",
       ],
@@ -463,6 +465,8 @@ export default function JewelleryStoreManagementSoftwarePage() {
             </div>
           </div>
         </section>
+
+        <AiPhotoStudioSpotlight />
 
         {/* ── Comparison Table ────────────────────────────── */}
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
