@@ -1153,7 +1153,7 @@ function PlansTab() {
                                     : "text-muted-foreground"
                                 }
                               >
-                                {label}
+                                <T>{label}</T>
                               </span>
                               {enforced ? (
                                 <span className="text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded-full leading-none">
