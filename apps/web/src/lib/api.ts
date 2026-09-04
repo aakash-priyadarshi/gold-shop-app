@@ -1757,6 +1757,126 @@ export const ticketsApi = {
   getPublicContacts: () => api.get("/tickets/contacts"),
 };
 
+// ─── Leads Management API ───
+export interface LeadItem {
+  id: string;
+  shopName: string;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country: string;
+  source: "GOOGLE_MAPS" | "AI_CHATBOT" | "MANUAL_IMPORT" | "REFERRAL";
+  status: "NEW" | "CONTACTED" | "WON" | "LOST";
+  rating?: number | null;
+  reviewCount?: number | null;
+  notes?: string | null;
+  outreachCount: number;
+  lastEmailedAt?: string | null;
+  lastCampaignKey?: string | null;
+  botSessionId?: string | null;
+  convertedUserId?: string | null;
+  convertedShopId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadsResult {
+  leads: LeadItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  stats: {
+    totalAll: number;
+    newCount: number;
+    contactedCount: number;
+    wonCount: number;
+    lostCount: number;
+    mapsCount: number;
+    chatCount: number;
+  };
+}
+
+export interface OutreachTemplate {
+  id: string;
+  name: string;
+  country: string;
+  subject: string;
+  body: string;
+  festivalHint?: string;
+}
+
+export const leadsAdminApi = {
+  getLeads: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    source?: string;
+    country?: string;
+    city?: string;
+    search?: string;
+  }) => api.get<LeadsResult>("/leads", { params }),
+
+  importLeads: (leads: Array<Partial<LeadItem>>) =>
+    api.post<{ imported: number; updated: number; skipped: number }>("/leads/import", { leads }),
+
+  updateLead: (
+    id: string,
+    data: {
+      status?: string;
+      notes?: string | null;
+      shopName?: string;
+      email?: string;
+      phone?: string;
+    },
+  ) => api.patch<LeadItem>(`/leads/${id}`, data),
+
+  bulkUpdateStatus: (ids: string[], status: string) =>
+    api.patch<{ count: number; status: string }>("/leads/bulk/status", { ids, status }),
+
+  deleteLead: (id: string) => api.delete(`/leads/${id}`),
+
+  getPresets: () => api.get<{ templates: OutreachTemplate[] }>("/leads/outreach/presets"),
+
+  getFestivals: (country?: string) =>
+    api.get<{ festivals: Array<{ name: string; date: string; country: string }> }>("/leads/outreach/festivals", {
+      params: { country },
+    }),
+
+  previewOutreach: (data: {
+    leadId?: string;
+    subject: string;
+    bodyTemplate: string;
+    festivalName?: string;
+    offerTrialDays?: number;
+  }) =>
+    api.post<{
+      subject: string;
+      bodyHtml: string;
+      fullHtml: string;
+      claimLink: string;
+    }>("/leads/outreach/preview", data),
+
+  sendOutreach: (data: {
+    leadIds: string[];
+    campaignKey: string;
+    subject: string;
+    bodyTemplate: string;
+    festivalName?: string;
+    offerTrialDays?: number;
+  }) =>
+    api.post<{
+      total: number;
+      sent: number;
+      failed: number;
+      skipped: number;
+    }>("/leads/outreach/send", data),
+};
+
 // ─── Product Variants API ───
 export const variantsApi = {
   toggleSizes: (itemId: string, hasSizes: boolean) =>
