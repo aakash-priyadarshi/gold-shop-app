@@ -29,7 +29,6 @@ export type ImageEnhancementResult = {
 export class ImageEnhancementService {
   private readonly logger = new Logger(ImageEnhancementService.name);
   private readonly apiKey: string;
-  private readonly allowedHosts: Set<string>;
 
   constructor(
     configService: ConfigService,
@@ -37,16 +36,6 @@ export class ImageEnhancementService {
     private readonly imageUpload: ImageWorkerUploadService,
   ) {
     this.apiKey = configService.get<string>("GEMINI_API_KEY") || "";
-    const workerUrl =
-      configService.get<string>("IMAGE_WORKER_URL") ||
-      "https://images.orivraa.com";
-    let workerHost = "images.orivraa.com";
-    try {
-      workerHost = new URL(workerUrl).host.toLowerCase();
-    } catch {
-      // Configuration errors are surfaced when enhancement is called.
-    }
-    this.allowedHosts = new Set(["images.orivraa.com", workerHost]);
   }
 
   async enhance(opts: {
@@ -169,8 +158,11 @@ export class ImageEnhancementService {
       url.protocol !== "https:" ||
       url.username ||
       url.password ||
-      !this.allowedHosts.has(url.host.toLowerCase()) ||
-      !url.pathname.startsWith("/product/")
+      url.port !== "" ||
+      url.hostname !== "images.orivraa.com" ||
+      !/^\/product\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|webp|gif|avif)$/i.test(
+        url.pathname,
+      )
     ) {
       throw new BadRequestException(
         "Only uploaded Orivraa product images can be enhanced",
@@ -182,7 +174,23 @@ export class ImageEnhancementService {
   }
 
   private async fetchSourceImage(url: string): Promise<SourceImage> {
-    const response = await fetch(url, { redirect: "error" });
+    const source = new URL(url);
+    const productKey = source.pathname.match(
+      /^\/product\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|webp|gif|avif))$/i,
+    )?.[1];
+    if (
+      source.protocol !== "https:" ||
+      source.username ||
+      source.password ||
+      source.port !== "" ||
+      source.hostname !== "images.orivraa.com" ||
+      !productKey
+    ) {
+      throw new Error("Source image URL is not an allowed Orivraa product image");
+    }
+    const safeUrl = new URL("https://images.orivraa.com/product/");
+    safeUrl.pathname += encodeURIComponent(productKey);
+    const response = await fetch(safeUrl, { redirect: "error" });
     if (!response.ok) throw new Error(`Source image fetch failed (${response.status})`);
     const mimeType = (response.headers.get("content-type") || "")
       .split(";")[0]

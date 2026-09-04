@@ -157,6 +157,8 @@ describe("ImageEnhancementService", () => {
     "http://images.orivraa.com/product/a.jpg",
     "https://example.com/product/a.jpg",
     "https://images.orivraa.com/profile/a.jpg",
+    "https://images.orivraa.com/product/a/b.jpg",
+    "https://images.orivraa.com/product/../admin.jpg",
     "http://127.0.0.1/product/a.jpg",
   ])("rejects unsafe or non-product URL %s before debit", async (url) => {
     await expect(
