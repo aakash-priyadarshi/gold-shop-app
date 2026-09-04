@@ -1896,7 +1896,9 @@ export const leadsAdminApi = {
 
   sendWhatsAppCampaign: (data: {
     leadIds: string[];
-    templateText: string;
+    templateText?: string;
+    contentSid?: string;
+    contentVariables?: Record<string, string> | string;
     mediaUrl?: string;
     festivalName?: string;
   }) =>

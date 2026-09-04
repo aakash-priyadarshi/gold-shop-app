@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   leadsAdminApi,
   LeadMessage,
@@ -30,6 +31,7 @@ export function LeadChatDrawer({
   onClose,
   onLeadUpdated,
 }: LeadChatDrawerProps) {
+  const t = useT();
   const [data, setData] = useState<LeadMessagesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -39,17 +41,26 @@ export function LeadChatDrawer({
   const [togglingAi, setTogglingAi] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activeLeadIdRef = useRef<string | null>(null);
+  activeLeadIdRef.current = leadId;
 
   const fetchMessages = useCallback(async () => {
     if (!leadId) return;
+    const requestedId = leadId;
     try {
       setLoading(true);
       const res = await leadsAdminApi.getMessages(leadId);
-      setData(res.data);
+      if (activeLeadIdRef.current === requestedId) {
+        setData(res.data);
+      }
     } catch (err: any) {
-      console.error("Failed loading chat messages:", err);
+      if (activeLeadIdRef.current === requestedId) {
+        console.error("Failed loading chat messages:", err);
+      }
     } finally {
-      setLoading(false);
+      if (activeLeadIdRef.current === requestedId) {
+        setLoading(false);
+      }
     }
   }, [leadId]);
 
@@ -92,9 +103,19 @@ export function LeadChatDrawer({
     return () => clearInterval(timer);
   }, [data?.lead.customerServiceWindowExpiresAt]);
 
+  const isWindowActive = Boolean(
+    data?.lead.customerServiceWindowExpiresAt &&
+    new Date(data.lead.customerServiceWindowExpiresAt).getTime() > Date.now()
+  );
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!leadId || !inputText.trim()) return;
+
+    if (!isWindowActive) {
+      alert(t("WhatsApp Business policy requires an active 24-hour customer service window or an approved template message."));
+      return;
+    }
 
     try {
       setSending(true);
@@ -140,7 +161,6 @@ export function LeadChatDrawer({
 
   const lead = data?.lead;
   const messages = data?.messages || [];
-  const isWindowActive = Boolean(timeRemaining);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -361,6 +381,18 @@ export function LeadChatDrawer({
           </div>
         )}
 
+        {/* Customer Service Window Expired Notice */}
+        {!isWindowActive && !lead?.whatsappOptOut && (
+          <div className="px-3 py-2 bg-amber-500/10 border-t border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+            <ClockIcon className="h-4 w-4 shrink-0" />
+            <span>
+              <T>
+                24-Hour Customer Service Window is closed. Free-form WhatsApp messages require customer activity or an approved template campaign.
+              </T>
+            </span>
+          </div>
+        )}
+
         {/* Message Input Form */}
         <form
           onSubmit={handleSendMessage}
@@ -369,7 +401,8 @@ export function LeadChatDrawer({
           <button
             type="button"
             onClick={() => setShowMediaInput(!showMediaInput)}
-            title="Attach Media URL"
+            title={t("Attach Media URL")}
+            disabled={!isWindowActive || lead?.whatsappOptOut}
             className={`p-2 rounded-lg border transition-colors ${
               mediaUrl
                 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
@@ -383,18 +416,20 @@ export function LeadChatDrawer({
             type="text"
             placeholder={
               lead?.whatsappOptOut
-                ? "Lead opted out of WhatsApp messages"
-                : "Type message via Twilio WhatsApp..."
+                ? t("Lead opted out of WhatsApp messages")
+                : !isWindowActive
+                ? t("Service window closed — waiting for merchant message or template")
+                : t("Type message via Twilio WhatsApp...")
             }
-            disabled={sending || lead?.whatsappOptOut}
+            disabled={sending || lead?.whatsappOptOut || !isWindowActive}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
 
           <button
             type="submit"
-            disabled={sending || !inputText.trim() || lead?.whatsappOptOut}
+            disabled={sending || !inputText.trim() || lead?.whatsappOptOut || !isWindowActive}
             className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 flex items-center gap-1.5 text-sm font-medium transition-colors shrink-0"
           >
             <PaperAirplaneIcon className="h-4 w-4" />

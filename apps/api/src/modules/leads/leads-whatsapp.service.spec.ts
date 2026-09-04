@@ -37,6 +37,7 @@ describe("LeadsWhatsAppService", () => {
         update: jest.fn().mockImplementation((args) => Promise.resolve({ ...mockLead, ...args.data })),
       },
       leadMessage: {
+        findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockImplementation((args) => Promise.resolve({ id: "msg-123", ...args.data })),
         findMany: jest.fn().mockResolvedValue([]),
       },
@@ -143,7 +144,15 @@ describe("LeadsWhatsAppService", () => {
       expect(aiBotService.generateAndSendReply).toHaveBeenCalled();
     });
 
-    it("handles STOP keyword for automatic opt-out", async () => {
+    it("handles STOP keyword for automatic opt-out with stateful persistence and confirmation", async () => {
+      let currentLeadState = { ...mockLead, whatsappOptOut: false };
+      prisma.lead.findUnique.mockImplementation(() => Promise.resolve(currentLeadState));
+      prisma.lead.findFirst.mockImplementation(() => Promise.resolve(currentLeadState));
+      prisma.lead.update.mockImplementation((args: any) => {
+        currentLeadState = { ...currentLeadState, ...args.data };
+        return Promise.resolve(currentLeadState);
+      });
+
       const payload = {
         From: "whatsapp:+9779812345678",
         Body: "STOP",
@@ -152,6 +161,75 @@ describe("LeadsWhatsAppService", () => {
 
       const res = await service.handleIncomingWebhook(payload);
       expect(res.optOut).toBe(true);
+      expect(currentLeadState.whatsappOptOut).toBe(true);
+
+      // Verify transactional confirmation was created before/with opt-out
+      expect(prisma.leadMessage.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            leadId: "lead-123",
+            direction: MessageDirection.OUTBOUND,
+            sender: MessageSender.SYSTEM,
+            body: expect.stringContaining("unsubscribed"),
+          }),
+        })
+      );
+      expect(aiBotService.generateAndSendReply).not.toHaveBeenCalled();
+    });
+
+    it("skips duplicate webhook replay when twilioMessageSid already exists", async () => {
+      prisma.leadMessage.findUnique = jest.fn().mockResolvedValueOnce({
+        id: "msg-existing",
+        twilioMessageSid: "SM_existing_123",
+      });
+
+      const payload = {
+        From: "whatsapp:+9779812345678",
+        Body: "Hello",
+        MessageSid: "SM_existing_123",
+      };
+
+      const res = await service.handleIncomingWebhook(payload);
+      expect(res.duplicate).toBe(true);
+      expect(res.received).toBe(true);
+      expect(aiBotService.generateAndSendReply).not.toHaveBeenCalled();
+    });
+
+    it("re-enables messaging on explicit START opt-in keyword", async () => {
+      const optedOutLead = { ...mockLead, whatsappOptOut: true };
+      prisma.lead.findFirst.mockResolvedValue(optedOutLead);
+      prisma.lead.findUnique.mockResolvedValue(optedOutLead);
+
+      const payload = {
+        From: "whatsapp:+9779812345678",
+        Body: "START",
+        MessageSid: "SM_start_123",
+      };
+
+      const res = await service.handleIncomingWebhook(payload);
+      expect(res.optIn).toBe(true);
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            whatsappOptOut: false,
+          }),
+        })
+      );
+    });
+
+    it("preserves opt-out state when an opted-out lead sends a regular message and does not invoke AI bot", async () => {
+      const optedOutLead = { ...mockLead, whatsappOptOut: true };
+      prisma.lead.findFirst.mockResolvedValue(optedOutLead);
+      prisma.lead.findUnique.mockResolvedValue(optedOutLead);
+
+      const payload = {
+        From: "whatsapp:+9779812345678",
+        Body: "Wrong number, stop contacting me",
+        MessageSid: "SM_wrong_123",
+      };
+
+      const res = await service.handleIncomingWebhook(payload);
+      expect(res.optedOut).toBe(true);
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -160,6 +238,21 @@ describe("LeadsWhatsAppService", () => {
         })
       );
       expect(aiBotService.generateAndSendReply).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("validateWebhookSignature", () => {
+    it("returns true when token is unconfigured (development mode)", () => {
+      const devService = new LeadsWhatsAppService(
+        prisma,
+        { get: jest.fn().mockReturnValue(null) } as any,
+        aiBotService
+      );
+      expect(devService.validateWebhookSignature("", "http://localhost", {})).toBe(true);
+    });
+
+    it("rejects when signature is missing but token is configured", () => {
+      expect(service.validateWebhookSignature("", "http://localhost", {})).toBe(false);
     });
   });
 });

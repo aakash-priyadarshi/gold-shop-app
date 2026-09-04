@@ -141,7 +141,6 @@ function normalizeLeadPhone(rawPhone?: string, countryHint: string = "NP"): stri
 
   return cleaned;
 }
-}
 
 export async function scrapeGoogleMaps(options: ScraperOptions): Promise<EnrichedShopLead[]> {
   const {

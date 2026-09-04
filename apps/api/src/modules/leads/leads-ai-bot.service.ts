@@ -136,7 +136,12 @@ INSTRUCTIONS FOR YOUR RESPONSE:
           contents.push({ role: "user", parts: [{ text: incomingUserText }] });
         }
 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        // Gemini API strictly requires that multi-turn history begins with a user turn
+        while (contents.length > 0 && contents[0].role === "model") {
+          contents.shift();
+        }
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
 
         const geminiRes = await axios.post(
           endpoint,
@@ -148,7 +153,13 @@ INSTRUCTIONS FOR YOUR RESPONSE:
               maxOutputTokens: 600,
             },
           },
-          { timeout: 20000 }
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey,
+            },
+            timeout: 20000,
+          }
         );
 
         const candidates = geminiRes.data?.candidates;

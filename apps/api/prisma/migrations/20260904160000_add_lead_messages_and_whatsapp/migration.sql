@@ -62,9 +62,28 @@ CREATE INDEX IF NOT EXISTS "lead_messages_leadId_createdAt_idx" ON "lead_message
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "lead_messages_twilioMessageSid_idx" ON "lead_messages"("twilioMessageSid");
 
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "lead_messages_twilioMessageSid_key" ON "lead_messages"("twilioMessageSid");
+
 -- AddForeignKey
 DO $$ BEGIN
     ALTER TABLE "lead_messages" ADD CONSTRAINT "lead_messages_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
+
+-- Backfill existing local-format lead phone numbers to canonical E.164
+UPDATE "Lead"
+SET "phone" = '+977' || regexp_replace("phone", '^0', '')
+WHERE ("country" = 'NP' OR "country" IS NULL)
+  AND "phone" IS NOT NULL
+  AND "phone" NOT LIKE '+%'
+  AND "phone" ~ '^0?9[78]\d{8}$';
+
+UPDATE "Lead"
+SET "phone" = '+91' || regexp_replace("phone", '^0', '')
+WHERE "country" = 'IN'
+  AND "phone" IS NOT NULL
+  AND "phone" NOT LIKE '+%'
+  AND "phone" ~ '^0?[6-9]\d{9}$';
+

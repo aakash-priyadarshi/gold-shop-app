@@ -3,10 +3,13 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
   Query,
+  Req,
+  UnauthorizedException,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -133,7 +136,24 @@ export class LeadsController {
   @Post("whatsapp/webhook")
   @Public()
   @ApiOperation({ summary: "Twilio — incoming WhatsApp webhook receiver" })
-  async handleTwilioWhatsAppWebhook(@Body() payload: Record<string, any>) {
+  async handleTwilioWhatsAppWebhook(
+    @Headers("x-twilio-signature") signature: string,
+    @Req() req: any,
+    @Body() payload: Record<string, any>
+  ) {
+    const proto = req.headers?.["x-forwarded-proto"] || (req.secure ? "https" : "http");
+    const host = req.headers?.["x-forwarded-host"] || req.headers?.["host"];
+    const requestUrl = `${proto}://${host}${req.originalUrl || req.url}`;
+
+    const isValid = this.whatsAppService.validateWebhookSignature(
+      signature,
+      requestUrl,
+      payload
+    );
+    if (!isValid) {
+      throw new UnauthorizedException("Invalid or missing X-Twilio-Signature");
+    }
+
     return this.whatsAppService.handleIncomingWebhook(payload);
   }
 }

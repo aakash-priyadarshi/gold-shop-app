@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { LeadItem, leadsAdminApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   Bot,
   Building2,
@@ -72,6 +73,7 @@ function whatsappLink(phone: string) {
 }
 
 export default function AdminLeadsPage() {
+  const t = useT();
   const searchParams = useSearchParams();
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [stats, setStats] = useState({
@@ -166,6 +168,19 @@ export default function AdminLeadsPage() {
     () => leads.filter((l) => selectedIds.has(l.id)),
     [leads, selectedIds],
   );
+
+  // Prune any selected IDs that are not present in current loaded leads
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const validIds = new Set(leads.map((l) => l.id));
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (validIds.has(id)) next.add(id);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [leads]);
 
   const handleBulkStatusChange = async (newStatus: LeadStatus) => {
     if (selectedIds.size === 0) return;
@@ -589,10 +604,10 @@ export default function AdminLeadsPage() {
                                     setChatDrawerOpen(true);
                                   }}
                                   className="text-[10px] bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-medium transition-colors cursor-pointer"
-                                  title="Open Twilio WhatsApp Chat & AI Bot drawer"
+                                  title={t("Open Twilio WhatsApp Chat & AI Bot drawer")}
                                 >
                                   <MessageSquare className="h-2.5 w-2.5" />
-                                  <span>Chat</span>
+                                  <span><T>Chat</T></span>
                                   {lead._count?.messages ? (
                                     <span className="bg-emerald-600 text-white rounded-full px-1 text-[9px] font-bold">
                                       {lead._count.messages}
@@ -604,7 +619,7 @@ export default function AdminLeadsPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                  title="Open external WhatsApp Web"
+                                  title={t("Open external WhatsApp Web")}
                                 >
                                   <ExternalLink className="h-2.5 w-2.5" />
                                 </a>

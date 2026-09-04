@@ -8,6 +8,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { MessageDirection, MessageSender, MessageStatus } from "@prisma/client";
 import axios from "axios";
+import * as crypto from "crypto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { LeadsAiBotService } from "./leads-ai-bot.service";
 
@@ -92,6 +93,9 @@ export class LeadsWhatsAppService {
     options?: {
       mediaUrl?: string;
       sender?: MessageSender;
+      bypassOptOut?: boolean;
+      contentSid?: string;
+      contentVariables?: string;
     }
   ): Promise<WhatsAppSendResult> {
     const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
@@ -99,7 +103,7 @@ export class LeadsWhatsAppService {
       throw new BadRequestException(`Lead ${leadId} not found`);
     }
 
-    if (lead.whatsappOptOut) {
+    if (lead.whatsappOptOut && !options?.bypassOptOut) {
       this.logger.warn(`Lead ${lead.shopName} has opted out of WhatsApp messages.`);
       return { success: false, skipped: true, error: "Lead opted out" };
     }
@@ -126,8 +130,16 @@ export class LeadsWhatsAppService {
         const payload = new URLSearchParams({
           From: `whatsapp:${twilioFrom}`,
           To: `whatsapp:${normalizedPhone}`,
-          Body: body,
         });
+
+        if (options?.contentSid) {
+          payload.append("ContentSid", options.contentSid);
+          if (options?.contentVariables) {
+            payload.append("ContentVariables", options.contentVariables);
+          }
+        } else {
+          payload.append("Body", body);
+        }
 
         if (options?.mediaUrl) {
           payload.append("MediaUrl", options.mediaUrl);
@@ -186,6 +198,56 @@ export class LeadsWhatsAppService {
     };
   }
 
+  validateWebhookSignature(
+    signature: string,
+    url: string,
+    params: Record<string, any> = {}
+  ): boolean {
+    const authToken = this.configService.get<string>("TWILIO_AUTH_TOKEN");
+    if (!authToken) {
+      this.logger.warn(
+        "TWILIO_AUTH_TOKEN is not set — Twilio webhook signature verification bypassed (development mode)"
+      );
+      return true;
+    }
+
+    if (!signature) {
+      this.logger.warn("Twilio webhook rejected: missing X-Twilio-Signature header");
+      return false;
+    }
+
+    const configuredUrl = this.configService.get<string>("TWILIO_WEBHOOK_URL");
+    const candidateUrls = [configuredUrl, url, url.replace(/^http:/, "https:")].filter(
+      Boolean
+    ) as string[];
+
+    const sortedKeys = Object.keys(params).sort();
+
+    for (const testUrl of candidateUrls) {
+      try {
+        let data = testUrl;
+        for (const key of sortedKeys) {
+          data += key + (params[key] ?? "");
+        }
+
+        const hmac = crypto.createHmac("sha1", authToken);
+        hmac.update(Buffer.from(data, "utf-8"));
+        const expected = hmac.digest("base64");
+
+        const sigBuf = Buffer.from(signature, "utf-8");
+        const expBuf = Buffer.from(expected, "utf-8");
+        if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+          return true;
+        }
+      } catch (err: any) {
+        this.logger.error(`Error computing Twilio webhook signature: ${err?.message}`);
+      }
+    }
+
+    this.logger.warn("Twilio webhook rejected: invalid X-Twilio-Signature header");
+    return false;
+  }
+
   async handleIncomingWebhook(payload: Record<string, any>): Promise<any> {
     const rawFrom = (payload.From || payload.from || "") as string;
     const body = ((payload.Body || payload.body || "") as string).trim();
@@ -194,6 +256,19 @@ export class LeadsWhatsAppService {
     if (!rawFrom || !body) {
       this.logger.warn("Received empty or malformed Twilio WhatsApp webhook payload");
       return { received: false };
+    }
+
+    // Replay / duplicate check for provider SID
+    if (twilioSid) {
+      const existing = await this.prisma.leadMessage.findUnique({
+        where: { twilioMessageSid: twilioSid },
+      });
+      if (existing) {
+        this.logger.log(
+          `Replay webhook delivery ignored for existing twilioMessageSid: ${twilioSid}`
+        );
+        return { received: true, duplicate: true };
+      }
     }
 
     const cleanPhone = rawFrom.replace(/^whatsapp:/i, "").trim();
@@ -229,9 +304,38 @@ export class LeadsWhatsAppService {
       });
     }
 
-    // Check opt-out keywords (STOP, UNSUBSCRIBE, CANCEL)
     const upper = body.toUpperCase();
+
+    // Check opt-out keywords (STOP, UNSUBSCRIBE, CANCEL, HALT, OPTOUT)
     if (["STOP", "UNSUBSCRIBE", "CANCEL", "HALT", "OPTOUT"].includes(upper)) {
+      try {
+        await this.prisma.leadMessage.create({
+          data: {
+            leadId: lead.id,
+            direction: MessageDirection.INBOUND,
+            sender: MessageSender.LEAD,
+            body,
+            status: MessageStatus.RECEIVED,
+            twilioMessageSid: twilioSid || null,
+            rawPayload: payload,
+          },
+        });
+      } catch (err: any) {
+        if (err?.code === "P2002") {
+          this.logger.log(`Duplicate webhook insertion avoided on twilioMessageSid: ${twilioSid}`);
+          return { received: true, duplicate: true };
+        }
+        throw err;
+      }
+
+      // Send transactional confirmation before/with bypass opt-out
+      await this.sendMessage(
+        lead.id,
+        "You have successfully unsubscribed from Orivraa WhatsApp updates. Reply START anytime to re-enable.",
+        { bypassOptOut: true, sender: MessageSender.SYSTEM }
+      );
+
+      // Persist opt-out
       await this.prisma.lead.update({
         where: { id: lead.id },
         data: {
@@ -240,7 +344,27 @@ export class LeadsWhatsAppService {
         },
       });
 
-      await this.prisma.leadMessage.create({
+      return { optOut: true };
+    }
+
+    // Check explicit opt-in keywords (START, UNSTOP, RESUME, SUBSCRIBE)
+    const isExplicitOptIn = ["START", "UNSTOP", "RESUME", "SUBSCRIBE"].includes(upper);
+    const updatedOptOut = isExplicitOptIn ? false : lead.whatsappOptOut;
+
+    // Refresh 24-hour Meta customer service window and update opt-out state
+    const windowExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        customerServiceWindowExpiresAt: windowExpiresAt,
+        lastMessageAt: new Date(),
+        whatsappOptOut: updatedOptOut,
+      },
+    });
+
+    let inboundMsg: any;
+    try {
+      inboundMsg = await this.prisma.leadMessage.create({
         data: {
           leadId: lead.id,
           direction: MessageDirection.INBOUND,
@@ -251,36 +375,29 @@ export class LeadsWhatsAppService {
           rawPayload: payload,
         },
       });
-
-      await this.sendMessage(
-        lead.id,
-        "You have successfully unsubscribed from Orivraa WhatsApp updates. Reply START anytime to re-enable."
-      );
-      return { optOut: true };
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        this.logger.log(`Duplicate webhook insertion avoided on twilioMessageSid: ${twilioSid}`);
+        return { received: true, duplicate: true };
+      }
+      throw err;
     }
 
-    // Refresh 24-hour Meta customer service window
-    const windowExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await this.prisma.lead.update({
-      where: { id: lead.id },
-      data: {
-        customerServiceWindowExpiresAt: windowExpiresAt,
-        lastMessageAt: new Date(),
-        whatsappOptOut: false, // If they sent a message, they opted back in
-      },
-    });
+    if (isExplicitOptIn) {
+      await this.sendMessage(
+        lead.id,
+        "Welcome back! You have re-subscribed to Orivraa WhatsApp updates. How can we help your jewellery business today?",
+        { bypassOptOut: true, sender: MessageSender.SYSTEM }
+      );
+      return { received: true, optIn: true, messageId: inboundMsg.id };
+    }
 
-    const inboundMsg = await this.prisma.leadMessage.create({
-      data: {
-        leadId: lead.id,
-        direction: MessageDirection.INBOUND,
-        sender: MessageSender.LEAD,
-        body,
-        status: MessageStatus.RECEIVED,
-        twilioMessageSid: twilioSid || null,
-        rawPayload: payload,
-      },
-    });
+    // If the lead is currently opted out and sent a non-opt-in message (e.g., "thanks", "wrong number"),
+    // do NOT dispatch to the AI bot to avoid spamming an opted-out contact.
+    if (updatedOptOut) {
+      this.logger.log(`Lead ${lead.shopName} is opted out; recorded message but skipping AI reply.`);
+      return { received: true, optedOut: true, messageId: inboundMsg.id };
+    }
 
     // Check if AI Bot is active or paused by admin
     if (!lead.aiBotPaused) {
@@ -299,8 +416,13 @@ export class LeadsWhatsAppService {
 
   async sendCampaign(
     leadIds: string[],
-    templateText: string,
-    options?: { mediaUrl?: string; festivalName?: string }
+    templateText?: string,
+    options?: {
+      mediaUrl?: string;
+      festivalName?: string;
+      contentSid?: string;
+      contentVariables?: Record<string, string> | string;
+    }
   ): Promise<{ sent: number; skipped: number; failed: number }> {
     const leads = await this.prisma.lead.findMany({
       where: { id: { in: leadIds } },
@@ -327,7 +449,7 @@ export class LeadsWhatsAppService {
         lead.city || ""
       )}&country=${lead.country}&promo=WHATSAPP60`;
 
-      const messageBody = templateText
+      const resolvedBody = (templateText || "")
         .replace(/\{\{shopName\}\}/g, lead.shopName)
         .replace(/\{\{contactName\}\}/g, lead.contactName || lead.shopName)
         .replace(/\{\{city\}\}/g, lead.city || "your city")
@@ -336,10 +458,32 @@ export class LeadsWhatsAppService {
         .replace(/\{\{trialDays\}\}/g, "60")
         .replace(/\{\{claimLink\}\}/g, claimLink);
 
+      let contentVariablesStr: string | undefined;
+      if (options?.contentVariables) {
+        if (typeof options.contentVariables === "string") {
+          contentVariablesStr = options.contentVariables;
+        } else {
+          const resolvedVars: Record<string, string> = {};
+          for (const [k, v] of Object.entries(options.contentVariables)) {
+            resolvedVars[k] = String(v)
+              .replace(/\{\{shopName\}\}/g, lead.shopName)
+              .replace(/\{\{contactName\}\}/g, lead.contactName || lead.shopName)
+              .replace(/\{\{city\}\}/g, lead.city || "your city")
+              .replace(/\{\{country\}\}/g, lead.country || "NP")
+              .replace(/\{\{festivalName\}\}/g, options?.festivalName || "this festive season")
+              .replace(/\{\{trialDays\}\}/g, "60")
+              .replace(/\{\{claimLink\}\}/g, claimLink);
+          }
+          contentVariablesStr = JSON.stringify(resolvedVars);
+        }
+      }
+
       try {
-        const res = await this.sendMessage(lead.id, messageBody, {
+        const res = await this.sendMessage(lead.id, resolvedBody, {
           mediaUrl: options?.mediaUrl,
           sender: MessageSender.SYSTEM,
+          contentSid: options?.contentSid,
+          contentVariables: contentVariablesStr,
         });
         if (res.success) {
           sent++;

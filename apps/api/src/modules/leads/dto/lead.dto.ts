@@ -208,9 +208,16 @@ export class SendWhatsAppCampaignDto {
   @IsString({ each: true })
   leadIds: string[];
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  templateText: string;
+  templateText?: string;
+
+  @IsOptional()
+  @IsString()
+  contentSid?: string;
+
+  @IsOptional()
+  contentVariables?: Record<string, string> | string;
 
   @IsOptional()
   @IsString()

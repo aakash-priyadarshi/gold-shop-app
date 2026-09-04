@@ -5062,7 +5062,7 @@ model LeadMessage {
   body             String           @db.Text
   mediaUrl         String?
   status           MessageStatus    @default(SENT)
-  twilioMessageSid String?
+  twilioMessageSid String?          @unique
   rawPayload       Json?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt

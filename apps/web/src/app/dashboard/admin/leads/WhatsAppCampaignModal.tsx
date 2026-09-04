@@ -34,6 +34,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 interface Props {
   open: boolean;
@@ -66,6 +67,7 @@ export function WhatsAppCampaignModal({
   selectedLeads,
   onSuccess,
 }: Props) {
+  const t = useT();
   const [selectedPresetId, setSelectedPresetId] = useState<string>("trial-60");
   const [templateText, setTemplateText] = useState<string>(PRESET_TEMPLATES[0].text);
   const [festivalName, setFestivalName] = useState<string>("");
@@ -90,8 +92,8 @@ export function WhatsAppCampaignModal({
   const handleSend = async () => {
     if (eligibleLeads.length === 0) {
       toast({
-        title: "No eligible leads",
-        description: "None of the selected leads have valid phone numbers.",
+        title: t("No eligible leads"),
+        description: t("None of the selected leads have valid phone numbers."),
         variant: "destructive",
       });
       return;
@@ -99,7 +101,7 @@ export function WhatsAppCampaignModal({
 
     if (!templateText.trim()) {
       toast({
-        title: "Message cannot be empty",
+        title: t("Message cannot be empty"),
         variant: "destructive",
       });
       return;
@@ -116,15 +118,15 @@ export function WhatsAppCampaignModal({
 
       const data = res.data;
       toast({
-        title: "WhatsApp Campaign Dispatched",
-        description: `Sent: ${data?.sent || 0} | Skipped: ${data?.skipped || 0} | Failed: ${data?.failed || 0}`,
+        title: t("WhatsApp Campaign Dispatched"),
+        description: `${t("Sent")}: ${data?.sent || 0} | ${t("Skipped")}: ${data?.skipped || 0} | ${t("Failed")}: ${data?.failed || 0}`,
       });
 
       onOpenChange(false);
       onSuccess();
     } catch (err: any) {
       toast({
-        title: "Failed to dispatch campaign",
+        title: t("Failed to dispatch campaign"),
         description: err?.response?.data?.message || err?.message,
         variant: "destructive",
       });
@@ -183,7 +185,7 @@ export function WhatsAppCampaignModal({
             </div>
             <p className="leading-relaxed text-[11px] text-emerald-800/90 dark:text-emerald-300/90">
               <T>
-                Twilio fee is $0.005 per message. Once the jewellery merchant replies to this WhatsApp outreach, a 24-Hour Customer Service Window activates: all subsequent Gemini AI bot conversations and admin replies cost $0.00 Meta conversation fee!
+                Outbound outreach uses Twilio message handling ($0.005/msg) plus Meta template category pricing (marketing/utility). Once the merchant replies, an official 24-Hour Customer Service Window opens: all subsequent AI concierge interactions and free-form support messages incur $0.00 Meta conversation fees (standard Twilio $0.005/msg applies).
               </T>
             </p>
           </div>

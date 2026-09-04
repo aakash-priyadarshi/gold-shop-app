@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
 import { LeadSource, LeadStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
@@ -8,12 +8,43 @@ import {
   UpdateLeadDto,
 } from "./dto/lead.dto";
 import { OUTREACH_TEMPLATES } from "./leads-outreach.service";
+import { normalizeWhatsAppNumber } from "./leads-whatsapp.service";
 
 @Injectable()
-export class LeadsService {
+export class LeadsService implements OnModuleInit {
   private readonly logger = new Logger(LeadsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit() {
+    this.backfillLeadPhones().catch((err) =>
+      this.logger.warn(`Failed to backfill lead phone numbers: ${err?.message}`)
+    );
+  }
+
+  private async backfillLeadPhones(): Promise<void> {
+    try {
+      const leadsWithPhone = await this.prisma.lead.findMany({
+        where: {
+          phone: { not: null },
+        },
+        select: { id: true, phone: true, country: true },
+      });
+
+      for (const lead of leadsWithPhone) {
+        if (!lead.phone || lead.phone.startsWith("+")) continue;
+        const normalized = normalizeWhatsAppNumber(lead.phone, lead.country);
+        if (normalized && normalized !== lead.phone) {
+          await this.prisma.lead.update({
+            where: { id: lead.id },
+            data: { phone: normalized },
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Lead phone backfill skipped or failed: ${err?.message}`);
+    }
+  }
 
   getOutreachPresets() {
     return OUTREACH_TEMPLATES;
@@ -121,8 +152,11 @@ export class LeadsService {
         continue;
       }
 
+      const country = (item.country || "NP").toUpperCase();
       const cleanEmail = item.email?.trim().toLowerCase() || null;
-      const cleanPhone = item.phone?.trim() || null;
+      const cleanPhone = item.phone
+        ? normalizeWhatsAppNumber(item.phone, country) || item.phone.trim()
+        : null;
 
       try {
         let existing = null;
@@ -164,7 +198,7 @@ export class LeadsService {
               address: item.address?.trim() || null,
               city: item.city?.trim() || null,
               state: item.state?.trim() || null,
-              country: (item.country || "NP").toUpperCase(),
+              country,
               source: item.source || LeadSource.GOOGLE_MAPS,
               status: item.status || LeadStatus.NEW,
               rating: item.rating ?? null,
@@ -189,6 +223,10 @@ export class LeadsService {
       throw new NotFoundException("Lead not found");
     }
 
+    const normalizedPhone = dto.phone
+      ? normalizeWhatsAppNumber(dto.phone, existing.country) || dto.phone.trim()
+      : undefined;
+
     return this.prisma.lead.update({
       where: { id },
       data: {
@@ -196,7 +234,7 @@ export class LeadsService {
         notes: dto.notes ?? undefined,
         shopName: dto.shopName?.trim() ?? undefined,
         email: dto.email?.trim().toLowerCase() ?? undefined,
-        phone: dto.phone?.trim() ?? undefined,
+        phone: normalizedPhone,
       },
     });
   }
