@@ -2311,6 +2311,31 @@ describe("RecoveryOffersService", () => {
     );
   });
 
+  it("saves and previews studio styling with the same shared rendering used at delivery", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({ key: "studio", name: "New feature", kind: OfferCampaignKind.PRODUCT_UPDATE });
+    prisma.recoveryOffer.findFirst.mockResolvedValue(null);
+    prisma.offerCampaign.update.mockResolvedValue({ key: "studio" });
+    const input = { emailSubject: "New feature", preheader: "Your next favourite workflow", theme: "editorial" as const, expectedUpdatedAt: "2026-09-05T10:00:00.000Z", blocks: [{ type: "heading" as const, id: "hero", text: "Hello", style: { fontSize: 40 } }] };
+    await service.updateCampaignEmailDesign("studio", input);
+    const saved = prisma.offerCampaign.update.mock.calls[0][0];
+    expect(saved.where).toEqual({ key: "studio", updatedAt: new Date(input.expectedUpdatedAt) });
+    expect(saved.data.emailDesign).toMatchObject({ preheader: input.preheader, theme: input.theme, blocks: input.blocks });
+    expect(saved.data.emailDesign).not.toHaveProperty("expectedUpdatedAt");
+    const preview = await service.previewCampaignEmailDesign("studio", input);
+    const delivery = (service as any).renderDesignForDelivery(saved.data.emailDesign, { campaignName: "New feature", firstName: "Shop owner", unsubscribeUrl: "#", brandIconUrl: "https://www.orivraa.com/favicon/android-chrome-192x192.png" });
+    expect(preview.html).toBe(delivery.html);
+    expect(preview.html).toContain(input.preheader);
+    expect(preview.html).toContain("background:#193d35");
+    expect(preview.html).not.toContain("data-email-block");
+  });
+
+  it("rejects a stale draft atomically when the campaign revision no longer matches", async () => {
+    prisma.offerCampaign.findUnique.mockResolvedValue({ key: "studio", name: "New feature", kind: OfferCampaignKind.PRODUCT_UPDATE });
+    prisma.recoveryOffer.findFirst.mockResolvedValue(null);
+    prisma.offerCampaign.update.mockRejectedValueOnce({ code: "P2025" });
+    await expect(service.updateCampaignEmailDesign("studio", { emailSubject: "New feature", expectedUpdatedAt: "2026-09-05T10:00:00.000Z", blocks: [{ type: "divider" }] })).rejects.toThrow(/changed since you opened/);
+  });
+
   it("rejects the advanced email builder for festival campaigns", async () => {
     prisma.offerCampaign.findUnique.mockResolvedValue({
       key: "festival-dashain-2026",

@@ -1,6 +1,8 @@
 import { toast } from "@/hooks/use-toast";
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import axios from "axios";
+import type { OfferEmailBlock, OfferEmailDesign } from "@gold-shop/shared";
+export type { OfferEmailAnimation, OfferEmailBlock, OfferEmailDesign } from "@gold-shop/shared";
 
 // Ensure the API URL always ends with /api
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -2652,7 +2654,8 @@ export interface OfferCampaign {
   emailHeading: string;
   emailBody: string;
   /** Persisted block design; matches the backend's { blocks: [...] } shape. */
-  emailDesign?: { blocks: OfferEmailBlock[] } | null;
+  emailDesign?: OfferEmailDesign | null;
+  updatedAt?: string;
   imageUrl?: string | null;
   ctaUrl?: string | null;
   ctaLabel?: string | null;
@@ -2670,42 +2673,9 @@ export interface OfferCampaign {
 
 export type OfferEmailImageMode = "KEEP" | "DEFAULT" | "URL" | "UPLOAD";
 
-export type OfferEmailAnimation = "none" | "fadeIn" | "slideUp";
-
-export type OfferEmailBlock =
-  | { type: "heading"; text: string; animation?: OfferEmailAnimation }
-  | {
-      type: "text";
-      text: string;
-      align?: "left" | "center";
-      animation?: OfferEmailAnimation;
-    }
-  | {
-      type: "image";
-      url: string;
-      alt: string;
-      linkUrl?: string;
-      animation?: OfferEmailAnimation;
-    }
-  | {
-      type: "video";
-      posterUrl: string;
-      videoUrl: string;
-      label?: string;
-      animation?: OfferEmailAnimation;
-    }
-  | {
-      type: "button";
-      label: string;
-      url: string;
-      variant?: "primary" | "secondary";
-    }
-  | { type: "divider" }
-  | { type: "spacer"; size?: number };
-
-export interface OfferCampaignEmailDesignDraft {
+export interface OfferCampaignEmailDesignDraft extends OfferEmailDesign {
   emailSubject: string;
-  blocks: OfferEmailBlock[];
+  expectedUpdatedAt?: string;
 }
 
 export interface OfferCampaignEmailDraft {
