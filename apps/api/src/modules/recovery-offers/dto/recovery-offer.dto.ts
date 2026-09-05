@@ -187,6 +187,9 @@ export class SaveOfferCampaignEmailDesignDto {
 
   @IsArray()
   @ArrayMaxSize(40)
+  // Without an element type, implicit conversion treats each block as an
+  // Array. Keep plain objects for the service's per-block validation.
+  @Type(() => Object)
   blocks: unknown[];
 }
 

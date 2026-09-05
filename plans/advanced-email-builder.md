@@ -93,3 +93,24 @@ server HTML with a Gmail-size warning. Festival editor untouched.
    emergency procedure; wait out the lock window instead (a nullable column
    also makes a full code rollback safe, since the design path only activates
    on campaigns that explicitly saved a design).
+
+## Preview/save regression fix (Sep 5, 2026)
+
+- The production validation pipe implicitly converted untyped block objects
+  into arrays, causing `Block 1 must be an object`. The design DTO now declares
+  an object element type while retaining the service's strict block validation.
+- The security scanner combined unrelated JSON fields into SQL-like text and
+  treated URL fragments (`#ai-photo-studio`) as injection. It now scans decoded
+  keys and values separately and requires context for line-comment markers.
+  Repeated valid previews/saves no longer accumulate these false threat scores.
+- Affected journeys: product-update preview/save and body threat detection
+  across API routes. Authentication, authorization, send locks, and IP-blocking
+  thresholds are unchanged. Tests cover valid media blocks, invalid fields,
+  repeated saves, and SQL/XSS/path/command attack detection, including login.
+- Validation: API and web typechecks; renderer/DTO, security, and recovery-offer
+  service tests. Production verification remains pending: the connected browser
+  has no admin session, and the local Railway link points to a deleted environment.
+- Release check: preview the Demo announcement preset, save a draft campaign,
+  reopen it, and repeat preview/save with a fragment-bearing demo URL. Inspect
+  new crash reports and security events after deployment. No campaign send is
+  needed. Rollback is an API code revert; no migration or stored-design rewrite.

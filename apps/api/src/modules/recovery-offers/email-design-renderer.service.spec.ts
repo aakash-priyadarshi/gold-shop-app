@@ -1,3 +1,5 @@
+import { ValidationPipe } from "@nestjs/common";
+import { SaveOfferCampaignEmailDesignDto } from "./dto/recovery-offer.dto";
 import { EmailDesignRendererService } from "./email-design-renderer.service";
 import {
   OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES,
@@ -5,13 +7,78 @@ import {
 } from "./email-design";
 
 const baseOptions = {
-  unsubscribeUrl: "https://api.orivraa.com/api/recovery-offers/unsubscribe?token=abc",
+  unsubscribeUrl:
+    "https://api.orivraa.com/api/recovery-offers/unsubscribe?token=abc",
   campaignName: "AI product photo studio",
   firstName: "Owner",
   brandIconUrl: "https://www.orivraa.com/favicon/android-chrome-192x192.png",
 };
 
 describe("parseOfferEmailDesign", () => {
+  const validationPipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    transformOptions: { enableImplicitConversion: true },
+  });
+
+  function validateRequest(blocks: unknown) {
+    return validationPipe.transform(
+      { emailSubject: "See the product update", blocks },
+      { type: "body", metatype: SaveOfferCampaignEmailDesignDto },
+    );
+  }
+
+  it("preserves every block type through the production validation pipe", async () => {
+    const blocks = [
+      { type: "heading", text: "See it in action", animation: "fadeIn" },
+      { type: "text", text: "A **new** workflow.", align: "center" },
+      {
+        type: "image",
+        url: "https://images.orivraa.com/email/demo.gif",
+        alt: "Demo",
+      },
+      {
+        type: "video",
+        posterUrl: "https://images.orivraa.com/email/poster.png",
+        videoUrl:
+          "https://www.orivraa.com/jewellery-shop-software#ai-photo-studio",
+        label: "Watch the demo",
+      },
+      { type: "button", label: "Try it", url: "https://www.orivraa.com/demo" },
+      { type: "divider" },
+      { type: "spacer", size: 32 },
+    ];
+    const dto = await validateRequest(blocks);
+    expect(dto.blocks).toEqual(blocks);
+    expect(parseOfferEmailDesign(dto)).toEqual(
+      parseOfferEmailDesign({ blocks }),
+    );
+  });
+
+  it.each([null, "heading", 1, [], ["heading"]].map((block) => ({ block })))(
+    "still rejects malformed blocks after DTO transformation: $block",
+    async ({ block }) => {
+      const dto = await validateRequest([block]);
+      expect(() => parseOfferEmailDesign(dto)).toThrow(
+        "Block 1 must be an object",
+      );
+    },
+  );
+
+  it.each([
+    { type: "heading", text: 123 },
+    { type: "spacer", size: "32" },
+    {
+      type: "video",
+      posterUrl: "https://example.com/a.png",
+      videoUrl: "javascript:alert(1)",
+    },
+  ])("does not coerce or accept invalid block fields: %j", async (block) => {
+    const dto = await validateRequest([block]);
+    expect(() => parseOfferEmailDesign(dto)).toThrow();
+  });
+
   it("normalizes and rebuilds a valid block list", () => {
     const design = parseOfferEmailDesign({
       blocks: [
@@ -45,7 +112,9 @@ describe("parseOfferEmailDesign", () => {
   it("rejects non-https and malformed URLs", () => {
     expect(() =>
       parseOfferEmailDesign({
-        blocks: [{ type: "image", url: "http://images.orivraa.com/a.gif", alt: "x" }],
+        blocks: [
+          { type: "image", url: "http://images.orivraa.com/a.gif", alt: "x" },
+        ],
       }),
     ).toThrow(/https URL/i);
     expect(() =>
@@ -97,7 +166,10 @@ describe("EmailDesignRendererService", () => {
       parseOfferEmailDesign({
         blocks: [
           { type: "heading", text: "Studio photos in one tap" },
-          { type: "text", text: "Watch the demo, then try **Enhance**.\n\nMade for *gold shops*." },
+          {
+            type: "text",
+            text: "Watch the demo, then try **Enhance**.\n\nMade for *gold shops*.",
+          },
           {
             type: "image",
             url: "https://images.orivraa.com/email/demo.gif",
@@ -126,7 +198,9 @@ describe("EmailDesignRendererService", () => {
     expect(html).toContain("<strong>Enhance</strong>");
     expect(html).toContain("<em>gold shops</em>");
     expect(html).toContain('src="https://images.orivraa.com/email/demo.gif"');
-    expect(html).toContain('href="https://www.orivraa.com/jewellery-shop-software"');
+    expect(html).toContain(
+      'href="https://www.orivraa.com/jewellery-shop-software"',
+    );
     expect(html).toContain("https://images.orivraa.com/email/demo.mp4");
     expect(html).toContain("&#9654;"); // play glyph on the video CTA
     expect(html).toContain("Unsubscribe from future offers");
