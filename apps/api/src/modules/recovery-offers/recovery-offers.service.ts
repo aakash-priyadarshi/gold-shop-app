@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -35,6 +36,7 @@ import { EmailDesignRendererService } from "./email-design-renderer.service";
 import { RecoveryOfferDeliveryTiming } from "./dto/recovery-offer.dto";
 import type {
   CreateOfferCampaignDto,
+  SaveOfferCampaignEmailDesignDto,
   UpdateOfferCampaignEmailDto,
   UpdateOfferCampaignDto,
 } from "./dto/recovery-offer.dto";
@@ -413,10 +415,10 @@ export class RecoveryOffersService {
    */
   async updateCampaignEmailDesign(
     key: string,
-    input: { emailSubject: string; blocks: unknown[] },
+    input: SaveOfferCampaignEmailDesignDto,
   ) {
     const resolvedKey = this.normalizeCampaignKey(key, key);
-    const design = this.parseDesignInput(input.blocks);
+    const design = this.parseDesignInput(input);
 
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.offerCampaign.findUnique({
@@ -436,6 +438,8 @@ export class RecoveryOffersService {
         design.blocks,
         existing.name,
         input.emailSubject,
+        undefined,
+        design,
       );
       if (rendered.bytes > OFFER_EMAIL_DESIGN_HTML_SOFT_LIMIT_BYTES) {
         this.logger.warn(
@@ -444,7 +448,10 @@ export class RecoveryOffersService {
       }
 
       return tx.offerCampaign.update({
-        where: { key: resolvedKey },
+        where: {
+          key: resolvedKey,
+          ...(input.expectedUpdatedAt ? { updatedAt: new Date(input.expectedUpdatedAt) } : {}),
+        },
         data: {
           emailSubject: input.emailSubject,
           emailDesign: design as unknown as Prisma.InputJsonValue,
@@ -461,6 +468,11 @@ export class RecoveryOffersService {
             },
           },
         },
+      }).catch((error: unknown) => {
+        if (input.expectedUpdatedAt && (error as { code?: string }).code === "P2025") {
+          throw new ConflictException("This campaign changed since you opened it. Reopen the studio to review the latest version. Your local draft is still available.");
+        }
+        throw error;
       });
     });
   }
@@ -468,7 +480,7 @@ export class RecoveryOffersService {
   /** Renders unsaved design blocks for the builder's live preview. */
   async previewCampaignEmailDesign(
     key: string,
-    input: { emailSubject: string; blocks: unknown[] },
+    input: SaveOfferCampaignEmailDesignDto,
   ) {
     const resolvedKey = this.normalizeCampaignKey(key, key);
     const campaign = await this.prisma.offerCampaign.findUnique({
@@ -483,12 +495,13 @@ export class RecoveryOffersService {
         "Only product-update campaigns support the advanced email builder",
       );
     }
-    const design = this.parseDesignInput(input.blocks);
+    const design = this.parseDesignInput(input);
     const rendered = this.renderDesignOrThrow(
       design.blocks,
       campaign.name,
       input.emailSubject,
       "Shop owner",
+      design,
     );
     return {
       subject: input.emailSubject,
@@ -547,7 +560,11 @@ export class RecoveryOffersService {
       brandIconUrl: string;
     },
   ) {
-    const rendered = this.emailDesignRenderer.render(design.blocks, options);
+    const rendered = this.emailDesignRenderer.render(design.blocks, {
+      ...options,
+      preheader: design.preheader,
+      theme: design.theme,
+    });
     if (rendered.bytes > OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES) {
       this.logger.error(
         `Campaign ${options.campaignName} email design renders at ${rendered.bytes} bytes; falling back to the template email`,
@@ -557,9 +574,9 @@ export class RecoveryOffersService {
     return rendered;
   }
 
-  private parseDesignInput(blocks: unknown[]) {
+  private parseDesignInput(input: unknown) {
     try {
-      return parseOfferEmailDesign({ blocks });
+      return parseOfferEmailDesign(input);
     } catch (error) {
       throw new BadRequestException(
         error instanceof Error
@@ -574,12 +591,15 @@ export class RecoveryOffersService {
     campaignName: string,
     subject: string,
     firstName?: string,
+    design?: import("./email-design").OfferEmailDesign,
   ) {
     const rendered = this.emailDesignRenderer.render(blocks, {
       unsubscribeUrl: "#",
       campaignName,
       firstName,
       brandIconUrl: `${this.frontendBaseUrl()}/favicon/android-chrome-192x192.png`,
+      preheader: design?.preheader,
+      theme: design?.theme,
     });
     if (!subject || !campaignName) {
       throw new BadRequestException(

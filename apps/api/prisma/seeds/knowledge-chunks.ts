@@ -19,6 +19,10 @@ const EMBED_URL =
 
 const CHUNKS: { topic: string; content: string }[] = [
   {
+    topic: "admin-live-email-studio",
+    content: "Live Email Studio is available in Admin > Offers > Product updates > Design email. Select a section on the persistent canvas or in the section list to edit it. Use desktop/mobile widths and Images off to inspect readability. This is a browser preview, not an exact Gmail or Outlook screenshot. Subject, preheader, themes, text styling, padding, corners, GIFs, linked video posters, two/three-image galleries and before/after sections are supported. Drag sections or use the arrows; undo and redo are available. A video opens from its poster in a browser; the email does not run JavaScript. Upload a finished GIF for motion; video-to-GIF conversion is not available. Drafts are kept on the same device for up to seven days, scoped to the signed-in admin and campaign. Restore or discard a recovered draft when reopening. Save design explicitly updates the campaign; local recovery does not change scheduled sends. Missing or invalid content is marked in the editor and blocks saving. Concurrent campaign changes reject stale saves; reopen the studio and review the recovered draft against the latest campaign. Campaign content is locked within five minutes of a scheduled send. Return to simple template removes the advanced design after confirmation.",
+  },
+  {
     topic: "inventory-sets",
     content:
       "Jewelry Sets on Orivraa: From Product Catalog use Add Set to create a bridal or matching set with its own SKU. Attach existing pieces or create new components (earrings, maang tikka, necklace, nathuni, etc.). The set price is built from its linked metal, making, gemstone, and tax components; apply a percent or fixed set discount when buying together. Review the price preview before saving or invoicing. Components are hidden from separate sale while bound to the set. Selling the set at POS marks the set and all components sold. Use Break set to release pieces for individual sale. Vault & Tags manages physical locations as Area → Cabinet → Bin trees you define for your shop.",

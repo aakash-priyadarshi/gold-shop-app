@@ -1,5 +1,6 @@
 import { PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import { OFFER_EMAIL_THEMES, type OfferEmailTheme } from "@gold-shop/shared";
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -180,6 +181,20 @@ export class UpdateOfferCampaignEmailDto {
  * class-validator only checks the envelope.
  */
 export class SaveOfferCampaignEmailDesignDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  preheader?: string;
+
+  @IsOptional()
+  @IsIn(OFFER_EMAIL_THEMES)
+  theme?: OfferEmailTheme;
+
+  /** Optimistic concurrency for studio drafts; older clients can omit it. */
+  @IsOptional()
+  @IsDateString()
+  expectedUpdatedAt?: string;
+
   @IsString()
   @MinLength(3)
   @MaxLength(180)

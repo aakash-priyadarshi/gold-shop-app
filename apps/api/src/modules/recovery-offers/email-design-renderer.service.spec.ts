@@ -56,6 +56,16 @@ describe("parseOfferEmailDesign", () => {
     );
   });
 
+  it("keeps studio metadata and nested gallery/style objects through the production pipe", async () => {
+    const input = { emailSubject: "Meet the update", preheader: "A faster workflow", theme: "editorial", expectedUpdatedAt: "2026-09-05T10:00:00.000Z", blocks: [{ type: "gallery", id: "gallery", style: { padding: 16, radius: 8 }, images: [
+      { url: "https://example.com/one.png", alt: "One" }, { url: "https://example.com/two.png", alt: "Two" },
+    ] }] };
+    const dto = await validationPipe.transform(input, { type: "body", metatype: SaveOfferCampaignEmailDesignDto });
+    expect(dto).toEqual(input);
+    expect(parseOfferEmailDesign(dto).theme).toBe("editorial");
+    expect(parseOfferEmailDesign(dto).blocks[0]).toMatchObject(input.blocks[0]);
+  });
+
   it.each([null, "heading", 1, [], ["heading"]].map((block) => ({ block })))(
     "still rejects malformed blocks after DTO transformation: $block",
     async ({ block }) => {
@@ -189,6 +199,13 @@ describe("EmailDesignRendererService", () => {
           },
           { type: "divider" },
           { type: "spacer", size: 24 },
+          {
+            type: "gallery",
+            images: [
+              { url: "https://images.orivraa.com/email/one.png", alt: "One", caption: "Before" },
+              { url: "https://images.orivraa.com/email/two.png", alt: "Two", caption: "After" },
+            ],
+          },
         ],
       }).blocks,
       baseOptions,
@@ -204,6 +221,8 @@ describe("EmailDesignRendererService", () => {
     expect(html).toContain("https://images.orivraa.com/email/demo.mp4");
     expect(html).toContain("&#9654;"); // play glyph on the video CTA
     expect(html).toContain("Unsubscribe from future offers");
+    expect(html).toContain("orv-gallery-cell");
+    expect(html).toContain("Before");
     expect(bytes).toBeGreaterThan(0);
     expect(bytes).toBeLessThan(OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES);
     expect(html).not.toContain("<script");

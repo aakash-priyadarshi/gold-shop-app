@@ -1424,18 +1424,18 @@ export default function OffersAdminPage() {
                     <button
                       type="button"
                       onClick={() => setDesignerOpen(true)}
-                      disabled={emailEditLocked}
+                      data-tour="email-studio-open"
                       title={
                         emailEditLocked
                           ? t(
-                              "Email content locks 5 minutes before a scheduled send",
+                              "Editing is locked this close to send. You can still open a read-only preview.",
                             )
                           : undefined
                       }
-                      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-violet-700 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-violet-700 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-800"
                     >
                       <ImageUp className="h-4 w-4" />
-                      <T>Design email (advanced)</T>
+                      <T>{emailEditLocked ? "Preview email" : "Design email"}</T>
                     </button>
                   )}
                 {selectedCampaign &&
@@ -2725,11 +2725,18 @@ export default function OffersAdminPage() {
           campaign={selectedCampaign}
           open={designerOpen}
           locked={emailEditLocked}
-          onClose={() => setDesignerOpen(false)}
-          onSaved={(updated) => {
+          onClose={() => {
             setDesignerOpen(false);
             void loadCampaigns();
+          }}
+          onSaved={(updated) => {
+            setCampaigns((current) =>
+              current.map((campaign) =>
+                campaign.key === updated.key ? { ...campaign, ...updated } : campaign,
+              ),
+            );
             setSelectedCampaignKey(updated.key);
+            if (!updated.emailDesign) setDesignerOpen(false);
           }}
         />
       )}
