@@ -198,7 +198,18 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
     setSaveError(null);
     try {
       const response = await recoveryOffersApi.clearCampaignEmailDesign(campaign.key, expectedUpdatedAt);
-      if (mounted.current) { forgetRecovery(); onSaved(response.data); }
+      if (!mounted.current) return;
+      const next = campaignDraft(response.data);
+      setBaseline(next);
+      setHistory({ past: [], present: next, future: [] });
+      setSelectedId((current) => next.blocks.some((block) => block.id === current) ? current : next.blocks[0]?.id);
+      if (response.data.updatedAt) {
+        setExpectedUpdatedAt(response.data.updatedAt);
+        setBaseRevision(campaignRevision(response.data));
+      }
+      setRestoredStale(false);
+      forgetRecovery();
+      onSaved(response.data);
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       if (mounted.current) setSaveError(typeof message === "string" ? message : "The email design was not removed. Try again.");

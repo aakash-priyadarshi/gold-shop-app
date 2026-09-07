@@ -311,6 +311,28 @@ describe("EmailBlockEditor", () => {
     expect(localStorage.getItem(draftStorageKey("admin-1", designedCampaign.key))).toContain("Unsaved heading");
   });
 
+  it("adopts the cleared campaign and revision returned by the reset API", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const clearedCampaign: OfferCampaign = {
+      ...designedCampaign,
+      emailSubject: "Server subject after reset",
+      emailDesign: null,
+      updatedAt: "2026-09-05T10:10:00.000Z",
+    };
+    mocks.clearDesign.mockResolvedValueOnce({ data: clearedCampaign });
+    const onSaved = vi.fn();
+    render(<EmailBlockEditor campaign={designedCampaign} open locked={false} onClose={vi.fn()} onSaved={onSaved} />);
+    fireEvent.click(screen.getByRole("button", { name: /1\. Heading/ }));
+    fireEvent.change(screen.getByLabelText("Heading text"), { target: { value: "Unsaved heading" } });
+    fireEvent.click(screen.getByRole("button", { name: "Return to simple template" }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(clearedCampaign));
+    expect(screen.getByLabelText("Subject")).toHaveValue("Server subject after reset");
+    expect(screen.getByLabelText("Image or GIF URL")).toBeInTheDocument();
+    expect(screen.getByText("Save design updates the campaign email.")).toBeInTheDocument();
+    expect(localStorage.getItem(draftStorageKey("admin-1", designedCampaign.key))).toBeNull();
+  });
+
   it("keeps preview controls available when scheduled-send locking disables editing", () => {
     render(<EmailBlockEditor campaign={campaign} open locked onClose={vi.fn()} onSaved={vi.fn()} />);
     expect(screen.getByLabelText("Subject")).toBeDisabled();
