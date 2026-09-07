@@ -511,7 +511,7 @@ export class RecoveryOffersService {
   }
 
   /** Clears the design so the campaign falls back to the simple template path. */
-  async clearCampaignEmailDesign(key: string) {
+  async clearCampaignEmailDesign(key: string, expectedUpdatedAt: string) {
     const resolvedKey = this.normalizeCampaignKey(key, key);
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.offerCampaign.findUnique({
@@ -528,7 +528,10 @@ export class RecoveryOffersService {
       await this.assertEmailContentEditable(resolvedKey, tx);
       // DbNull stores a SQL NULL so the column keeps IS NULL semantics.
       return tx.offerCampaign.update({
-        where: { key: resolvedKey },
+        where: {
+          key: resolvedKey,
+          updatedAt: new Date(expectedUpdatedAt),
+        },
         data: { emailDesign: Prisma.DbNull },
         include: {
           emailImage: {
@@ -542,6 +545,13 @@ export class RecoveryOffersService {
             },
           },
         },
+      }).catch((error: unknown) => {
+        if ((error as { code?: string }).code === "P2025") {
+          throw new ConflictException(
+            "This campaign changed since you opened it. Reopen the studio to review the latest version. Your local draft is still available.",
+          );
+        }
+        throw error;
       });
     });
   }

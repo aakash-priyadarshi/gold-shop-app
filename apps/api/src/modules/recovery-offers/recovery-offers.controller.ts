@@ -24,6 +24,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import {
+  ClearOfferCampaignEmailDesignDto,
   CreateOfferCampaignDto,
   FestivalCalendarQueryDto,
   PreviewRecoveryOffersDto,
@@ -169,8 +170,14 @@ export class RecoveryOffersController {
   @Delete("admin/campaigns/:key/email-design")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  clearCampaignEmailDesign(@Param("key") key: string) {
-    return this.recoveryOffers.clearCampaignEmailDesign(key);
+  clearCampaignEmailDesign(
+    @Param("key") key: string,
+    @Query() dto: ClearOfferCampaignEmailDesignDto,
+  ) {
+    return this.recoveryOffers.clearCampaignEmailDesign(
+      key,
+      dto.expectedUpdatedAt,
+    );
   }
 
   @Get("campaigns/:key")

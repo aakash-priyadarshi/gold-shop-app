@@ -55,6 +55,14 @@ const campaign = {
   isActive: true,
 } as OfferCampaign;
 
+const designedCampaign = {
+  ...campaign,
+  emailDesign: {
+    theme: "classic" as const,
+    blocks: [{ id: "heading-1", type: "heading" as const, text: "Existing heading" }],
+  },
+};
+
 function renderEditor() {
   return render(
     <EmailBlockEditor
@@ -173,8 +181,22 @@ describe("EmailBlockEditor", () => {
     expect(frame).toHaveAttribute("sandbox", "allow-same-origin");
   });
 
+  it("opens the selected section in a dedicated mobile inspector pane", () => {
+    renderEditor();
+    fireEvent.click(screen.getByRole("button", { name: /2\. Heading/ }));
+    expect(screen.getByRole("button", { name: "Edit email" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Email sections")).toHaveClass("hidden");
+    expect(screen.getByLabelText("Email inspector")).toHaveClass("flex");
+    expect(screen.getByLabelText("Heading text")).toHaveValue("What's new in your shop");
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to sections" }));
+    expect(screen.getByLabelText("Email sections")).toHaveClass("block");
+    expect(screen.getByLabelText("Email inspector")).toHaveClass("hidden");
+  });
+
   it("shows mobile and images-off previews without changing the saved design", async () => {
     renderEditor();
+    expect(screen.getByLabelText("Inbox preview text")).toHaveTextContent(campaign.name);
     fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
     expect(screen.getByTitle("Live email preview")).toHaveStyle({ width: "375px" });
     fireEvent.click(screen.getByLabelText("Images off"));
@@ -216,7 +238,9 @@ describe("EmailBlockEditor", () => {
     fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "A draft worth keeping" } });
     view.rerender(<EmailBlockEditor {...props} campaign={{ ...campaign, updatedAt: "2026-09-05T11:00:00.000Z" }} />);
     fireEvent.click(screen.getByRole("button", { name: "Save design" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("This campaign changed");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("This campaign changed");
+    expect(alert).toHaveClass("bg-red-50", "text-red-900", "dark:bg-red-950", "dark:text-red-100");
     expect(mocks.saveDesign).toHaveBeenCalledWith(campaign.key, expect.objectContaining({ expectedUpdatedAt: campaign.updatedAt, emailSubject: "A draft worth keeping" }));
     expect(localStorage.getItem(draftStorageKey("admin-1", campaign.key))).toContain("A draft worth keeping");
     expect(props.onSaved).not.toHaveBeenCalled();
@@ -245,6 +269,46 @@ describe("EmailBlockEditor", () => {
     expect(localStorage.getItem(draftStorageKey("admin-1", campaign.key))).toBeNull();
     fireEvent.change(screen.getByLabelText(/Preheader/), { target: { value: "Keep working after save" } });
     expect(localStorage.getItem(draftStorageKey("admin-1", campaign.key))).toContain("Keep working after save");
+  });
+
+  it("adopts the normalized campaign returned by the save API", async () => {
+    const savedCampaign: OfferCampaign = {
+      ...designedCampaign,
+      emailSubject: "Trimmed subject",
+      updatedAt: "2026-09-05T10:05:00.000Z",
+      emailDesign: {
+        theme: "classic",
+        preheader: "Trimmed preview",
+        blocks: [{ id: "heading-1", type: "heading", text: "Trimmed heading" }],
+      },
+    };
+    mocks.saveDesign.mockResolvedValueOnce({ data: savedCampaign });
+    const onSaved = vi.fn();
+    render(<EmailBlockEditor campaign={designedCampaign} open locked={false} onClose={vi.fn()} onSaved={onSaved} />);
+    fireEvent.click(screen.getByRole("button", { name: /1\. Heading/ }));
+    fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "  Trimmed subject  " } });
+    fireEvent.change(screen.getByLabelText(/Preheader/), { target: { value: "  Trimmed preview  " } });
+    fireEvent.change(screen.getByLabelText("Heading text"), { target: { value: "  Trimmed heading  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save design" }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(savedCampaign));
+    expect(screen.getByLabelText("Subject")).toHaveValue("Trimmed subject");
+    expect(screen.getByLabelText(/Preheader/)).toHaveValue("Trimmed preview");
+    expect(screen.getByLabelText("Heading text")).toHaveValue("Trimmed heading");
+    expect(screen.getByText("Save design updates the campaign email.")).toBeInTheDocument();
+  });
+
+  it("keeps a local draft when a stale destructive clear is rejected", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.clearDesign.mockRejectedValueOnce({ response: { data: { message: "This campaign changed since you opened it." } } });
+    render(<EmailBlockEditor campaign={designedCampaign} open locked={false} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /1\. Heading/ }));
+    fireEvent.change(screen.getByLabelText("Heading text"), { target: { value: "Unsaved heading" } });
+    fireEvent.click(screen.getByRole("button", { name: "Return to simple template" }));
+
+    expect(mocks.clearDesign).toHaveBeenCalledWith(designedCampaign.key, designedCampaign.updatedAt);
+    expect(await screen.findByRole("alert")).toHaveTextContent("This campaign changed");
+    expect(localStorage.getItem(draftStorageKey("admin-1", designedCampaign.key))).toContain("Unsaved heading");
   });
 
   it("keeps preview controls available when scheduled-send locking disables editing", () => {

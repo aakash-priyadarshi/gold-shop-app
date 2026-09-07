@@ -1,5 +1,8 @@
 import { ValidationPipe } from "@nestjs/common";
-import { SaveOfferCampaignEmailDesignDto } from "./dto/recovery-offer.dto";
+import {
+  ClearOfferCampaignEmailDesignDto,
+  SaveOfferCampaignEmailDesignDto,
+} from "./dto/recovery-offer.dto";
 import { EmailDesignRendererService } from "./email-design-renderer.service";
 import {
   OFFER_EMAIL_DESIGN_HTML_HARD_LIMIT_BYTES,
@@ -64,6 +67,19 @@ describe("parseOfferEmailDesign", () => {
     expect(dto).toEqual(input);
     expect(parseOfferEmailDesign(dto).theme).toBe("editorial");
     expect(parseOfferEmailDesign(dto).blocks[0]).toMatchObject(input.blocks[0]);
+  });
+
+  it("requires a valid campaign revision for destructive design clears", async () => {
+    const metadata = {
+      type: "query" as const,
+      metatype: ClearOfferCampaignEmailDesignDto,
+    };
+    await expect(validationPipe.transform({}, metadata)).rejects.toThrow();
+    await expect(validationPipe.transform({ expectedUpdatedAt: "not-a-date" }, metadata)).rejects.toThrow();
+    await expect(validationPipe.transform(
+      { expectedUpdatedAt: "2026-09-05T10:00:00.000Z" },
+      metadata,
+    )).resolves.toEqual({ expectedUpdatedAt: "2026-09-05T10:00:00.000Z" });
   });
 
   it.each([null, "heading", 1, [], ["heading"]].map((block) => ({ block })))(

@@ -37,6 +37,7 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
   const [mobile, setMobile] = useState(false);
   const [imagesOff, setImagesOff] = useState(false);
   const [smallView, setSmallView] = useState<"edit" | "preview">("preview");
+  const [smallEditPane, setSmallEditPane] = useState<"sections" | "inspector">("sections");
   const [leftTab, setLeftTab] = useState<"sections" | "add">("sections");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -97,7 +98,11 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
       past: [...current.past, current.present], present: current.future[0], future: current.future.slice(1),
     } : current);
   };
-  const select = (id: string) => { setSelectedId(id); setSmallView("edit"); };
+  const select = (id: string) => {
+    setSelectedId(id);
+    setSmallEditPane("inspector");
+    setSmallView("edit");
+  };
   const insert = (blocks: OfferEmailBlock[]) => {
     if (draft.blocks.length + blocks.length > 40) return;
     const next = cloneBlocks(blocks);
@@ -142,9 +147,10 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
         ...draft, emailSubject: draft.emailSubject.trim(), expectedUpdatedAt,
       });
       if (!mounted.current) return;
-      const next: StudioDraft = { ...draft, emailSubject: draft.emailSubject.trim() };
+      const next = campaignDraft(response.data);
       setBaseline(next);
       setHistory({ past: [], present: next, future: [] });
+      setSelectedId((current) => next.blocks.some((block) => block.id === current) ? current : next.blocks[0]?.id);
       if (response.data.updatedAt) {
         setExpectedUpdatedAt(response.data.updatedAt);
         setBaseRevision(campaignRevision(response.data));
@@ -184,11 +190,19 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
   };
   const reset = async () => {
     if (editingDisabled || !window.confirm(t("Remove the designed email and return to the simple template for this campaign?"))) return;
+    if (!expectedUpdatedAt) {
+      setSaveError("The campaign revision is missing. Reopen the studio before removing this design.");
+      return;
+    }
     setSaving(true);
+    setSaveError(null);
     try {
-      const response = await recoveryOffersApi.clearCampaignEmailDesign(campaign.key);
+      const response = await recoveryOffersApi.clearCampaignEmailDesign(campaign.key, expectedUpdatedAt);
       if (mounted.current) { forgetRecovery(); onSaved(response.data); }
-    } catch { if (mounted.current) setSaveError("The email design was not removed. Try again."); }
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      if (mounted.current) setSaveError(typeof message === "string" ? message : "The email design was not removed. Try again.");
+    }
     finally { if (mounted.current) setSaving(false); }
   };
 
@@ -220,13 +234,13 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
         <p className="flex-1"><T>This recovered draft is older than the saved campaign. Review it before replacing the saved design.</T></p>
         <button type="button" className={control} onClick={() => setRestoredStale(false)}><T>I have reviewed this draft</T></button>
       </div>}
-      {saveError && <p role="alert" className="border-b bg-destructive/10 px-4 py-3 text-sm text-destructive"><T>{saveError}</T></p>}
+      {saveError && <p role="alert" className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"><T>{saveError}</T></p>}
       <div className="flex border-b p-2 lg:hidden">
         {(["edit", "preview"] as const).map((view) => <button type="button" key={view} className={`${control} flex-1 border-0 ${smallView === view ? "bg-accent" : ""}`} aria-pressed={smallView === view} onClick={() => setSmallView(view)}><T>{view === "edit" ? "Edit email" : "Live preview"}</T></button>)}
       </div>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className={`${smallView === "edit" ? "flex" : "hidden"} min-w-0 flex-1 flex-col overflow-y-auto lg:contents`}>
-          <aside aria-label={t("Email sections")} className="shrink-0 border-b p-4 lg:w-56 lg:overflow-y-auto lg:border-b-0 lg:border-r xl:w-60">
+          <aside aria-label={t("Email sections")} className={`${smallEditPane === "sections" ? "block" : "hidden"} shrink-0 border-b p-4 lg:block lg:w-56 lg:overflow-y-auto lg:border-b-0 lg:border-r xl:w-60`}>
             <div className="mb-4 flex gap-1 rounded-md bg-muted p-1">
               {(["sections", "add"] as const).map((tab) => <button type="button" key={tab} className={`${control} flex-1 border-0 px-2 ${leftTab === tab ? "bg-background shadow-sm" : ""}`} aria-pressed={leftTab === tab} onClick={() => setLeftTab(tab)}><T>{tab === "sections" ? "Sections" : "Add content"}</T></button>)}
             </div>
@@ -265,8 +279,9 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
               }}><T>{preset.label}</T></button>)}
             </details>
           </aside>
-          <aside aria-label={t("Email inspector")} className="shrink-0 p-4 lg:order-3 lg:w-72 lg:overflow-y-auto lg:border-l xl:w-80">
-            <fieldset disabled={editingDisabled} className="mb-6 min-w-0 space-y-3 border-b pb-5">
+          <aside aria-label={t("Email inspector")} className={`${smallEditPane === "inspector" ? "flex" : "hidden"} shrink-0 flex-col p-4 lg:order-3 lg:block lg:w-72 lg:overflow-y-auto lg:border-l xl:w-80`}>
+            <button type="button" className={`${control} order-0 mb-4 self-start lg:hidden`} onClick={() => setSmallEditPane("sections")}><T>Back to sections</T></button>
+            <fieldset disabled={editingDisabled} className="order-2 mb-6 min-w-0 space-y-3 border-b pb-5 lg:order-none">
               <legend className="mb-3 text-sm font-semibold"><T>Campaign email</T></legend>
               <label className="block text-sm"><T>Subject</T><input className={studioInput} value={draft.emailSubject} maxLength={180} onChange={(event) => change((current) => ({ ...current, emailSubject: event.target.value }), "subject")} /></label>
               <label className="block text-sm"><T>Preheader</T><input className={studioInput} value={draft.preheader || ""} maxLength={180} onChange={(event) => change((current) => ({ ...current, preheader: event.target.value }), "preheader")} /><span className="mt-1 block text-xs text-muted-foreground"><T>The short preview text beside the subject in an inbox.</T></span></label>
@@ -274,10 +289,10 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
                 <option value="classic">{t("Orivraa gold")}</option><option value="editorial">{t("Editorial green")}</option><option value="midnight">{t("Midnight indigo")}</option>
               </select></label>
             </fieldset>
-            {selected ? <EmailBlockInspector key={selected.id} block={selected} disabled={editingDisabled} uploading={uploading === selected.id} progress={progress} issue={issue?.message}
+            <div className="order-1 lg:order-none">{selected ? <EmailBlockInspector key={selected.id} block={selected} disabled={editingDisabled} uploading={uploading === selected.id} progress={progress} issue={issue?.message}
               onChange={(block) => change((current) => ({ ...current, blocks: current.blocks.map((item) => item.id === block.id ? block : item) }), block.id)} onUpload={upload} />
-              : <p className="text-sm text-muted-foreground"><T>Select a section on the canvas, or add one to begin.</T></p>}
-            {campaign.emailDesign && <button type="button" className="mt-8 min-h-10 text-xs text-muted-foreground underline underline-offset-4" disabled={editingDisabled} onClick={reset}><T>Return to simple template</T></button>}
+              : <p className="text-sm text-muted-foreground"><T>Select a section on the canvas, or add one to begin.</T></p>}</div>
+            {campaign.emailDesign && <button type="button" className="order-3 mt-8 min-h-10 text-xs text-muted-foreground underline underline-offset-4 lg:order-none" disabled={editingDisabled} onClick={reset}><T>Return to simple template</T></button>}
           </aside>
         </div>
         <main aria-label={t("Email canvas")} className={`${smallView === "preview" ? "flex" : "hidden"} min-w-0 flex-1 flex-col bg-muted/50 lg:order-2 lg:flex`}>
@@ -296,7 +311,7 @@ function StudioSession({ campaign, locked, onClose, onSaved, userId }: Props & {
             <div className="mx-auto mb-3 max-w-[680px] rounded-md border bg-background px-4 py-3 text-sm">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground"><T>Sample inbox</T></p>
               <p className="mt-2 break-words font-semibold">{draft.emailSubject || t("Your email subject")}</p>
-              {draft.preheader && <p className="mt-1 break-words text-xs text-muted-foreground">{draft.preheader}</p>}
+              <p aria-label={t("Inbox preview text")} className="mt-1 break-words text-xs text-muted-foreground">{draft.preheader?.trim() || campaign.name}</p>
               <p className="mt-2 text-xs text-muted-foreground"><T>Greeting uses the sample name "Shop owner", not a selected recipient.</T></p>
             </div>
             <EmailCanvas blocks={preview.blocks} options={preview.options} selectedId={selectedId} mobile={mobile} imagesOff={imagesOff} onSelect={select} />

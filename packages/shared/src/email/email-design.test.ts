@@ -70,4 +70,21 @@ describe("email studio schema and shared renderer", () => {
     expect(renderer.render(blocks, options).html).toContain("@keyframes");
     expect(renderer.render(blocks, { ...options, disableAnimations: true }).html).not.toContain("@keyframes");
   });
+  it("keeps emphasis markup out of rich-text link destinations", () => {
+    const { html } = renderer.render(
+      [{ type: "text", text: "Open [the *demo*](https://example.com/releases/*latest*) now." }],
+      options,
+    );
+    expect(html).toContain('href="https://example.com/releases/*latest*"');
+    expect(html).toContain("the <em>demo</em>");
+    expect(html).not.toContain('href="https://example.com/releases/<em>');
+  });
+  it("uses the campaign name when a blank preheader is normalized away", () => {
+    const blocks = [{ type: "text" as const, text: "Hello" }];
+    const localPreview = renderer.render(blocks, { ...options, preheader: "   " }).html;
+    const savedDelivery = renderer.render(blocks, options).html;
+    const hiddenPreheader = '<div style="display:none;max-height:0;overflow:hidden;opacity:0">Product update</div>';
+    expect(localPreview).toContain(hiddenPreheader);
+    expect(savedDelivery).toContain(hiddenPreheader);
+  });
 });

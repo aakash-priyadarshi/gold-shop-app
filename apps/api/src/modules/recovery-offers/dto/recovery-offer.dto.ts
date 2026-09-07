@@ -208,6 +208,12 @@ export class SaveOfferCampaignEmailDesignDto {
   blocks: unknown[];
 }
 
+export class ClearOfferCampaignEmailDesignDto {
+  /** Prevents an older editor session from removing a newer saved design. */
+  @IsDateString()
+  expectedUpdatedAt: string;
+}
+
 export class PreviewRecoveryOffersDto {
   @IsArray()
   @ArrayMinSize(1)

@@ -63,13 +63,22 @@ function escapeHtml(value: string): string {
  * markup can survive into the email.
  */
 function renderRichText(text: string, palette: Palette): string {
-  const escaped = escapeHtml(text);
-  return escaped
-    .replace(/\[([^\]]+)\]\((https:[^)\s]+)\)/g, (_match, label: string, url: string) => {
-      return `<a href="${url}" style="color:${palette.primaryButton};text-decoration:underline">${label}</a>`;
-    })
+  const renderEmphasis = (value: string) => value
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+  // Render text and link tokens separately so emphasis markers in a valid URL
+  // can never mutate the generated href attribute.
+  const links = /\[([^\]]+)\]\((https:[^)\s]+)\)/g;
+  let result = "";
+  let cursor = 0;
+  for (const match of text.matchAll(links)) {
+    const index = match.index ?? 0;
+    result += renderEmphasis(escapeHtml(text.slice(cursor, index)));
+    result += `<a href="${escapeHtml(match[2])}" style="color:${palette.primaryButton};text-decoration:underline">${renderEmphasis(escapeHtml(match[1]))}</a>`;
+    cursor = index + match[0].length;
+  }
+  return result + renderEmphasis(escapeHtml(text.slice(cursor)));
 }
 
 function renderParagraphs(text: string, align: "left" | "center", palette: Palette, fontSize = 16): string {
@@ -164,7 +173,7 @@ export class OfferEmailRenderer {
     ${styleBlock}${galleryStyles}
   </head>
   <body style="margin:0;background:${palette.pageBackground};color:${palette.body};font-family:Arial,Helvetica,sans-serif;line-height:1.6">
-    <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(options.preheader ?? options.campaignName)}</div>
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(design.preheader ?? options.campaignName)}</div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
       <tr>
         <td align="center" style="padding:28px 14px">

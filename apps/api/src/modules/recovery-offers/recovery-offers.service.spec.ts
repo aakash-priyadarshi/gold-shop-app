@@ -2336,6 +2336,26 @@ describe("RecoveryOffersService", () => {
     await expect(service.updateCampaignEmailDesign("studio", { emailSubject: "New feature", expectedUpdatedAt: "2026-09-05T10:00:00.000Z", blocks: [{ type: "divider" }] })).rejects.toThrow(/changed since you opened/);
   });
 
+  it("rejects a stale destructive design clear atomically", async () => {
+    const expectedUpdatedAt = "2026-09-05T10:00:00.000Z";
+    prisma.offerCampaign.findUnique.mockResolvedValue({
+      key: "studio",
+      name: "New feature",
+      kind: OfferCampaignKind.PRODUCT_UPDATE,
+    });
+    prisma.recoveryOffer.findFirst.mockResolvedValue(null);
+    prisma.offerCampaign.update.mockRejectedValueOnce({ code: "P2025" });
+
+    await expect(
+      service.clearCampaignEmailDesign("studio", expectedUpdatedAt),
+    ).rejects.toThrow(/changed since you opened/);
+    expect(prisma.offerCampaign.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { key: "studio", updatedAt: new Date(expectedUpdatedAt) },
+      }),
+    );
+  });
+
   it("rejects the advanced email builder for festival campaigns", async () => {
     prisma.offerCampaign.findUnique.mockResolvedValue({
       key: "festival-dashain-2026",

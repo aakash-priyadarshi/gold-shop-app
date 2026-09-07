@@ -2824,9 +2824,10 @@ export const recoveryOffersApi = {
       `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email-design/preview`,
       data,
     ),
-  clearCampaignEmailDesign: (key: string) =>
+  clearCampaignEmailDesign: (key: string, expectedUpdatedAt: string) =>
     api.delete<OfferCampaign>(
       `/recovery-offers/admin/campaigns/${encodeURIComponent(key)}/email-design`,
+      { params: { expectedUpdatedAt } },
     ),
   getCampaign: (key: string) =>
     api.get<OfferCampaign>(
