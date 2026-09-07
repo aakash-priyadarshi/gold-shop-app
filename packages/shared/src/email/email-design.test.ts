@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseOfferEmailDesign, OfferEmailRenderer } from "../../dist";
+import { parseOfferEmailDesign } from "./email-design";
+import { OfferEmailRenderer } from "./email-renderer";
 
 const options = { campaignName: "Product update", brandIconUrl: "https://example.com/icon.png", unsubscribeUrl: "https://example.com/unsubscribe" };
 const renderer = new OfferEmailRenderer();
