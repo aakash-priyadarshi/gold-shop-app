@@ -178,3 +178,9 @@ apps/desktop/store-build-output/
 apps/desktop/msix/devcert.pfx
 apps/desktop/msix/*.msix
 apps/desktop/msix/dist/
+
+# Impeccable design-review working files
+.impeccable/
+
+# ZCode CLI local session files
+.zcode/
