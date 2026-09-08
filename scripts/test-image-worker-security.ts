@@ -155,7 +155,9 @@ const email = await worker.fetch(
   {} as any,
 );
 assert.equal(email.status, 200);
-assert.match(((await email.json()) as { key: string }).key, /^email\//);
+const emailUploaded = (await email.json()) as { key: string };
+assert.match(emailUploaded.key, /^email\//);
+assert.ok(await sharedEnv.IMAGES_BUCKET.head(emailUploaded.key));
 
 const mismatch = await worker.fetch(
   new Request("https://images.orivraa.com/upload", {
