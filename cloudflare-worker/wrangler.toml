@@ -22,6 +22,7 @@ ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://m.orivraa
 # Production environment
 [env.production]
 name = "orivraa-images"
+vars = { ALLOWED_ORIGINS = "https://orivraa.com,https://www.orivraa.com,https://m.orivraa.com" }
 r2_buckets = [
   { binding = "IMAGES_BUCKET", bucket_name = "orivraa-images" },
   { binding = "DEMOS_BUCKET", bucket_name = "orivraa-demos" }
