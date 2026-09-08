@@ -2345,6 +2345,7 @@ export default function ShopProductsPage() {
                     <AiPhotoEnhancer
                       shopId={user.shop.id}
                       images={formData.images}
+                      maxImages={3}
                       onChange={(images) =>
                         setFormData((current) => ({ ...current, images }))
                       }
@@ -2468,11 +2469,11 @@ export default function ShopProductsPage() {
                             </div>
                           )}
                           <Image
-                            src={getImageUrl(url, "thumbnail")}
+                            src={getImageUrl(url, "medium")}
                             alt={`Product ${idx + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg border"
-                            width={80}
-                            height={80}
+                            className="h-32 w-32 rounded-xl border object-cover"
+                            width={128}
+                            height={128}
                             unoptimized
                           />
                           {user?.shop?.id ? (
@@ -2480,6 +2481,7 @@ export default function ShopProductsPage() {
                               shopId={user.shop.id}
                               images={formData.images}
                               targetIndex={idx}
+                              maxImages={3}
                               trigger="icon"
                               className="absolute right-1 top-1 z-10 h-7 w-7 border-amber-300 bg-white/95 text-amber-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 dark:bg-gray-950/95"
                               onChange={(images) =>

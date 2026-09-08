@@ -27,6 +27,7 @@ import {
 } from "@gold-shop/shared";
 import {
   CircleAlert,
+  CopyPlus,
   Crown,
   ImageOff,
   Loader2,
@@ -49,6 +50,7 @@ type Props = {
   images: string[];
   onChange: (images: string[]) => void;
   targetIndex?: number;
+  maxImages?: number;
   context?: {
     name?: string;
     jewelleryType?: string;
@@ -64,6 +66,7 @@ export function AiPhotoEnhancer({
   images,
   onChange,
   targetIndex,
+  maxImages,
   context,
   trigger = "button",
   className,
@@ -80,6 +83,7 @@ export function AiPhotoEnhancer({
   const [creditsDepleted, setCreditsDepleted] = useState(false);
   const [results, setResults] = useState<EnhancementResult[]>([]);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [keptBoth, setKeptBoth] = useState<Set<string>>(new Set());
   const requestIdRef = useRef(0);
 
   const targets = useMemo(
@@ -90,6 +94,17 @@ export function AiPhotoEnhancer({
     [images, targetIndex],
   );
   const cost = enhancementCreditCost(AI_IMAGE_MODELS[model], targets.length);
+  const successfulResults = results.filter(
+    (result) => result.status === "success" && result.enhancedUrl,
+  );
+  const pendingSuccessfulResults = successfulResults.filter(
+    (result) => !accepted.has(result.sourceUrl),
+  );
+  const bothAdditions = pendingSuccessfulResults.filter(
+    (result) => !images.includes(result.enhancedUrl!),
+  );
+  const canKeepAllBoth =
+    maxImages == null || images.length + bothAdditions.length <= maxImages;
 
   useEffect(() => {
     if (!open || !canEnhance) return;
@@ -181,6 +196,26 @@ export function AiPhotoEnhancer({
         url === result.sourceUrl ? result.enhancedUrl! : url,
       ),
     );
+    setKeptBoth((current) => {
+      const next = new Set(current);
+      next.delete(result.sourceUrl);
+      return next;
+    });
+    setAccepted((current) => new Set(current).add(result.sourceUrl));
+  };
+
+  const canKeepBoth = (result: EnhancementResult) =>
+    Boolean(result.enhancedUrl) &&
+    (maxImages == null ||
+      images.includes(result.enhancedUrl!) ||
+      images.length < maxImages);
+
+  const keepBoth = (result: EnhancementResult) => {
+    if (!result.enhancedUrl || !canKeepBoth(result)) return;
+    if (!images.includes(result.enhancedUrl)) {
+      onChange([...images, result.enhancedUrl]);
+    }
+    setKeptBoth((current) => new Set(current).add(result.sourceUrl));
     setAccepted((current) => new Set(current).add(result.sourceUrl));
   };
 
@@ -191,12 +226,25 @@ export function AiPhotoEnhancer({
         .map((result) => [result.sourceUrl, result.enhancedUrl!]),
     );
     onChange(images.map((url) => replacements.get(url) || url));
+    setKeptBoth(new Set());
     setAccepted(new Set(replacements.keys()));
+  };
+
+  const keepAllBoth = () => {
+    if (!canKeepAllBoth) return;
+    if (bothAdditions.length) {
+      onChange([...images, ...bothAdditions.map((result) => result.enhancedUrl!)]);
+    }
+    setKeptBoth(
+      new Set(pendingSuccessfulResults.map((result) => result.sourceUrl)),
+    );
+    setAccepted(new Set(successfulResults.map((result) => result.sourceUrl)));
   };
 
   const resetDialog = () => {
     setResults([]);
     setAccepted(new Set());
+    setKeptBoth(new Set());
     setCreditsDepleted(false);
   };
 
@@ -240,7 +288,7 @@ export function AiPhotoEnhancer({
           }
         }}
       >
-        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-600" />
@@ -289,20 +337,21 @@ export function AiPhotoEnhancer({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className={`grid gap-5 ${results.length > 1 ? "sm:grid-cols-2" : ""}`}>
                 {results.map((result, index) => {
                   const used = accepted.has(result.sourceUrl);
+                  const both = keptBoth.has(result.sourceUrl);
                   return (
                     <div key={result.sourceUrl} className="overflow-hidden rounded-lg border">
                       <div className="grid grid-cols-2 border-b">
                         <figure className="border-r">
-                          <figcaption className="border-b bg-muted/40 px-2 py-1 text-xs text-muted-foreground"><T>Before</T></figcaption>
+                          <figcaption className="border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground"><T>Before</T></figcaption>
                           <div className="relative aspect-square bg-muted">
                             <Image src={result.sourceUrl} alt={t(`Original photo ${index + 1}`)} fill className="object-contain" unoptimized />
                           </div>
                         </figure>
                         <figure>
-                          <figcaption className="border-b bg-muted/40 px-2 py-1 text-xs text-muted-foreground"><T>After</T></figcaption>
+                          <figcaption className="border-b bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground"><T>After</T></figcaption>
                           <div className="relative flex aspect-square items-center justify-center bg-muted">
                             {result.enhancedUrl ? (
                               <Image src={result.enhancedUrl} alt={t(`Enhanced photo ${index + 1}`)} fill className="object-contain" unoptimized />
@@ -312,22 +361,38 @@ export function AiPhotoEnhancer({
                           </div>
                         </figure>
                       </div>
-                      <div className="flex items-center justify-between gap-2 p-2">
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3">
                         {result.status === "failed" ? (
                           <p className="text-xs text-destructive"><T>{result.error || "Enhancement failed"}</T></p>
                         ) : (
                           <p className="text-xs text-muted-foreground">
-                            {used ? <T>Enhanced photo selected</T> : <T>Original remains until you accept</T>}
+                            {both ? <T>Original and enhanced photos selected</T> : used ? <T>Enhanced photo selected</T> : <T>Original remains until you accept</T>}
                           </p>
                         )}
                         {result.status === "failed" ? (
                           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => requestEnhancement([result.sourceUrl])}>
                             <RotateCcw className="mr-1 h-3.5 w-3.5" /><T>Retry</T>
                           </Button>
-                        ) : used ? (
-                          <Button type="button" size="sm" variant="ghost" disabled><T>Used</T></Button>
                         ) : (
-                          <Button type="button" size="sm" onClick={() => acceptEnhanced(result)}><T>Use enhanced</T></Button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {used ? (
+                              <Button type="button" size="sm" variant="ghost" disabled><T>Used</T></Button>
+                            ) : (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={busy || !canKeepBoth(result)}
+                                  title={!canKeepBoth(result) ? t("Remove a photo before keeping both versions") : t("Keep the original and enhanced photos")}
+                                  onClick={() => keepBoth(result)}
+                                >
+                                  <CopyPlus className="mr-1 h-3.5 w-3.5" /><T>Keep both</T>
+                                </Button>
+                                <Button type="button" size="sm" onClick={() => acceptEnhanced(result)}><T>Use enhanced</T></Button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -339,8 +404,19 @@ export function AiPhotoEnhancer({
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     <X className="mr-1 h-4 w-4" /><T>Keep originals</T>
                   </Button>
-                  {results.filter((result) => result.status === "success").length > 1 ? (
-                    <Button type="button" onClick={useAllEnhanced}><T>Use all enhanced</T></Button>
+                  {successfulResults.length > 1 ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={busy || !bothAdditions.length || !canKeepAllBoth}
+                        title={!canKeepAllBoth ? t("Remove a photo before keeping both versions") : t("Keep original and enhanced versions")}
+                        onClick={keepAllBoth}
+                      >
+                        <CopyPlus className="mr-1 h-4 w-4" /><T>Keep all versions</T>
+                      </Button>
+                      <Button type="button" onClick={useAllEnhanced}><T>Use all enhanced</T></Button>
+                    </>
                   ) : null}
                 </DialogFooter>
               ) : null}

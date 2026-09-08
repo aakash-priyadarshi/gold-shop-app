@@ -1001,6 +1001,7 @@ function AddProductSheet({
               <AiPhotoEnhancer
                 shopId={shopId}
                 images={images}
+                maxImages={3}
                 onChange={setImages}
                 context={{
                   name,
@@ -1051,6 +1052,7 @@ function AddProductSheet({
                     shopId={shopId}
                     images={images}
                     targetIndex={index}
+                    maxImages={3}
                     trigger="icon"
                     onChange={setImages}
                     context={{ name, jewelleryType, metal: metalType, purity }}
