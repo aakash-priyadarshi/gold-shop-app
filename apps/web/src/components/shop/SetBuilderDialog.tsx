@@ -554,6 +554,7 @@ export function SetBuilderDialog({
                 <AiPhotoEnhancer
                   shopId={shopId}
                   images={images}
+                  maxImages={3}
                   onChange={setImages}
                   context={{ name: nameEn, jewelleryType: "SET" }}
                 />
@@ -598,6 +599,7 @@ export function SetBuilderDialog({
                       shopId={shopId}
                       images={images}
                       targetIndex={index}
+                      maxImages={3}
                       trigger="icon"
                       onChange={setImages}
                       context={{ name: nameEn, jewelleryType: "SET" }}

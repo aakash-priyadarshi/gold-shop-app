@@ -133,6 +133,32 @@ const valid = await worker.fetch(
 assert.equal(valid.status, 200);
 const uploaded = (await valid.json()) as { key: string };
 
+// Email media uses a separate upload scope so campaign assets cannot be
+// written into product storage. Keep this path covered because a stale worker
+// deployment previously rejected the email upload type altogether.
+const emailToken = tokenFor({ uploadType: "email" }, runtimeNow);
+const email = await worker.fetch(
+  new Request("https://images.orivraa.com/upload", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${emailToken}`, "X-Upload-Type": "email" },
+    body: (() => {
+      const form = new FormData();
+      form.append(
+        "file",
+        new Blob([new TextEncoder().encode("GIF89a")], { type: "image/gif" }),
+        "campaign.gif",
+      );
+      return form;
+    })(),
+  }),
+  sharedEnv,
+  {} as any,
+);
+assert.equal(email.status, 200);
+const emailUploaded = (await email.json()) as { key: string };
+assert.match(emailUploaded.key, /^email\//);
+assert.ok(await sharedEnv.IMAGES_BUCKET.head(emailUploaded.key));
+
 const mismatch = await worker.fetch(
   new Request("https://images.orivraa.com/upload", {
     method: "POST",
