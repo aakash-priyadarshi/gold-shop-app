@@ -105,7 +105,7 @@ describe("InvoicesService Sri Lanka invoice compliance", () => {
     mockPrisma.invoiceSettings.findUnique.mockResolvedValue(null);
     mockPrisma.shop.findUnique.mockResolvedValue({ shopName: 'Example Jewellers', address: 'Main Road', city: 'Kathmandu' });
     const result = await supportAccessContext.run({ readOnly: true, actorId: 'admin' }, () => service.getSettings('shop'));
-    expect(result).toMatchObject({ shopId: 'shop', shopNameOnBill: 'Example Jewellers', billTemplateId: 'classic' });
+    expect(result).toMatchObject({ id: null, shopId: 'shop', shopNameOnBill: 'Example Jewellers', billTemplateId: 'classic' });
     expect(mockPrisma.invoiceSettings.create).not.toHaveBeenCalled();
   });
 

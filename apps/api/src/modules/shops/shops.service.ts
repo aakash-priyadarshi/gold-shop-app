@@ -600,10 +600,13 @@ export class ShopsService {
   async findByUserId(userId: string, supportShopId?: string) {
     // Support browsing must neither select another shop nor trigger referral recovery.
     if (supportShopId) {
-      const { managerPinHash, bankAccountDetails, ...safeShop } = await this.prisma.shop.findFirstOrThrow({
+      const supportShop = await this.prisma.shop.findFirst({
         where: { id: supportShopId, userId },
         include: { metalRates: true, finishPricing: true },
       });
+      if (!supportShop)
+        throw new NotFoundException("Shop not found for this user");
+      const { managerPinHash, bankAccountDetails, ...safeShop } = supportShop;
       void managerPinHash;
       void bankAccountDetails;
       return safeShop;

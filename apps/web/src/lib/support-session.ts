@@ -1,6 +1,13 @@
 // Tab-scoped only. Never replace the admin's shared cookies/localStorage tokens.
 const KEY = "orivraa-support-session";
 let exitingToken: string | null = null;
+const sessionStartedListeners = new Set<() => void>();
+
+export function onSupportSessionStarted(listener: () => void) {
+  sessionStartedListeners.add(listener);
+  return () => sessionStartedListeners.delete(listener);
+}
+
 export function getSupportToken(): string | null {
   return typeof window === "undefined"
     ? null
@@ -11,6 +18,7 @@ export function storeSupportToken(token: string) {
     throw new Error("Invalid support credential");
   sessionStorage.setItem(KEY, token);
   sessionStorage.removeItem('gold-shop-preferences');
+  sessionStartedListeners.forEach((listener) => listener());
 }
 export function getPreferenceStorage(): Storage {
   return getSupportToken() ? sessionStorage : localStorage;

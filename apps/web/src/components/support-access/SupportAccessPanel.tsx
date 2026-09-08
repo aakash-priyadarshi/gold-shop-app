@@ -35,6 +35,13 @@ const durations = [
   ["custom", "Custom expiry"],
 ];
 
+function toLocalDateTimeInput(timestamp: number) {
+  const date = new Date(timestamp);
+  return new Date(timestamp - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 function ConsentFields({
   permissions,
   onChange,
@@ -52,7 +59,11 @@ function ConsentFields({
     duration === "custom"
       ? Date.parse(custom)
       : baseTime + Number(duration) * 3600_000;
-  const expiry = Number.isFinite(timestamp)
+  const customDuration = timestamp - Date.now();
+  const expiry =
+    Number.isFinite(timestamp) &&
+    (duration !== "custom" ||
+      (customDuration >= 60_000 && customDuration <= 90 * 86400_000))
     ? new Date(timestamp).toISOString()
     : "";
   useEffect(() => {
@@ -81,6 +92,8 @@ function ConsentFields({
             type="datetime-local"
             className="block w-full rounded border bg-background p-2"
             value={custom}
+            min={toLocalDateTimeInput(baseTime + 60_000)}
+            max={toLocalDateTimeInput(baseTime + 90 * 86400_000)}
             onChange={(e) => setCustom(e.target.value)}
           />
         </label>
@@ -156,6 +169,8 @@ export function SupportAccessPanel({
   grantId?: string;
 }) {
   const { user } = useAuth();
+  const userId = user?.id;
+  const userRole = user?.role;
   const t = useT();
   const [grants, setGrants] = useState<Grant[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -194,15 +209,18 @@ export function SupportAccessPanel({
         ? api.get(`/support-access/grants/${grantId}`)
         : api.get("/support-access/grants", { params: { conversationId } }),
     ]);
-    setPermissions(options.data.permissions);
+    setPermissions(
+      Array.isArray(options.data?.permissions) ? options.data.permissions : [],
+    );
     setGrants(grantId ? [list.data] : list.data);
     setReady(true);
   }, [conversationId, grantId]);
   useEffect(() => {
     if (
       getSupportToken() ||
-      !user ||
-      !["ADMIN", "SHOPKEEPER"].includes(user.role)
+      !userId ||
+      !userRole ||
+      !["ADMIN", "SHOPKEEPER"].includes(userRole)
     )
       return;
     void reload().catch((e) => {
@@ -224,7 +242,7 @@ export function SupportAccessPanel({
       void reload().catch(() => undefined);
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [reload, conversationId, grantId, user?.id, user?.role, t]);
+  }, [reload, conversationId, grantId, userId, userRole, t]);
   async function run(work: () => Promise<unknown>) {
     setBusy(true);
     setError("");

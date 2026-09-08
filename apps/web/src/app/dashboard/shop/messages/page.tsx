@@ -329,7 +329,6 @@ export default function ShopMessagesPage() {
               ) : (
                 <>
                   <div className="p-3 border-b flex items-center justify-between">
-                    <SupportAccessPanel key={selectedConversation} conversationId={selectedConversation} />
                     <div>
                       <h3 className="font-medium">
                         {selectedConv?.buyer.firstName}{" "}
@@ -361,6 +360,12 @@ export default function ShopMessagesPage() {
                         <T>Anti-circumvention active</T>
                       </div>
                     </div>
+                  </div>
+                  <div className="border-b p-3">
+                    <SupportAccessPanel
+                      key={selectedConversation}
+                      conversationId={selectedConversation}
+                    />
                   </div>
 
                   {/* Violation warning banner */}

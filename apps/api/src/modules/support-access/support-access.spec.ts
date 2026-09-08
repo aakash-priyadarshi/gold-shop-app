@@ -71,6 +71,9 @@ describe("Seller-approved support access", () => {
         findMany: jest.fn().mockResolvedValue([{ id: "shop" }]),
         findUnique: jest.fn().mockResolvedValue({ userId: "seller" }),
       },
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
+      invoice: { findFirst: jest.fn().mockResolvedValue(null) },
+      walkInCustomer: { findFirst: jest.fn().mockResolvedValue(null) },
       message: { create: jest.fn(), findFirst: jest.fn() },
       inventoryItem: { findUnique: jest.fn() },
     };
@@ -211,6 +214,20 @@ describe("Seller-approved support access", () => {
     }
     expect(db.supportAccessGrant.updateMany).not.toHaveBeenCalled();
   });
+  it("limits custom expiry to 90 days", () => {
+    expect(() =>
+      (service as any).approval({
+        expiresAt: new Date(Date.now() + 91 * 86400_000).toISOString(),
+        permissions: [],
+      }),
+    ).toThrow("90 days");
+    expect(() =>
+      (service as any).approval({
+        expiresAt: new Date(Date.now() + 89 * 86400_000).toISOString(),
+        permissions: [],
+      }),
+    ).not.toThrow();
+  });
   it("revokes every session for the grant", async () => {
     await service.decide(seller, "grant", "REVOKED");
     expect(db.supportAccessSession.updateMany).toHaveBeenCalledWith(
@@ -283,6 +300,22 @@ describe("Seller-approved support access", () => {
     await expect(
       guard.canActivate(http("/inventory/product").context),
     ).rejects.toThrow("outside");
+  });
+  it("blocks customer data outside the granted shop", async () => {
+    await expect(
+      guard.canActivate(http("/users/customers/customer/profile").context),
+    ).rejects.toThrow("outside the approved shop");
+  });
+  it("allows customer data when the customer is linked to the granted shop", async () => {
+    db.user.findFirst.mockResolvedValue({ id: "customer" });
+    await expect(
+      guard.canActivate(http("/users/customers/customer/profile").context),
+    ).resolves.toBe(true);
+    expect(db.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "customer" }),
+      }),
+    );
   });
   it("leaves ordinary authentication alone", async () => {
     const { req, context } = http("/auth/me");

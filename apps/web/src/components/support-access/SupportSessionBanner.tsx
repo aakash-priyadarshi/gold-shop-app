@@ -4,6 +4,12 @@ import { api } from "@/lib/api";
 import { exitSupportSession, getSupportToken } from "@/lib/support-session";
 import { T } from "@/components/ui/T";
 
+function exitOnAuthorizationFailure(error: unknown) {
+  const status = (error as { response?: { status?: number } })?.response
+    ?.status;
+  if (status === 401 || status === 403) exitSupportSession();
+}
+
 export function SupportSessionBanner() {
   const [active, setActive] = useState(false);
   const [info, setInfo] = useState<{
@@ -18,8 +24,19 @@ export function SupportSessionBanner() {
     const check = () => {
       void api
         .get("/support-access/session")
-        .then((r) => setInfo(r.data))
-        .catch(() => exitSupportSession());
+        .then(({ data }) =>
+          setInfo({
+            shopName: typeof data?.shopName === "string" ? data.shopName : "",
+            adminName:
+              typeof data?.adminName === "string" ? data.adminName : "",
+            expiresAt:
+              typeof data?.expiresAt === "string" ? data.expiresAt : "",
+            permissions: Array.isArray(data?.permissions)
+              ? data.permissions
+              : [],
+          }),
+        )
+        .catch(exitOnAuthorizationFailure);
     };
     check();
     const timer = window.setInterval(check, 15_000);
@@ -29,7 +46,7 @@ export function SupportSessionBanner() {
       lastActivity = Date.now();
       void api
         .post("/support-access/session/activity")
-        .catch(() => exitSupportSession());
+        .catch(exitOnAuthorizationFailure);
     };
     window.addEventListener("pointerdown", activity);
     window.addEventListener("keydown", activity);

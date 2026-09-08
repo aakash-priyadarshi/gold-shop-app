@@ -21,6 +21,7 @@ const include = {
   admin: { select: { id: true, firstName: true, lastName: true } },
   shop: { select: { id: true, shopName: true } },
 };
+const MAX_GRANT_DURATION_MS = 90 * 86400_000;
 export const supportTokenHash = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 
@@ -120,10 +121,10 @@ export class SupportAccessService {
     if (
       !Number.isFinite(duration) ||
       duration < 60_000 ||
-      duration > 366 * 86400_000
+      duration > MAX_GRANT_DURATION_MS
     )
       throw new BadRequestException(
-        "Choose an expiry between one minute and one year from now",
+        "Choose an expiry between one minute and 90 days from now",
       );
     if (
       !Array.isArray(dto.permissions) ||

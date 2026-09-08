@@ -1082,7 +1082,15 @@ export function ChatPopupWidget() {
                             )}
                           </div>
                         )}
-                        {msg.messageType === 'SUPPORT_ACCESS' ? <RichMessageCard messageType={msg.messageType} payload={msg.payload} /> : <p className="break-words">{msg.content}</p>}
+                        {msg.messageType === "SUPPORT_ACCESS" ? (
+                          <RichMessageCard
+                            messageType={msg.messageType}
+                            payload={msg.payload}
+                            content={msg.content}
+                          />
+                        ) : (
+                          <p className="break-words">{msg.content}</p>
+                        )}
                         {msg.hasViolation && (
                           <p className="text-[10px] mt-1 opacity-75">
                             ⚠️ Contact info removed

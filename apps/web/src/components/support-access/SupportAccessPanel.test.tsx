@@ -103,4 +103,31 @@ describe("Seller support consent", () => {
       ),
     );
   });
+  it("treats a missing permission options array as empty", async () => {
+    mocks.get.mockImplementation(async (url: string) => ({
+      data: url.endsWith("/options")
+        ? {}
+        : url.includes("/context/")
+          ? {
+              admin: { id: "admin", firstName: "Aakash", lastName: "Admin" },
+              sellerId: "seller",
+              shops: [{ id: "shop", shopName: "Example Jewellers" }],
+            }
+          : [],
+    }));
+    await openForm();
+    fireEvent.click(screen.getByLabelText("Allow selected changes"));
+    expect(screen.queryByText("Edit existing products")).not.toBeInTheDocument();
+  });
+  it("rejects a past custom expiry in the form", async () => {
+    await openForm();
+    fireEvent.change(screen.getByLabelText("Allow access for"), {
+      target: { value: "custom" },
+    });
+    const input = screen.getByLabelText("Expiry date and time");
+    expect(input).toHaveAttribute("min");
+    expect(input).toHaveAttribute("max");
+    fireEvent.change(input, { target: { value: "2000-01-01T00:00" } });
+    expect(screen.getByRole("button", { name: "Allow access" })).toBeDisabled();
+  });
 });

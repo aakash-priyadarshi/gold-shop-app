@@ -1,5 +1,8 @@
 import { api } from "@/lib/api";
-import { getSupportToken } from '@/lib/support-session';
+import {
+  getSupportToken,
+  onSupportSessionStarted,
+} from "@/lib/support-session";
 import { getDB, type OutboxOp } from "./db";
 
 /**
@@ -14,7 +17,10 @@ import { getDB, type OutboxOp } from "./db";
 
 const MAX_ATTEMPTS = 8;
 let flushing = false;
+let activeFlushController: AbortController | null = null;
 const listeners = new Set<() => void>();
+
+onSupportSessionStarted(() => activeFlushController?.abort());
 
 function crypoRandomId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -91,6 +97,8 @@ export async function flushOutbox(): Promise<void> {
   if (getSupportToken()) return;
   if (flushing) return;
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  const controller = new AbortController();
+  activeFlushController = controller;
   flushing = true;
   try {
     const db = getDB();
@@ -100,20 +108,37 @@ export async function flushOutbox(): Promise<void> {
       .sortBy("createdAt");
 
     for (const op of ops) {
-      if (getSupportToken()) return;
+      if (getSupportToken() || controller.signal.aborted) return;
       if (op.attempts >= MAX_ATTEMPTS) continue;
       await db.outbox.update(op.id, { status: "syncing", updatedAt: Date.now() });
       notify();
+      if (getSupportToken() || controller.signal.aborted) {
+        await db.outbox.update(op.id, {
+          status: "pending",
+          updatedAt: Date.now(),
+        });
+        notify();
+        return;
+      }
       try {
         await api.request({
           url: op.endpoint,
           method: op.method,
           data: op.body,
+          signal: controller.signal,
         });
         // Success — drop the op from the queue.
         await db.outbox.delete(op.id);
         notify();
       } catch (err: any) {
+        if (controller.signal.aborted) {
+          await db.outbox.update(op.id, {
+            status: "pending",
+            updatedAt: Date.now(),
+          });
+          notify();
+          return;
+        }
         const httpStatus = err?.response?.status;
         // Client errors (4xx except 408/429) won't succeed on retry — give up
         // to avoid poisoning the queue, but keep the record for inspection.
@@ -135,6 +160,7 @@ export async function flushOutbox(): Promise<void> {
       }
     }
   } finally {
+    if (activeFlushController === controller) activeFlushController = null;
     flushing = false;
   }
 }

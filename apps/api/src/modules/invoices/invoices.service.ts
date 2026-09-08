@@ -1616,6 +1616,60 @@ export class InvoicesService {
 
   // ── Invoice Settings ──────────────────────────────────────────
 
+  private buildDefaultInvoiceSettings(
+    shopId: string,
+    shop: {
+      shopName: string;
+      address: string | null;
+      city: string | null;
+      state: string | null;
+      contactPhone: string | null;
+      contactEmail: string | null;
+      panNumber: string | null;
+      vatNumber: string | null;
+      bisLicenseNumber: string | null;
+    } | null,
+  ) {
+    const now = new Date();
+    return {
+      id: null as string | null,
+      shopId,
+      shopNameOnBill: shop?.shopName || null,
+      shopLogoUrl: null,
+      tagline: null,
+      shopAddress: shop
+        ? [shop.address, shop.city, shop.state].filter(Boolean).join(", ")
+        : null,
+      shopPhone: shop?.contactPhone || null,
+      shopEmail: shop?.contactEmail || null,
+      gstin: shop?.vatNumber || shop?.panNumber || null,
+      licenseNumber: shop?.bisLicenseNumber || null,
+      footerNote: "Thank you for your business!",
+      termsText: "All items are subject to hallmarking verification.",
+      shopNamePosition: "TOP",
+      logoPosition: "TOP",
+      taglinePosition: "TOP",
+      addressPosition: "TOP",
+      phonePosition: "TOP",
+      emailPosition: "TOP",
+      gstinPosition: "TOP",
+      licensePosition: "TOP",
+      footerPosition: "BOTTOM",
+      termsPosition: "BOTTOM",
+      billTemplateId: "classic",
+      showLogo: true,
+      showAddress: true,
+      showPhone: true,
+      showEmail: false,
+      showGstin: true,
+      showLicense: false,
+      showFooter: true,
+      showTerms: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   async getSettings(shopId: string) {
     // Return existing settings or create defaults
     let settings = await this.prisma.invoiceSettings.findUnique({
@@ -1639,29 +1693,14 @@ export class InvoicesService {
         },
       });
 
-      if (supportAccessContext.getStore()?.readOnly) return {
-        id: '', shopId, shopNameOnBill: shop?.shopName || null,
-        shopLogoUrl: null, tagline: null, shopAddress: shop ? [shop.address, shop.city, shop.state].filter(Boolean).join(', ') : null,
-        shopPhone: shop?.contactPhone || null, shopEmail: shop?.contactEmail || null,
-        gstin: shop?.vatNumber || shop?.panNumber || null, licenseNumber: shop?.bisLicenseNumber || null,
-        footerNote: 'Thank you for your business!', termsText: 'All items are subject to hallmarking verification.',
-        shopNamePosition: 'TOP', logoPosition: 'TOP', taglinePosition: 'TOP', addressPosition: 'TOP', phonePosition: 'TOP', emailPosition: 'TOP', gstinPosition: 'TOP', licensePosition: 'TOP', footerPosition: 'BOTTOM', termsPosition: 'BOTTOM',
-        billTemplateId: 'classic', showLogo: true, showAddress: true, showPhone: true, showEmail: false, showGstin: true, showLicense: false, showFooter: true, showTerms: true,
-        createdAt: new Date(), updatedAt: new Date(),
-      };
+      const defaults = this.buildDefaultInvoiceSettings(shopId, shop);
+      if (supportAccessContext.getStore()?.readOnly) return defaults;
       settings = await this.prisma.invoiceSettings.create({
         data: {
-          shopId,
-          shopNameOnBill: shop?.shopName || null,
-          shopAddress: shop
-            ? [shop.address, shop.city, shop.state].filter(Boolean).join(", ")
-            : null,
-          shopPhone: shop?.contactPhone || null,
-          shopEmail: shop?.contactEmail || null,
-          gstin: shop?.vatNumber || shop?.panNumber || null,
-          licenseNumber: shop?.bisLicenseNumber || null,
-          footerNote: "Thank you for your business!",
-          termsText: "All items are subject to hallmarking verification.",
+          ...defaults,
+          id: undefined,
+          createdAt: undefined,
+          updatedAt: undefined,
         },
       });
     }

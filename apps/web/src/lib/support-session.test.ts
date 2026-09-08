@@ -36,4 +36,12 @@ describe('Support tab credential isolation', () => {
     expect(() => session.storeSupportToken('admin-token')).toThrow();
     expect(session.getSupportToken()).toBeNull();
   });
+  it('notifies active work when support access starts', async () => {
+    const session = await import('./support-session');
+    const listener = vi.fn();
+    const unsubscribe = session.onSupportSessionStarted(listener);
+    session.storeSupportToken(`osa_${'c'.repeat(64)}`);
+    expect(listener).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
 });

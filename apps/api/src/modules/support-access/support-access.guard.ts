@@ -93,6 +93,45 @@ export class SupportAccessGuard implements CanActivate {
           throw new ForbiddenException("Location is outside the approved shop");
       }
     }
+    if (operation.resource === "customer") {
+      const customerId = operation.id!;
+      const [registeredCustomer, invoiceCustomer, walkInCustomer] =
+        await Promise.all([
+          this.prisma.user.findFirst({
+            where: {
+              id: customerId,
+              role: "CUSTOMER",
+              OR: [
+                { customerOrders: { some: { shopId: grant.shopId } } },
+                {
+                  rfqRequests: {
+                    some: {
+                      targetedShops: { some: { shopId: grant.shopId } },
+                    },
+                  },
+                },
+              ],
+            },
+            select: { id: true },
+          }),
+          this.prisma.invoice.findFirst({
+            where: {
+              shopId: grant.shopId,
+              registeredCustomerId: customerId,
+              status: { notIn: ["VOID", "CANCELLED"] },
+            },
+            select: { id: true },
+          }),
+          this.prisma.walkInCustomer.findFirst({
+            where: { id: customerId, createdByShopId: grant.shopId },
+            select: { id: true },
+          }),
+        ]);
+      if (!registeredCustomer && !invoiceCustomer && !walkInCustomer)
+        throw new ForbiddenException(
+          "Customer is outside the approved shop",
+        );
+    }
     if (path === "/invoices" && request.method === "POST") {
       if (request.body?.orderId) {
         const order = await this.prisma.order.findUnique({

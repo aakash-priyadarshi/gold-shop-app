@@ -49,7 +49,11 @@ export const SUPPORT_PERMISSION_IDS = SUPPORT_PERMISSIONS.map((p) => p.id);
 export function supportOperation(
   method: string,
   path: string,
-): { permission?: SupportPermission; resource?: "inventoryItem"; id?: string } {
+): {
+  permission?: SupportPermission;
+  resource?: "inventoryItem" | "customer";
+  id?: string;
+} {
   const read = method === "GET" || method === "HEAD";
   if (method === 'POST' && path === '/translation/batch') return {};
   if (
@@ -92,11 +96,10 @@ export function supportOperation(
     return {};
   if (read && /^\/orders\/shop\/[^/]+(\/stats)?$/.test(path)) return {};
   if (read && /^\/shop-quotes\/[^/]+$/.test(path)) return {};
-  if (
-    read &&
-    /^\/users\/customers\/[^/]+\/(profile|orders|stats|notes)$/.test(path)
-  )
-    return {};
+  const customer = read
+    ? /^\/users\/customers\/([^/]+)\/(profile|orders|stats|notes)$/.exec(path)
+    : null;
+  if (customer) return { resource: "customer", id: customer[1] };
   if (read && /^\/karigar\/jobs\/[^/]+(\/cost-summary)?$/.test(path)) return {};
   if (read && /^\/karigar\/workshops\/[^/]+\/account(\/statement)?$/.test(path))
     return {};

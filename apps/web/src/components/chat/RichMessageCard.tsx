@@ -19,7 +19,13 @@ export function RichMessageCard({
   content?: string;
 }) {
   if (!messageType || messageType === "TEXT") return null;
-  if (messageType === 'SUPPORT_ACCESS' && typeof payload?.grantId === 'string') return <SupportGrantCard grantId={payload.grantId} />;
+  if (messageType === "SUPPORT_ACCESS") {
+    return typeof payload?.grantId === "string" ? (
+      <SupportGrantCard grantId={payload.grantId} />
+    ) : content ? (
+      <p className="break-words">{content}</p>
+    ) : null;
+  }
 
   if (messageType === "CATALOGUE_LINK" && payload) {
     return (
