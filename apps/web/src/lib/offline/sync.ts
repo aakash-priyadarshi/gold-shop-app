@@ -1,4 +1,8 @@
 import { api } from "@/lib/api";
+import {
+  getSupportToken,
+  onSupportSessionStarted,
+} from "@/lib/support-session";
 import { getDB, type OutboxOp } from "./db";
 
 /**
@@ -13,7 +17,10 @@ import { getDB, type OutboxOp } from "./db";
 
 const MAX_ATTEMPTS = 8;
 let flushing = false;
+let activeFlushController: AbortController | null = null;
 const listeners = new Set<() => void>();
+
+onSupportSessionStarted(() => activeFlushController?.abort());
 
 function crypoRandomId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -50,6 +57,7 @@ export async function enqueue(args: {
   body: Record<string, unknown>;
   clientId?: string;
 }): Promise<string> {
+  if (getSupportToken()) throw new Error('Offline changes are unavailable during support access');
   const id = args.clientId ?? crypoRandomId();
   const now = Date.now();
   const op: OutboxOp = {
@@ -74,6 +82,7 @@ export async function enqueue(args: {
 
 /** Number of ops still waiting to sync. */
 export async function pendingCount(): Promise<number> {
+  if (getSupportToken()) return 0;
   return getDB()
     .outbox.where("status")
     .anyOf("pending", "failed")
@@ -85,8 +94,11 @@ export async function pendingCount(): Promise<number> {
  * a single in-flight flush is enforced via the `flushing` guard.
  */
 export async function flushOutbox(): Promise<void> {
+  if (getSupportToken()) return;
   if (flushing) return;
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  const controller = new AbortController();
+  activeFlushController = controller;
   flushing = true;
   try {
     const db = getDB();
@@ -96,19 +108,37 @@ export async function flushOutbox(): Promise<void> {
       .sortBy("createdAt");
 
     for (const op of ops) {
+      if (getSupportToken() || controller.signal.aborted) return;
       if (op.attempts >= MAX_ATTEMPTS) continue;
       await db.outbox.update(op.id, { status: "syncing", updatedAt: Date.now() });
       notify();
+      if (getSupportToken() || controller.signal.aborted) {
+        await db.outbox.update(op.id, {
+          status: "pending",
+          updatedAt: Date.now(),
+        });
+        notify();
+        return;
+      }
       try {
         await api.request({
           url: op.endpoint,
           method: op.method,
           data: op.body,
+          signal: controller.signal,
         });
         // Success — drop the op from the queue.
         await db.outbox.delete(op.id);
         notify();
       } catch (err: any) {
+        if (controller.signal.aborted) {
+          await db.outbox.update(op.id, {
+            status: "pending",
+            updatedAt: Date.now(),
+          });
+          notify();
+          return;
+        }
         const httpStatus = err?.response?.status;
         // Client errors (4xx except 408/429) won't succeed on retry — give up
         // to avoid poisoning the queue, but keep the record for inspection.
@@ -130,6 +160,7 @@ export async function flushOutbox(): Promise<void> {
       }
     }
   } finally {
+    if (activeFlushController === controller) activeFlushController = null;
     flushing = false;
   }
 }

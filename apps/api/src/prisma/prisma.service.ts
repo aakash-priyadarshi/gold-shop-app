@@ -5,6 +5,8 @@ import {
   OnModuleInit,
 } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
+import { ForbiddenException } from '@nestjs/common';
+import { supportAccessContext } from '../common/support-access-context';
 import type { MetricsService } from "../modules/metrics/metrics.service";
 
 @Injectable()
@@ -37,6 +39,9 @@ export class PrismaService
 
     // Add middleware to time every query + handle connection errors
     this.$use(async (params, next) => {
+      if (supportAccessContext.getStore()?.readOnly && !['findUnique', 'findUniqueOrThrow', 'findFirst', 'findFirstOrThrow', 'findMany', 'count', 'aggregate', 'groupBy'].includes(params.action)) {
+        throw new ForbiddenException('Support browsing cannot change stored data');
+      }
       const startTime = performance.now();
       const model = params.model || "unknown";
       const action = params.action || "unknown";

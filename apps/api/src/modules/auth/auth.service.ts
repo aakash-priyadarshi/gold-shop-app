@@ -1123,7 +1123,7 @@ export class AuthService {
   /**
    * Get current user profile with shop details
    */
-  async getMe(userId: string) {
+  async getMe(userId: string, supportShopId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -1132,6 +1132,7 @@ export class AuthService {
             id: true,
             shopName: true,
             country: true,
+            currency: true,
             city: true,
             isVerified: true,
             isActive: true,
@@ -1164,7 +1165,8 @@ export class AuthService {
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
       shop:
-        (user.activeShopId
+          (supportShopId ? user.shops?.find((shop) => shop.id === supportShopId) : undefined) ??
+          (user.activeShopId
           ? user.shops?.find((shop) => shop.id === user.activeShopId)
           : undefined) ??
         user.shops?.[0] ??

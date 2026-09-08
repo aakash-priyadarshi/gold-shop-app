@@ -11,6 +11,8 @@ datasource db {
 }
 
 model User {
+  supportGrantsGiven SupportAccessGrant[] @relation("SupportSeller")
+  supportGrantsReceived SupportAccessGrant[] @relation("SupportAdmin")
   id                   String                  @id @default(uuid())
   email                String                  @unique
   phone                String?                 @unique
@@ -342,6 +344,7 @@ model Session {
 }
 
 model Shop {
+  supportAccessGrants SupportAccessGrant[]
   id                        String                @id @default(uuid())
   userId                    String
   shopName                  String
@@ -2206,6 +2209,7 @@ enum RfqSource {
 }
 
 enum MessageType {
+  SUPPORT_ACCESS
   TEXT
   ATTACHMENT
   SYSTEM
@@ -2916,7 +2920,60 @@ model QuoteAnomaly {
 // IN-APP CHAT SYSTEM (Anti-Circumvention)
 // ═══════════════════════════════════════════
 
+model SupportAccessGrant {
+  id String @id @default(uuid())
+  sellerId String
+  adminId String
+  shopId String
+  conversationId String
+  reason String
+  status String @default("PENDING")
+  permissions String[] @default([])
+  recordingEnabled Boolean @default(false)
+  createdAt DateTime @default(now())
+  approvedAt DateTime?
+  expiresAt DateTime?
+  revokedAt DateTime?
+  seller User @relation("SupportSeller", fields: [sellerId], references: [id])
+  admin User @relation("SupportAdmin", fields: [adminId], references: [id])
+  shop Shop @relation(fields: [shopId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sessions SupportAccessSession[]
+  events SupportAccessAuditEvent[]
+  @@index([sellerId, createdAt])
+  @@index([adminId, status])
+}
+
+model SupportAccessSession {
+  id String @id @default(uuid())
+  grantId String
+  tokenHash String @unique
+  startedAt DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  expiresAt DateTime
+  endedAt DateTime?
+  endReason String?
+  grant SupportAccessGrant @relation(fields: [grantId], references: [id])
+  events SupportAccessAuditEvent[]
+  @@index([grantId])
+}
+
+model SupportAccessAuditEvent {
+  id String @id @default(uuid())
+  grantId String
+  sessionId String?
+  actorId String
+  action String
+  resource String?
+  outcome String
+  createdAt DateTime @default(now())
+  grant SupportAccessGrant @relation(fields: [grantId], references: [id])
+  session SupportAccessSession? @relation(fields: [sessionId], references: [id])
+  @@index([grantId, createdAt])
+}
+
 model Conversation {
+  supportAccessGrants SupportAccessGrant[]
   id        String             @id @default(uuid())
   orderId   String?            @unique
   rfqId     String?

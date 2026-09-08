@@ -636,6 +636,8 @@ const navItems: NavItem[] = [
     icon: Settings,
     roles: ["SHOPKEEPER"],
   },
+  { label: 'Support access', href: '/dashboard/shop/support-access', icon: Shield, roles: ['SHOPKEEPER'] },
+  { label: 'Support access', href: '/dashboard/admin/support-access', icon: Shield, roles: ['ADMIN'] },
 
   // Customer routes
   {

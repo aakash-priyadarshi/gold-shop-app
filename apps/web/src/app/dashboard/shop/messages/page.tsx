@@ -1,4 +1,5 @@
 "use client";
+import { SupportAccessPanel } from '@/components/support-access/SupportAccessPanel';
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { RichMessageCard } from "@/components/chat/RichMessageCard";
@@ -359,6 +360,12 @@ export default function ShopMessagesPage() {
                         <T>Anti-circumvention active</T>
                       </div>
                     </div>
+                  </div>
+                  <div className="border-b p-3">
+                    <SupportAccessPanel
+                      key={selectedConversation}
+                      conversationId={selectedConversation}
+                    />
                   </div>
 
                   {/* Violation warning banner */}

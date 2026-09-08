@@ -37,6 +37,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Set only by the global support guard after server-side grant validation.
+    if (context.switchToHttp().getRequest().supportAccess) return true;
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),

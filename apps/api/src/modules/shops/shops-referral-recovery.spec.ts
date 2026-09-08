@@ -1,3 +1,4 @@
+import { NotFoundException } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import {
   encodePendingReferral,
@@ -106,6 +107,39 @@ describe("ShopsService pending referral recovery", () => {
       "INVITE123",
     );
     expect(redis.del).toHaveBeenCalledWith(pendingReferralKey("user-1"));
+  });
+
+  it("returns only an owned support shop and hides its private fields", async () => {
+    prisma.shop.findFirst.mockResolvedValue({
+      id: "support-shop",
+      userId: "user-1",
+      managerPinHash: "secret",
+      bankAccountDetails: { account: "private" },
+      metalRates: [],
+      finishPricing: [],
+    });
+
+    await expect(
+      service.findByUserId("user-1", "support-shop"),
+    ).resolves.toEqual({
+      id: "support-shop",
+      userId: "user-1",
+      metalRates: [],
+      finishPricing: [],
+    });
+    expect(prisma.shop.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "support-shop", userId: "user-1" },
+      }),
+    );
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns the normal not-found error for an unavailable support shop", async () => {
+    prisma.shop.findFirst.mockResolvedValue(null);
+    await expect(
+      service.findByUserId("user-1", "other-shop"),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it("keeps the pending key and its TTL on a failed recovery retry", async () => {

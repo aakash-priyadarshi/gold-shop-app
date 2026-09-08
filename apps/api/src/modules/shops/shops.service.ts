@@ -597,7 +597,20 @@ export class ShopsService {
     };
   }
 
-  async findByUserId(userId: string) {
+  async findByUserId(userId: string, supportShopId?: string) {
+    // Support browsing must neither select another shop nor trigger referral recovery.
+    if (supportShopId) {
+      const supportShop = await this.prisma.shop.findFirst({
+        where: { id: supportShopId, userId },
+        include: { metalRates: true, finishPricing: true },
+      });
+      if (!supportShop)
+        throw new NotFoundException("Shop not found for this user");
+      const { managerPinHash, bankAccountDetails, ...safeShop } = supportShop;
+      void managerPinHash;
+      void bankAccountDetails;
+      return safeShop;
+    }
     // For multi-shop support, find the user's active shop or the first shop
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -1039,15 +1052,15 @@ export class ShopsService {
   /**
    * Get shop settings for the current user
    */
-  async getShopSettings(userId: string) {
+  async getShopSettings(userId: string, supportShopId?: string) {
     // For multi-shop support: get active shop or first shop for user
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { activeShopId: true },
     });
 
-    const shopWhere = user?.activeShopId
-      ? { id: user.activeShopId, userId }
+    const shopWhere = (supportShopId || user?.activeShopId)
+      ? { id: supportShopId || user!.activeShopId!, userId }
       : { userId };
     const existing = await this.prisma.shop.findFirst({
       where: shopWhere,
@@ -1056,7 +1069,7 @@ export class ShopsService {
     if (!existing) {
       throw new NotFoundException("Shop not found for this user");
     }
-    await this.priceRebase.ensureShopPricesMatchCurrency(existing.id);
+    if (!supportShopId) await this.priceRebase.ensureShopPricesMatchCurrency(existing.id);
 
     const shop = await this.prisma.shop.findFirst({
       where: shopWhere,

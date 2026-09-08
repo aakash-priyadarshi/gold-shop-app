@@ -1,6 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import axios from "axios";
+import { getSupportToken, exitSupportSession, getPreferenceStorage } from './support-session';
 import type { OfferEmailBlock, OfferEmailDesign } from "@gold-shop/shared";
 export type { OfferEmailAnimation, OfferEmailBlock, OfferEmailDesign } from "@gold-shop/shared";
 
@@ -186,6 +187,7 @@ api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     // Add auth token — check both persistent (localStorage) and session storage
     const token =
+      getSupportToken() ||
       localStorage.getItem("token") ||
       sessionStorage.getItem("token") ||
       readCookie("token");
@@ -212,7 +214,7 @@ api.interceptors.request.use((config) => {
 
     // Add currency header from preferences store
     try {
-      const prefsJson = localStorage.getItem("gold-shop-preferences");
+      const prefsJson = getPreferenceStorage().getItem("gold-shop-preferences");
       if (prefsJson) {
         const prefs = JSON.parse(prefsJson);
         if (prefs.state?.currency) {
@@ -231,6 +233,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Never retry a support request using the real admin's refresh token.
+    if (typeof window !== 'undefined' && getSupportToken()) {
+      error.supportAccessFailure = true;
+      if (error.response?.status === 401) exitSupportSession();
+      return Promise.reject(error);
+    }
     const originalRequest = error.config as typeof error.config & {
       _retry?: boolean;
     };

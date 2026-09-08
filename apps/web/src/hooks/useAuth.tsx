@@ -4,8 +4,10 @@ import OrivraaLoader, {
     useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
+import { getSupportToken, exitSupportSession } from '@/lib/support-session';
 import { sanitizeRedirectUrl } from "@/lib/redirect-validation";
 import { syncShopCountryToPreferences } from "@/lib/shop-settings";
+import { usePreferencesStore, type Language } from '@/store/preferences';
 import { usePathname, useRouter } from "next/navigation";
 import React, {
     createContext,
@@ -183,6 +185,7 @@ function clearAuthCookie(name: string) {
 const getStoredToken = () => {
   if (typeof window === "undefined") return null;
   return (
+    getSupportToken() ||
     localStorage.getItem(TOKEN_KEY) ||
     sessionStorage.getItem(TOKEN_KEY) ||
     getCookieValue(TOKEN_KEY)
@@ -343,16 +346,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set user role cookie for Edge Middleware routing
       const hadRememberMe = localStorage.getItem("orivraa_remember_me") === "1";
       const maxAge = hadRememberMe ? REMEMBERED_TOKEN_MAX_AGE : undefined;
-      setAuthCookie("orivraa_user_role", user.role, maxAge);
+      if (!getSupportToken()) setAuthCookie("orivraa_user_role", user.role, maxAge);
 
       // Shop's country/currency is the overriding factor for sellers.
       // Apply it now so geo-detection (which runs earlier) doesn't win.
       if (user.role === "SHOPKEEPER" && user.shop?.country) {
         syncShopCountryToPreferences(user.shop);
       }
+      if (getSupportToken()) usePreferencesStore.setState({ language: user.preferredLanguage as Language });
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 401 || status === 403) {
+        if (getSupportToken() || error.supportAccessFailure) { exitSupportSession(); return; }
         clearTokens();
         setState({
           user: null,
@@ -652,6 +657,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logout function
   const logout = useCallback(async () => {
+    if (getSupportToken()) {
+      try { await api.post('/support-access/session/end'); } finally { exitSupportSession(); }
+      return;
+    }
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
     try {

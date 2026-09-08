@@ -3,6 +3,7 @@
 import { ClipboardList, ExternalLink, ShoppingBag, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { SupportGrantCard } from '@/components/support-access/SupportAccessPanel';
 
 /**
  * Renders rich message types: CATALOGUE_LINK, PRODUCT_CARD, RFQ_ACTION
@@ -18,6 +19,15 @@ export function RichMessageCard({
   content?: string;
 }) {
   if (!messageType || messageType === "TEXT") return null;
+  if (messageType === "SUPPORT_ACCESS") {
+    const grantId =
+      typeof payload?.grantId === "string" ? payload.grantId.trim() : "";
+    return grantId ? (
+      <SupportGrantCard grantId={grantId} />
+    ) : content ? (
+      <p className="break-words">{content}</p>
+    ) : null;
+  }
 
   if (messageType === "CATALOGUE_LINK" && payload) {
     return (

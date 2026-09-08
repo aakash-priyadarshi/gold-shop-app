@@ -1,3 +1,4 @@
+import { getSupportToken } from '@/lib/support-session';
 import Dexie, { type Table } from "dexie";
 
 /**
@@ -111,11 +112,13 @@ export function getDB(): OrivraaDB {
 
 /** Cache a value under `key`. */
 export async function kvSet(key: string, value: unknown): Promise<void> {
+  if (getSupportToken()) return;
   await getDB().kv.put({ key, value, updatedAt: Date.now() });
 }
 
 /** Read a cached value (or undefined). */
 export async function kvGet<T = unknown>(key: string): Promise<T | undefined> {
+  if (getSupportToken()) return undefined;
   const row = await getDB().kv.get(key);
   return row?.value as T | undefined;
 }

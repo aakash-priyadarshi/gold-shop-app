@@ -173,8 +173,8 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current user shop" })
-  async getMyShop(@CurrentUser("id") userId: string) {
-    return this.shopsService.findByUserId(userId);
+  async getMyShop(@CurrentUser() user: any) {
+    return this.shopsService.findByUserId(user.id, user.supportAccess ? user.shopId : undefined);
   }
 
   @Get("my-shops")
@@ -238,8 +238,8 @@ export class ShopsController {
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get shop settings" })
-  async getMyShopSettings(@CurrentUser("id") userId: string) {
-    return this.shopsService.getShopSettings(userId);
+  async getMyShopSettings(@CurrentUser() user: any) {
+    return this.shopsService.getShopSettings(user.id, user.supportAccess ? user.shopId : undefined);
   }
 
   @Patch("my-shop/settings")

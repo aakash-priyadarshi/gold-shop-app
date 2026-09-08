@@ -1,3 +1,4 @@
+import { supportAccessContext } from '../../common/support-access-context';
 import { ConflictException, Injectable, Logger } from "@nestjs/common";
 import { CurrencyCode, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -125,6 +126,7 @@ export class ShopPriceRebaseService {
   async ensureShopPricesMatchCurrency(
     shopId: string,
   ): Promise<ShopPriceRebaseResult | null> {
+    if (supportAccessContext.getStore()?.readOnly) return null;
     const existing = this.inFlight.get(shopId);
     if (existing) return existing;
 

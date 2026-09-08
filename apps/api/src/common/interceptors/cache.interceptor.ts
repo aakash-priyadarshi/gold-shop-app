@@ -55,6 +55,7 @@ export class RedisCacheInterceptor implements NestInterceptor {
   ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
+    if (request.supportAccess) return next.handle();
 
     // Only cache GET requests
     if (request.method !== 'GET') {

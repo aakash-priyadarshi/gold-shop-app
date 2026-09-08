@@ -3,11 +3,13 @@ import { Prisma } from "@prisma/client";
 import { BackendTaxEngineService } from "../core/pricing/services/backend-tax-engine.service";
 import { PlanLimitsService } from "../core/subscriptions/plan-limits.service";
 import { InvoicesService } from "./invoices.service";
+import { supportAccessContext } from '../../common/support-access-context';
 import { SaleBuilderService } from "./sale-builder.service";
 
 const invoiceCreate = jest.fn();
 const invoiceSequenceUpsert = jest.fn();
 const mockPrisma: any = {
+  invoiceSettings: { findUnique: jest.fn(), create: jest.fn() },
   shop: { findUnique: jest.fn() },
   invoice: {
     findFirst: jest.fn(),
@@ -98,6 +100,14 @@ describe("SaleBuilderService gemstone snapshots", () => {
 
 describe("InvoicesService Sri Lanka invoice compliance", () => {
   let service: InvoicesService;
+
+  it('returns default invoice settings without saving during support browsing', async () => {
+    mockPrisma.invoiceSettings.findUnique.mockResolvedValue(null);
+    mockPrisma.shop.findUnique.mockResolvedValue({ shopName: 'Example Jewellers', address: 'Main Road', city: 'Kathmandu' });
+    const result = await supportAccessContext.run({ readOnly: true, actorId: 'admin' }, () => service.getSettings('shop'));
+    expect(result).toMatchObject({ id: null, shopId: 'shop', shopNameOnBill: 'Example Jewellers', billTemplateId: 'classic' });
+    expect(mockPrisma.invoiceSettings.create).not.toHaveBeenCalled();
+  });
 
   const lineItems = [
     {

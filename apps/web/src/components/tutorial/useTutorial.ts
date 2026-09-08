@@ -138,6 +138,8 @@ const INVOICE_DETAIL_TOUR_STEPS: DriveStep[] = [
 ];
 
 const TOUR_STEPS: Record<string, DriveStep[]> = {
+  '/dashboard/shop/support-access': [{ element: '[data-tour="support-access-permissions"]', popover: { title: 'Support access', description: 'Review the named admin, expiry and selected permissions. Revoke access or inspect recent activity here.' } }],
+  '/dashboard/admin/support-access': [{ element: '[data-tour="support-access-permissions"]', popover: { title: 'Seller-approved access', description: 'Request access in a seller conversation. Open the seller dashboard only after the seller approves. Each session lasts up to one hour.' } }],
   "/dashboard/shop/pos": [
     {
       element: "[data-tour='pos-register-shift']",
