@@ -862,13 +862,23 @@ export default function ShopProductsPage() {
   };
 
   const addImage = () => {
-    if (newImageUrl && !formData.images.includes(newImageUrl)) {
-      setFormData({
-        ...formData,
-        images: [...formData.images, newImageUrl],
+    const imageUrl = newImageUrl.trim();
+    if (!imageUrl || formData.images.includes(imageUrl)) return;
+
+    if (formData.images.length >= 3) {
+      toast({
+        variant: "destructive",
+        title: t("Maximum Images Reached"),
+        description: t("You can upload a maximum of 3 images per product"),
       });
-      setNewImageUrl("");
+      return;
     }
+
+    setFormData({
+      ...formData,
+      images: [...formData.images, imageUrl],
+    });
+    setNewImageUrl("");
   };
 
   const removeImage = (url: string) => {
@@ -2469,7 +2479,7 @@ export default function ShopProductsPage() {
                             </div>
                           )}
                           <Image
-                            src={getImageUrl(url, "medium")}
+                            src={getImageUrl(url, "thumbnail")}
                             alt={`Product ${idx + 1}`}
                             className="h-32 w-32 rounded-xl border object-cover"
                             width={128}

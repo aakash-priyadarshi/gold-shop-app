@@ -165,6 +165,43 @@ describe("AiPhotoEnhancer", () => {
     expect(screen.getByText("Original and enhanced photos selected")).toBeInTheDocument();
   });
 
+  it("preserves earlier keep-both selections when keeping all remaining versions", async () => {
+    vi.mocked(inventoryApi.enhanceImages).mockResolvedValue({
+      data: {
+        creditsCharged: 4,
+        creditsRefunded: 0,
+        balanceAfter: 16,
+        results: images.map((sourceUrl, index) => ({
+          sourceUrl,
+          status: "success",
+          enhancedUrl: `https://images.orivraa.com/product/enhanced-${index + 1}.jpg`,
+        })),
+      },
+    } as never);
+
+    render(
+      <AiPhotoEnhancer
+        shopId="shop-1"
+        images={images}
+        maxImages={4}
+        onChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Enhance all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Enhance and review" }));
+
+    const keepBothButtons = await screen.findAllByRole("button", {
+      name: "Keep both",
+    });
+    fireEvent.click(keepBothButtons[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Keep all versions" }));
+
+    expect(
+      screen.getAllByText("Original and enhanced photos selected"),
+    ).toHaveLength(2);
+  });
+
   it("disables keeping both when the image limit is full", async () => {
     vi.mocked(inventoryApi.enhanceImages).mockResolvedValue({
       data: {

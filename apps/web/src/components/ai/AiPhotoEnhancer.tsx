@@ -242,9 +242,11 @@ export function AiPhotoEnhancer({
     if (bothAdditions.length) {
       onChange([...images, ...bothAdditions.map((result) => result.enhancedUrl!)]);
     }
-    setKeptBoth(
-      new Set(pendingSuccessfulResults.map((result) => result.sourceUrl)),
-    );
+    setKeptBoth((current) => {
+      const next = new Set(current);
+      pendingSuccessfulResults.forEach((result) => next.add(result.sourceUrl));
+      return next;
+    });
     setAccepted(new Set(successfulResults.map((result) => result.sourceUrl)));
   };
 
