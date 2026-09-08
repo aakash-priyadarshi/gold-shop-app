@@ -85,6 +85,13 @@ export function AiPhotoEnhancer({
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
   const [keptBoth, setKeptBoth] = useState<Set<string>>(new Set());
   const requestIdRef = useRef(0);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   const targets = useMemo(
     () =>
@@ -284,7 +291,8 @@ export function AiPhotoEnhancer({
           if (!next) {
             requestIdRef.current += 1;
             setBusy(false);
-            window.setTimeout(resetDialog, 200);
+            if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+            resetTimerRef.current = setTimeout(resetDialog, 200);
           }
         }}
       >

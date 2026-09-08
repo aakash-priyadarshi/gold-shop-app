@@ -40,6 +40,9 @@ describe("MailService template rendering", () => {
     const template = await (service as any).loadTemplate("recovery-offer");
     const html = template(
       (service as any).buildTemplateContext({
+        emailSubject: "A personal welcome-back offer",
+        emailHeading: "We made Orivraa better for your shop",
+        emailBody: "The reliability improvements are now live.",
         firstName: "Alice",
         shopName: "Alice Gold",
         days: 50,
@@ -54,6 +57,9 @@ describe("MailService template rendering", () => {
     );
 
     expect(html).toContain("50 days free");
+    expect(html).toContain("A personal welcome-back offer");
+    expect(html).toContain("We made Orivraa better for your shop");
+    expect(html).toContain("The reliability improvements are now live.");
     expect(html).toContain("Founder &amp; CEO, Orivraa");
     expect(html).toContain("luxury-gold-globe.png");
     expect(html).toContain("Return to Orivraa and claim Pro");
@@ -89,7 +95,7 @@ describe("MailService template rendering", () => {
     expect(html).toContain("then 10% off the paid plan you choose");
     expect(html).toContain("Buy a plan with 10% off");
     expect(html).toContain(
-      "<p style=\"margin:0 0 14px;font-size:16px;color:#344054\">A seasonal offer for your shop.</p>",
+      '<p style="margin:0 0 14px;font-size:16px;color:#344054">A seasonal offer for your shop.</p>',
     );
     expect(html).toContain("/offers/unsubscribe?token");
     expect(html).toContain("Unsubscribe from future offers");
@@ -118,6 +124,14 @@ describe("MailService template rendering", () => {
       template: "recovery-offer",
       context: {},
       idempotencyKey: "recovery-offer-1",
+      attachments: [
+        {
+          filename: "header.gif",
+          content: Buffer.from("GIF89a"),
+          contentType: "image/gif",
+          contentId: "offer-header-1",
+        },
+      ],
     });
 
     expect(result).toEqual({ success: true, messageId: "smtp-message-1" });
@@ -126,7 +140,62 @@ describe("MailService template rendering", () => {
         headers: {
           "Resend-Idempotency-Key": "recovery-offer-1",
         },
+        attachments: [
+          {
+            filename: "header.gif",
+            content: Buffer.from("GIF89a"),
+            contentType: "image/gif",
+            cid: "offer-header-1",
+            contentDisposition: "inline",
+          },
+        ],
       }),
+    );
+  });
+
+  it("passes inline image content IDs to the Resend API", async () => {
+    const resendService = new MailService({
+      get: (_key: string, fallback?: unknown) => fallback,
+    } as any);
+    const send = jest.fn().mockResolvedValue({
+      data: { id: "resend-inline-1" },
+      error: null,
+    });
+    Object.assign(resendService as any, {
+      provider: "resend",
+      resend: { emails: { send } },
+    });
+    jest
+      .spyOn(resendService as any, "loadTemplate")
+      .mockResolvedValue(() => '<img src="cid:offer-header-1" />');
+
+    await resendService.send({
+      to: "owner@example.com",
+      subject: "Festival offer",
+      template: "festival-offer",
+      context: {},
+      attachments: [
+        {
+          filename: "header.gif",
+          content: Buffer.from("GIF89a"),
+          contentType: "image/gif",
+          contentId: "offer-header-1",
+        },
+      ],
+    });
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: [
+          {
+            filename: "header.gif",
+            content: Buffer.from("GIF89a"),
+            contentType: "image/gif",
+            contentId: "offer-header-1",
+          },
+        ],
+      }),
+      undefined,
     );
   });
 

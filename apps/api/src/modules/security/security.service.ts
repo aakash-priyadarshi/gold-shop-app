@@ -51,8 +51,10 @@ export interface IpProfile {
 // ─── SQL / XSS injection patterns ──────────────────────────
 const INJECTION_PATTERNS = [
   // SQL injection
-  /(\b(union|select|insert|update|delete|drop|alter|create|exec|execute)\b.*\b(from|into|table|where|set|values)\b)/i,
-  /(--|#|\/\*|\*\/|;[\s]*$)/,
+  /(\b(union|select|insert|update|delete|drop|alter|create|exec|execute)\b.*\b(from|into|table|where|set|values)\b)/is,
+  // Hashes, dashes and semicolons alone are normal copy/URL characters.
+  // A quote followed by a comment marker still signals SQL termination.
+  /(['"]\s*(--|#)|\/\*|\*\/)/,
   /(\b(or|and)\b\s+[\d'"]\s*[=<>])/i,
   /([\'"]\s*(or|and)\s*[\'"]\s*[=])/i,
   /(\bsleep\s*\(|\bbenchmark\s*\()/i,
@@ -158,7 +160,9 @@ export class SecurityService {
     }
 
     // 2. Detect injection in body/query (skipped for chatbot routes to prevent false positive blocks of legitimate sellers discussing database concepts)
-    const isChatbotRoute = req.route?.includes("/tickets/seller-chat") || req.route?.includes("/tickets/ai-chat");
+    const isChatbotRoute =
+      req.route?.includes("/tickets/seller-chat") ||
+      req.route?.includes("/tickets/ai-chat");
     if (req.body && !isChatbotRoute) {
       const injectionResult = this.detectInjection(req.body);
       if (injectionResult) {
@@ -728,11 +732,23 @@ export class SecurityService {
     return profile;
   }
 
-  private detectInjection(body: any): string | null {
-    const bodyStr = typeof body === "string" ? body : JSON.stringify(body);
-    for (const pattern of INJECTION_PATTERNS) {
-      if (pattern.test(bodyStr)) {
-        return pattern.source.substring(0, 80);
+  private detectInjection(body: unknown): string | null {
+    // Scan decoded keys and values separately. Serializing the entire body
+    // joins unrelated fields (e.g. subject "Product update" and copy "from
+    // catalog to customer") into what looks like a single SQL statement.
+    const pending: unknown[] = [body];
+    while (pending.length > 0) {
+      const value = pending.pop();
+      if (typeof value === "string") {
+        for (const pattern of INJECTION_PATTERNS) {
+          if (pattern.test(value)) {
+            return pattern.source.substring(0, 80);
+          }
+        }
+      } else if (value !== null && typeof value === "object") {
+        for (const [key, child] of Object.entries(value)) {
+          pending.push(key, child);
+        }
       }
     }
     return null;

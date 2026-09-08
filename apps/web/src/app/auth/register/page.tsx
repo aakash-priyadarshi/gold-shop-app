@@ -63,6 +63,7 @@ import {
   LockClosedIcon,
   MapPinIcon,
   PhoneIcon,
+  SparklesIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -397,6 +398,40 @@ function RegisterForm() {
     resolver: zodResolver(shopkeeperSchema),
   });
 
+  // Lead Outreach Campaign pre-fill
+  const leadShopName = searchParams.get("shopName")?.trim();
+  const leadEmail = searchParams.get("email")?.trim();
+  const leadCity = searchParams.get("city")?.trim();
+  const leadCountry = searchParams.get("country")?.trim().toUpperCase();
+  const leadPromo = searchParams.get("promo")?.trim();
+  const leadId = searchParams.get("leadId")?.trim();
+  const isLeadOutreach =
+    searchParams.get("ref") === "lead_outreach" ||
+    Boolean(leadPromo) ||
+    Boolean(leadId);
+
+  useEffect(() => {
+    if (isLeadOutreach) {
+      setActiveTab("shopkeeper");
+      if (leadShopName) shopkeeperForm.setValue("shopName", leadShopName);
+      if (leadEmail) shopkeeperForm.setValue("email", leadEmail);
+      if (leadCity) shopkeeperForm.setValue("city", leadCity);
+      if (
+        leadCountry &&
+        ["NP", "IN", "US", "AE", "UK", "EU", "LK"].includes(leadCountry)
+      ) {
+        shopkeeperForm.setValue("country", leadCountry as any);
+      }
+    }
+  }, [
+    isLeadOutreach,
+    leadShopName,
+    leadEmail,
+    leadCity,
+    leadCountry,
+    shopkeeperForm,
+  ]);
+
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -490,6 +525,7 @@ function RegisterForm() {
         role: "SHOPKEEPER" as UserRole,
         turnstileToken,
         referralCode:
+          leadId ||
           searchParams.get("ref")?.trim() ||
           sessionStorage.getItem("orivraa_referral_code") ||
           undefined,
@@ -768,6 +804,27 @@ function RegisterForm() {
         </CardHeader>
 
         <CardContent>
+          {isLeadOutreach && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-amber-100/60 dark:from-amber-950/40 dark:to-amber-900/20 border border-amber-300 dark:border-amber-700/60 rounded-xl flex items-center gap-3 animate-in fade-in duration-200">
+              <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-700 dark:text-amber-300 shrink-0">
+                <SparklesIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                  <T>60-Day Complimentary PRO Access Unlocked!</T>
+                </div>
+                <p className="text-xs text-amber-900/80 dark:text-amber-200/80 mt-0.5">
+                  <T>Welcome</T>{" "}
+                  {leadShopName ? <strong>{leadShopName}</strong> : ""}{"! "}
+                  <T>
+                    Complete registration below to start your 60-day free trial
+                    — no credit card required.
+                  </T>
+                </p>
+              </div>
+            </div>
+          )}
+
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as "customer" | "shopkeeper")}

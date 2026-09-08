@@ -11,7 +11,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { CurrencyCode, UserRole, UserStatus } from "@prisma/client";
+import { CurrencyCode, LeadStatus, UserRole, UserStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { RedisService } from "../../common/redis";
@@ -373,6 +373,30 @@ export class AuthService {
         dto.email,
         dto.referralCode,
       );
+
+      // Auto-attribute lead conversion if registered email or referral matches a Lead
+      try {
+        const lead = await this.prisma.lead.findFirst({
+          where: {
+            OR: [
+              { email: dto.email.trim().toLowerCase() },
+              ...(dto.referralCode ? [{ id: dto.referralCode }] : []),
+            ],
+          },
+        });
+        if (lead) {
+          await this.prisma.lead.update({
+            where: { id: lead.id },
+            data: {
+              status: LeadStatus.WON,
+              convertedUserId: result.user.id,
+              convertedShopId: result.shop.id,
+            },
+          });
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not attribute lead conversion: ${err?.message}`);
+      }
     }
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);

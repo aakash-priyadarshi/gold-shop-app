@@ -134,7 +134,7 @@ export function maxBytesForType(type: DetectedFileType): number {
 }
 
 export function isSafeObjectKey(key: string): boolean {
-  return /^(?:product|profile|rfq|designs|kyc|chat|certificate|review-proof)\/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp|gif|avif|mp4|webm|pdf|doc|docx)$/i.test(key) &&
+  return /^(?:product|profile|rfq|designs|kyc|chat|certificate|review-proof|email)\/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp|gif|avif|mp4|webm|pdf|doc|docx)$/i.test(key) &&
     !key.includes("..") &&
     !key.includes("\\");
 }

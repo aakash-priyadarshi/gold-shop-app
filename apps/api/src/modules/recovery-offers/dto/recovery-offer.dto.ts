@@ -1,5 +1,6 @@
 import { PartialType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import { OFFER_EMAIL_THEMES, type OfferEmailTheme } from "@gold-shop/shared";
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -28,8 +29,19 @@ export const RECOVERY_OFFER_DELIVERY_TIMINGS = [
 export type RecoveryOfferDeliveryTiming =
   (typeof RECOVERY_OFFER_DELIVERY_TIMINGS)[number];
 
-export const OFFER_CAMPAIGN_KINDS = ["RECOVERY", "FESTIVAL"] as const;
+export const OFFER_CAMPAIGN_KINDS = [
+  "RECOVERY",
+  "FESTIVAL",
+  "PRODUCT_UPDATE",
+] as const;
 export type OfferCampaignKindInput = (typeof OFFER_CAMPAIGN_KINDS)[number];
+export const OFFER_EMAIL_IMAGE_MODES = [
+  "KEEP",
+  "DEFAULT",
+  "URL",
+  "UPLOAD",
+] as const;
+export type OfferEmailImageMode = (typeof OFFER_EMAIL_IMAGE_MODES)[number];
 
 export class FestivalCalendarQueryDto {
   @IsOptional()
@@ -62,7 +74,7 @@ export class CreateOfferCampaignDto {
   kind: OfferCampaignKindInput;
 
   @IsInt()
-  @Min(1)
+  @Min(0)
   @Max(90)
   complimentaryDays: number;
 
@@ -99,6 +111,19 @@ export class CreateOfferCampaignDto {
   })
   @MaxLength(500)
   imageUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https:\/\/\S+$/i, {
+    message: "ctaUrl must be an https URL or empty",
+  })
+  @MaxLength(500)
+  ctaUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  ctaLabel?: string | null;
 }
 
 export class UpdateOfferCampaignDto extends PartialType(
@@ -107,6 +132,86 @@ export class UpdateOfferCampaignDto extends PartialType(
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+}
+
+export class UpdateOfferCampaignEmailDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  emailSubject: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  emailHeading: string;
+
+  @IsString()
+  @MinLength(10)
+  @MaxLength(4000)
+  emailBody: string;
+
+  @IsIn(OFFER_EMAIL_IMAGE_MODES)
+  imageMode: OfferEmailImageMode;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https?:\/\/\S+$/i, {
+    message: "imageUrl must be an http(s) URL",
+  })
+  @MaxLength(500)
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https:\/\/\S+$/i, {
+    message: "ctaUrl must be an https URL or empty",
+  })
+  @MaxLength(500)
+  ctaUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  ctaLabel?: string | null;
+}
+
+/**
+ * Block-based design saved by the advanced product-update email builder.
+ * Blocks are deeply validated by parseOfferEmailDesign in the service —
+ * class-validator only checks the envelope.
+ */
+export class SaveOfferCampaignEmailDesignDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  preheader?: string;
+
+  @IsOptional()
+  @IsIn(OFFER_EMAIL_THEMES)
+  theme?: OfferEmailTheme;
+
+  /** Optimistic concurrency for studio drafts; older clients can omit it. */
+  @IsOptional()
+  @IsDateString()
+  expectedUpdatedAt?: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
+  emailSubject: string;
+
+  @IsArray()
+  @ArrayMaxSize(40)
+  // Without an element type, implicit conversion treats each block as an
+  // Array. Keep plain objects for the service's per-block validation.
+  @Type(() => Object)
+  blocks: unknown[];
+}
+
+export class ClearOfferCampaignEmailDesignDto {
+  /** Prevents an older editor session from removing a newer saved design. */
+  @IsDateString()
+  expectedUpdatedAt: string;
 }
 
 export class PreviewRecoveryOffersDto {

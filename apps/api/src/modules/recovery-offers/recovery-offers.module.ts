@@ -7,6 +7,7 @@ import { RecoveryOfferProcessor } from "./recovery-offer.processor";
 import { RecoveryOffersWebhookController } from "./recovery-offers.webhook.controller";
 import { RECOVERY_OFFERS_QUEUE } from "./recovery-offers.service";
 import { FestivalCalendarService } from "./festival-calendar.service";
+import { EmailDesignRendererService } from "./email-design-renderer.service";
 
 @Module({
   imports: [
@@ -18,7 +19,8 @@ import { FestivalCalendarService } from "./festival-calendar.service";
     RecoveryOffersService,
     RecoveryOfferProcessor,
     FestivalCalendarService,
+    EmailDesignRendererService,
   ],
-  exports: [RecoveryOffersService],
+  exports: [RecoveryOffersService, FestivalCalendarService],
 })
 export class RecoveryOffersModule {}

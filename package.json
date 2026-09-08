@@ -13,6 +13,7 @@
     "seo:submit-sitemap": "tsx scripts/submit-sitemap-to-google.ts",
     "seo:submit-urls": "tsx scripts/submit-urls-to-google.ts",
     "seo:submit-indexnow": "tsx scripts/submit-urls-to-indexnow.ts",
+    "lead-bot": "tsx scripts/lead-bot/index.ts",
     "db:generate": "cd apps/api && npx prisma generate",
     "db:migrate": "cd apps/api && npx prisma migrate dev",
     "db:seed": "cd apps/api && npx prisma db seed",

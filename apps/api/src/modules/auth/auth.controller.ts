@@ -52,6 +52,7 @@ const IMAGE_UPLOAD_TYPES = new Set([
   "kyc",
   "review-proof",
   "certificate",
+  "email",
   "chat",
 ]);
 
@@ -312,6 +313,10 @@ export class AuthController {
     if (operation === "upload") {
       if (!uploadType || !IMAGE_UPLOAD_TYPES.has(uploadType)) {
         throw new BadRequestException("A supported uploadType is required");
+      }
+      // Campaign email media is managed from the admin offers console only.
+      if (uploadType === "email" && user.role !== "ADMIN") {
+        throw new ForbiddenException("This upload type requires admin authorization");
       }
       if (
         ["product", "kyc", "review-proof", "certificate"].includes(uploadType) &&

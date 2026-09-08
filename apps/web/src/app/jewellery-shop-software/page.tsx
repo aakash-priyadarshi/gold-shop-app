@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { ComparisonClusterLinks } from "@/components/marketing/ComparisonClusterLinks";
 import { AiDiscoverySection } from "@/components/marketing/AskAiAboutUs";
+import { AiPhotoStudioSpotlight } from "@/components/marketing/AiPhotoStudioSpotlight";
 import { T } from "@/components/ui/T";
 import { subscriptionPlansApi } from "@/lib/api";
 import { usePlatformFeatures } from "@/hooks/usePlatformFeatures";
@@ -18,6 +19,7 @@ import {
     ArrowRight,
     BarChart3,
     BookOpen,
+    Camera,
     Check,
     Cloud,
     Crown,
@@ -222,6 +224,7 @@ const softwareJsonLd = {
         "Built-in customer chat & RFQ",
         "Sales analytics dashboard",
         "AI product descriptions",
+        "AI product photo enhancement",
         "Barcode/SKU support",
         "Mobile POS for smartphone counter billing",
         "7-day live gold and silver rate trends",
@@ -497,6 +500,12 @@ const USE_CASES = [
 ];
 
 const WHATS_NEW = [
+  {
+    icon: Camera,
+    title: "AI product photo studio",
+    desc: "Turn a shop-floor photo into a listing-ready studio image. Enhance keeps the jewellery exact — only lighting, background, and sharpness change.",
+    href: "#ai-photo-studio",
+  },
   {
     icon: Package,
     title: "Catalog → invoice in one click",
@@ -852,6 +861,8 @@ export default function JewelleryShopSoftwarePage() {
           </div>
         </section>
 
+        <AiPhotoStudioSpotlight />
+
         {/* ── What's New ─────────────────────────────────── */}
         <section className="bg-gradient-to-b from-amber-50/80 to-white dark:from-gray-900 dark:to-gray-950 border-b border-gray-200 dark:border-gray-800">
           <div className="max-w-6xl mx-auto px-4 py-16">
@@ -860,7 +871,7 @@ export default function JewelleryShopSoftwarePage() {
                 <T>What&apos;s new</T>
               </p>
               <h2 className="mt-2 text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                <T>Shipped for jewellers — catalog, stock, tax, and desktop</T>
+                <T>Shipped for jewellers — photos, catalog, stock, tax, and desktop</T>
               </h2>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

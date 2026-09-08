@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { LeadStatus, RefundStatus } from "@prisma/client";
+import { LeadSource, LeadStatus, RefundStatus } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -275,6 +275,41 @@ export class SupportService {
       where: { id: sessionId },
       data: updateData,
     });
+
+    // Sync to unified Lead model
+    try {
+      const email = contactType === "email" ? contactValue : existing?.guestEmail;
+      const phone = contactType === "phone" ? contactValue : existing?.guestPhone;
+      const shopName = guestName || existing?.guestName || "Website Visitor";
+      const existingLead = await this.prisma.lead.findFirst({
+        where: { botSessionId: sessionId },
+      });
+      if (existingLead) {
+        await this.prisma.lead.update({
+          where: { id: existingLead.id },
+          data: {
+            email: email || undefined,
+            phone: phone || undefined,
+            shopName: shopName || undefined,
+          },
+        });
+      } else {
+        await this.prisma.lead.create({
+          data: {
+            shopName,
+            contactName: guestName || existing?.guestName,
+            email: email || null,
+            phone: phone || null,
+            source: LeadSource.AI_CHATBOT,
+            status: LeadStatus.NEW,
+            botSessionId: sessionId,
+            notes: `Captured via website AI chat. Intents: ${existing?.leadIntents?.join(", ") || "None"}`,
+          },
+        });
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not sync bot session lead to Lead table: ${err?.message}`);
+    }
 
     if (isFirstCapture) {
       const name = guestName || existing?.guestName || "A visitor";

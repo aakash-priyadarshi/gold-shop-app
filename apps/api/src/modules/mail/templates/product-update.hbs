@@ -1,0 +1,59 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{campaignName}} from Orivraa</title>
+  </head>
+  <body style="margin:0;background:#f6f1e6;color:#172033;font-family:Arial,Helvetica,sans-serif;line-height:1.6">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0">
+      {{emailHeading}}
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        <td align="center" style="padding:28px 14px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#fff;border:1px solid #e6dcc6;border-radius:20px;overflow:hidden">
+            <tr>
+              <td style="background:#0d1830;padding:20px 28px;color:#fff">
+                <img src="{{brandIconUrl}}" width="42" height="42" alt="Orivraa" style="vertical-align:middle;border-radius:10px" />
+                <strong style="margin-left:10px;font-size:22px">Orivraa</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="{{demoUrl}}" style="display:block;text-decoration:none">
+                  <img src="{{heroImageUrl}}" width="640" alt="Watch the product demo" style="display:block;width:100%;height:auto;border:0" />
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px">
+                <div style="color:#8a5b13;font-size:12px;font-weight:700;text-transform:uppercase">{{campaignName}}</div>
+                <h1 style="margin:12px 0;color:#13213c;font-family:Georgia,'Times New Roman',serif;font-size:31px">{{emailHeading}}</h1>
+                <p style="font-size:16px;color:#344054">Hi {{firstName}},</p>
+                {{paragraphs emailBody}}
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background:#fbf7ed;border:1px solid #ead9b6;border-radius:16px">
+                  <tr>
+                    <td align="center" style="padding:24px">
+                      <p style="margin:0 0 16px;color:#667085;font-size:14px">Tap the preview above, or open the live demo — your catalog photos can look like a studio shoot in one click.</p>
+                      <a href="{{demoUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#b7791f;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">{{ctaLabel}}</a>
+                      <a href="{{catalogUrl}}" style="display:inline-block;margin:6px;border-radius:11px;background:#172033;color:#fff;padding:14px 22px;text-decoration:none;font-weight:700">Open in your catalog</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="font-size:13px;color:#667085">This email is a product announcement, not a discount or free-Pro offer. Pro+ and Enterprise shops can enhance catalog photos from Product Catalog.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#0d1830;padding:22px 30px;text-align:center;color:#cbd2df;font-size:12px">
+                Need help? Reply to this email. You received this because you created an Orivraa shop account.
+                <br />
+                <a href="{{unsubscribeUrl}}" style="color:#e5c477;text-decoration:underline">Unsubscribe from future offers</a>.
+              </td>
+            </tr>
+          </table>
+          <p style="color:#9a8f79;font-size:11px">© {{year}} Orivraa. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
