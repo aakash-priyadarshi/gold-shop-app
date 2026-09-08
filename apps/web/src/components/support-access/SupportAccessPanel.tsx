@@ -55,6 +55,7 @@ function ConsentFields({
   const [changes, setChanges] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [baseTime] = useState(() => Date.now());
+  const minCustomTime = Math.ceil(baseTime / 60_000) * 60_000 + 60_000;
   const timestamp =
     duration === "custom"
       ? Date.parse(custom)
@@ -92,7 +93,7 @@ function ConsentFields({
             type="datetime-local"
             className="block w-full rounded border bg-background p-2"
             value={custom}
-            min={toLocalDateTimeInput(baseTime + 60_000)}
+            min={toLocalDateTimeInput(minCustomTime)}
             max={toLocalDateTimeInput(baseTime + 90 * 86400_000)}
             onChange={(e) => setCustom(e.target.value)}
           />

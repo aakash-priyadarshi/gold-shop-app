@@ -20,8 +20,10 @@ export function RichMessageCard({
 }) {
   if (!messageType || messageType === "TEXT") return null;
   if (messageType === "SUPPORT_ACCESS") {
-    return typeof payload?.grantId === "string" ? (
-      <SupportGrantCard grantId={payload.grantId} />
+    const grantId =
+      typeof payload?.grantId === "string" ? payload.grantId.trim() : "";
+    return grantId ? (
+      <SupportGrantCard grantId={grantId} />
     ) : content ? (
       <p className="break-words">{content}</p>
     ) : null;

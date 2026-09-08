@@ -30,4 +30,16 @@ describe("support access chat cards", () => {
     );
     expect(screen.getByText("Support access requested")).toBeInTheDocument();
   });
+
+  it("falls back to message text when the grant id is empty", () => {
+    render(
+      <RichMessageCard
+        messageType="SUPPORT_ACCESS"
+        payload={{ grantId: "   " }}
+        content="Support access requested"
+      />,
+    );
+    expect(screen.getByText("Support access requested")).toBeInTheDocument();
+    expect(screen.queryByText(/^Grant /)).not.toBeInTheDocument();
+  });
 });

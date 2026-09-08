@@ -130,4 +130,19 @@ describe("Seller support consent", () => {
     fireEvent.change(input, { target: { value: "2000-01-01T00:00" } });
     expect(screen.getByRole("button", { name: "Allow access" })).toBeDisabled();
   });
+  it("accepts the custom expiry input's rendered minimum", async () => {
+    await openForm();
+    fireEvent.change(screen.getByLabelText("Allow access for"), {
+      target: { value: "custom" },
+    });
+    const input = screen.getByLabelText("Expiry date and time");
+    const minimum = input.getAttribute("min");
+    expect(minimum).toBeTruthy();
+    fireEvent.change(input, { target: { value: minimum } });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Allow access" }),
+      ).toBeEnabled(),
+    );
+  });
 });
