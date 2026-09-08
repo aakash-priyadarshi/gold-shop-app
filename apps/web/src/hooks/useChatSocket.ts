@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { getSupportToken } from '@/lib/support-session';
 
 /* ──────────────────────────────────────────────────────────
    useChatSocket — lightweight Socket.IO hook for live chat
@@ -80,6 +81,7 @@ export function useChatSocket({
   cbRead.current = onMessagesRead;
 
   useEffect(() => {
+    if (getSupportToken()) return;
     const token =
       typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;

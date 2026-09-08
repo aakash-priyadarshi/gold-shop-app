@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getSupportToken } from '@/lib/support-session';
 import { getDB, type OutboxOp } from "./db";
 
 /**
@@ -50,6 +51,7 @@ export async function enqueue(args: {
   body: Record<string, unknown>;
   clientId?: string;
 }): Promise<string> {
+  if (getSupportToken()) throw new Error('Offline changes are unavailable during support access');
   const id = args.clientId ?? crypoRandomId();
   const now = Date.now();
   const op: OutboxOp = {
@@ -74,6 +76,7 @@ export async function enqueue(args: {
 
 /** Number of ops still waiting to sync. */
 export async function pendingCount(): Promise<number> {
+  if (getSupportToken()) return 0;
   return getDB()
     .outbox.where("status")
     .anyOf("pending", "failed")
@@ -85,6 +88,7 @@ export async function pendingCount(): Promise<number> {
  * a single in-flight flush is enforced via the `flushing` guard.
  */
 export async function flushOutbox(): Promise<void> {
+  if (getSupportToken()) return;
   if (flushing) return;
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
   flushing = true;
@@ -96,6 +100,7 @@ export async function flushOutbox(): Promise<void> {
       .sortBy("createdAt");
 
     for (const op of ops) {
+      if (getSupportToken()) return;
       if (op.attempts >= MAX_ATTEMPTS) continue;
       await db.outbox.update(op.id, { status: "syncing", updatedAt: Date.now() });
       notify();

@@ -561,6 +561,7 @@ export default function ShopSettingsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <a href="/dashboard/shop/support-access" className="text-sm font-medium underline"><T>Support access</T></a>
               <SettingsSaveStatus
                 status={autoSaveStatus}
                 idleLabel="Toggle changes save automatically"

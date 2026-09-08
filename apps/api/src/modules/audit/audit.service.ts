@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { supportAccessContext } from '../../common/support-access-context';
 
 export interface AuditLogEntry {
   userId?: string;
@@ -22,14 +23,14 @@ export class AuditService {
   async log(entry: AuditLogEntry) {
     return this.prisma.auditLog.create({
       data: {
-        userId: entry.userId,
-        actorType: entry.actorType || 'USER',
+        userId: supportAccessContext.getStore()?.actorId || entry.userId,
+        actorType: supportAccessContext.getStore() ? 'ADMIN_SUPPORT' : entry.actorType || 'USER',
         action: entry.action,
         resourceType: entry.resourceType,
         resourceId: entry.resourceId,
         previousValue: entry.previousValue,
         newValue: entry.newValue,
-        metadata: entry.metadata,
+        metadata: supportAccessContext.getStore() ? { ...entry.metadata, effectiveSellerId: entry.userId } : entry.metadata,
         ipAddress: entry.ipAddress,
         userAgent: entry.userAgent,
       },
@@ -40,14 +41,14 @@ export class AuditService {
   async logBatch(entries: AuditLogEntry[]) {
     return this.prisma.auditLog.createMany({
       data: entries.map((entry) => ({
-        userId: entry.userId,
-        actorType: entry.actorType || 'USER',
+        userId: supportAccessContext.getStore()?.actorId || entry.userId,
+        actorType: supportAccessContext.getStore() ? 'ADMIN_SUPPORT' : entry.actorType || 'USER',
         action: entry.action,
         resourceType: entry.resourceType,
         resourceId: entry.resourceId,
         previousValue: entry.previousValue,
         newValue: entry.newValue,
-        metadata: entry.metadata,
+        metadata: supportAccessContext.getStore() ? { ...entry.metadata, effectiveSellerId: entry.userId } : entry.metadata,
         ipAddress: entry.ipAddress,
         userAgent: entry.userAgent,
       })),

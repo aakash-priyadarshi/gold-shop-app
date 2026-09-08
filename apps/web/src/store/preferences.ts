@@ -15,6 +15,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { LOCALE_REGISTRY, type UiLocale } from "@gold-shop/shared";
 import { api } from "../lib/api";
+import { getSupportToken, getPreferenceStorage } from '../lib/support-session';
 
 // Currency types matching backend CurrencyCode enum
 export type CurrencyCode =
@@ -220,7 +221,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         set({ currency });
         // Mark that user explicitly chose a currency (prevents geo-detection override)
         if (typeof window !== "undefined") {
-          localStorage.setItem("orivraa_user_currency_choice", "true");
+          getPreferenceStorage().setItem("orivraa_user_currency_choice", "true");
         }
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
@@ -239,8 +240,8 @@ export const usePreferencesStore = create<PreferencesState>()(
 
         // Mark that user explicitly chose a country (prevents geo-detection override)
         if (typeof window !== "undefined") {
-          localStorage.setItem("orivraa_user_country_choice", "true");
-          localStorage.setItem("orivraa_user_currency_choice", "true");
+          getPreferenceStorage().setItem("orivraa_user_country_choice", "true");
+          getPreferenceStorage().setItem("orivraa_user_currency_choice", "true");
         }
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
@@ -265,8 +266,8 @@ export const usePreferencesStore = create<PreferencesState>()(
             geoMismatchDismissed: true,
           });
           if (typeof window !== "undefined") {
-            localStorage.setItem("orivraa_user_country_choice", "true");
-            localStorage.setItem("orivraa_user_currency_choice", "true");
+            getPreferenceStorage().setItem("orivraa_user_country_choice", "true");
+            getPreferenceStorage().setItem("orivraa_user_currency_choice", "true");
           }
           if (isAuthenticated) {
             await syncToServer();
@@ -312,6 +313,7 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Fetch preferences from server (called on login)
       syncFromServer: async () => {
+        if (getSupportToken()) return;
         const { isAuthenticated } = get();
         if (!isAuthenticated) return;
 
@@ -342,6 +344,7 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Push preferences to server (called on change when authenticated)
       syncToServer: async () => {
+        if (getSupportToken()) return;
         const { isAuthenticated, language, currency, country, theme } = get();
         if (!isAuthenticated) return;
 
@@ -399,7 +402,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: "gold-shop-preferences",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({ getItem: (key) => getPreferenceStorage().getItem(key), setItem: (key, value) => getPreferenceStorage().setItem(key, value), removeItem: (key) => getPreferenceStorage().removeItem(key) })),
       // Only persist these fields
       partialize: (state) => ({
         language: state.language,

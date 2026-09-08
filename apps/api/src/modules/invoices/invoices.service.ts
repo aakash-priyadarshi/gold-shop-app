@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
+import { supportAccessContext } from '../../common/support-access-context';
 import {
   CurrencyCode,
   JournalReferenceType,
@@ -1638,6 +1639,16 @@ export class InvoicesService {
         },
       });
 
+      if (supportAccessContext.getStore()?.readOnly) return {
+        id: '', shopId, shopNameOnBill: shop?.shopName || null,
+        shopLogoUrl: null, tagline: null, shopAddress: shop ? [shop.address, shop.city, shop.state].filter(Boolean).join(', ') : null,
+        shopPhone: shop?.contactPhone || null, shopEmail: shop?.contactEmail || null,
+        gstin: shop?.vatNumber || shop?.panNumber || null, licenseNumber: shop?.bisLicenseNumber || null,
+        footerNote: 'Thank you for your business!', termsText: 'All items are subject to hallmarking verification.',
+        shopNamePosition: 'TOP', logoPosition: 'TOP', taglinePosition: 'TOP', addressPosition: 'TOP', phonePosition: 'TOP', emailPosition: 'TOP', gstinPosition: 'TOP', licensePosition: 'TOP', footerPosition: 'BOTTOM', termsPosition: 'BOTTOM',
+        billTemplateId: 'classic', showLogo: true, showAddress: true, showPhone: true, showEmail: false, showGstin: true, showLicense: false, showFooter: true, showTerms: true,
+        createdAt: new Date(), updatedAt: new Date(),
+      };
       settings = await this.prisma.invoiceSettings.create({
         data: {
           shopId,

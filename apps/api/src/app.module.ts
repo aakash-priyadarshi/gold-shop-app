@@ -2,6 +2,7 @@ import { BullModule } from "@nestjs/bull";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { SupportAccessModule } from './modules/support-access/support-access.module';
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { ScheduleModule } from "@nestjs/schedule";
 
@@ -186,6 +187,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     TranslationModule,
     TestingModule,
     BackupModule,
+    SupportAccessModule,
   ],
   providers: [
     // Apply ThrottlerGuard globally so @Throttle() decorators are enforced

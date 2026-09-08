@@ -283,7 +283,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "User profile returned" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async me(@CurrentUser() user: any) {
-    return this.authService.getMe(user.id);
+    return user.supportAccess ? this.authService.getMe(user.id, user.shopId) : this.authService.getMe(user.id);
   }
 
   @Get("image-upload-token")

@@ -37,6 +37,8 @@ import {
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SupportAccessPanel } from '@/components/support-access/SupportAccessPanel';
+import { RichMessageCard } from './RichMessageCard';
 
 /* ────────────────────────────────────────────────────────────
    Types
@@ -58,6 +60,8 @@ interface Conversation {
 }
 
 interface Message {
+  messageType?: string;
+  payload?: { grantId?: string };
   id: string;
   senderId: string;
   senderRole: string;
@@ -941,6 +945,7 @@ export function ChatPopupWidget() {
         /* ── Active Chat ── */
         <>
           {/* Safety banner */}
+          {activeConversationId && <div className="max-h-72 overflow-auto"><SupportAccessPanel key={activeConversationId} conversationId={activeConversationId} /></div>}
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b dark:border-gray-700 text-[11px] text-gray-500 dark:text-gray-400 flex-shrink-0">
             <Shield className="h-3 w-3" />
             Messages are monitored for safety
@@ -1077,7 +1082,7 @@ export function ChatPopupWidget() {
                             )}
                           </div>
                         )}
-                        <p className="break-words">{msg.content}</p>
+                        {msg.messageType === 'SUPPORT_ACCESS' ? <RichMessageCard messageType={msg.messageType} payload={msg.payload} /> : <p className="break-words">{msg.content}</p>}
                         {msg.hasViolation && (
                           <p className="text-[10px] mt-1 opacity-75">
                             ⚠️ Contact info removed

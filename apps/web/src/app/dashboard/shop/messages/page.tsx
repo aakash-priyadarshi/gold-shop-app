@@ -1,4 +1,5 @@
 "use client";
+import { SupportAccessPanel } from '@/components/support-access/SupportAccessPanel';
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { RichMessageCard } from "@/components/chat/RichMessageCard";
@@ -328,6 +329,7 @@ export default function ShopMessagesPage() {
               ) : (
                 <>
                   <div className="p-3 border-b flex items-center justify-between">
+                    <SupportAccessPanel key={selectedConversation} conversationId={selectedConversation} />
                     <div>
                       <h3 className="font-medium">
                         {selectedConv?.buyer.firstName}{" "}

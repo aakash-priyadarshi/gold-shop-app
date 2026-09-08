@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SupportSessionBanner } from '@/components/support-access/SupportSessionBanner';
 
 /** Seller and admin surfaces are private application UI, not search content. */
 export const metadata: Metadata = {
@@ -13,5 +14,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <><SupportSessionBanner />{children}</>;
 }

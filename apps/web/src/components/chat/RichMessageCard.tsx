@@ -3,6 +3,7 @@
 import { ClipboardList, ExternalLink, ShoppingBag, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { SupportGrantCard } from '@/components/support-access/SupportAccessPanel';
 
 /**
  * Renders rich message types: CATALOGUE_LINK, PRODUCT_CARD, RFQ_ACTION
@@ -18,6 +19,7 @@ export function RichMessageCard({
   content?: string;
 }) {
   if (!messageType || messageType === "TEXT") return null;
+  if (messageType === 'SUPPORT_ACCESS' && typeof payload?.grantId === 'string') return <SupportGrantCard grantId={payload.grantId} />;
 
   if (messageType === "CATALOGUE_LINK" && payload) {
     return (

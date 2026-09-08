@@ -1,3 +1,4 @@
+import { getPreferenceStorage } from './support-session';
 import {
   COUNTRIES,
   usePreferencesStore,
@@ -73,8 +74,8 @@ export function syncShopCountryToPreferences(shop: {
   });
 
   if (typeof window !== "undefined") {
-    localStorage.setItem("orivraa_user_country_choice", "shop");
-    localStorage.setItem("orivraa_user_currency_choice", "shop");
+    getPreferenceStorage().setItem("orivraa_user_country_choice", "shop");
+    getPreferenceStorage().setItem("orivraa_user_currency_choice", "shop");
   }
 }
 
