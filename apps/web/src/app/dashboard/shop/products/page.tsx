@@ -862,13 +862,23 @@ export default function ShopProductsPage() {
   };
 
   const addImage = () => {
-    if (newImageUrl && !formData.images.includes(newImageUrl)) {
-      setFormData({
-        ...formData,
-        images: [...formData.images, newImageUrl],
+    const imageUrl = newImageUrl.trim();
+    if (!imageUrl || formData.images.includes(imageUrl)) return;
+
+    if (formData.images.length >= 3) {
+      toast({
+        variant: "destructive",
+        title: t("Maximum Images Reached"),
+        description: t("You can upload a maximum of 3 images per product"),
       });
-      setNewImageUrl("");
+      return;
     }
+
+    setFormData({
+      ...formData,
+      images: [...formData.images, imageUrl],
+    });
+    setNewImageUrl("");
   };
 
   const removeImage = (url: string) => {
@@ -2345,6 +2355,7 @@ export default function ShopProductsPage() {
                     <AiPhotoEnhancer
                       shopId={user.shop.id}
                       images={formData.images}
+                      maxImages={3}
                       onChange={(images) =>
                         setFormData((current) => ({ ...current, images }))
                       }
@@ -2470,9 +2481,9 @@ export default function ShopProductsPage() {
                           <Image
                             src={getImageUrl(url, "thumbnail")}
                             alt={`Product ${idx + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg border"
-                            width={80}
-                            height={80}
+                            className="h-32 w-32 rounded-xl border object-cover"
+                            width={128}
+                            height={128}
                             unoptimized
                           />
                           {user?.shop?.id ? (
@@ -2480,6 +2491,7 @@ export default function ShopProductsPage() {
                               shopId={user.shop.id}
                               images={formData.images}
                               targetIndex={idx}
+                              maxImages={3}
                               trigger="icon"
                               className="absolute right-1 top-1 z-10 h-7 w-7 border-amber-300 bg-white/95 text-amber-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 dark:bg-gray-950/95"
                               onChange={(images) =>
