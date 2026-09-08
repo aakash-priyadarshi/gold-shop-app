@@ -7,6 +7,58 @@ export type EmailBlockPreset = {
   blocks: OfferEmailBlock[];
 };
 
+/** Insertable recipes. Empty media fields deliberately require the author's own assets. */
+export const EMAIL_SECTION_PRESETS: EmailBlockPreset[] = [
+  {
+    id: "feature-hero", label: "Product spotlight", description: "A large image or GIF, a concise benefit, and one primary action.",
+    blocks: [
+      { type: "image", url: "", alt: "" },
+      { type: "heading", text: "Meet your next favourite feature", style: { fontSize: 40, fontFamily: "serif" } },
+      { type: "text", text: "Introduce the update in one sentence. Make the benefit clear." },
+      { type: "button", label: "Try the new feature", url: "" },
+    ],
+  },
+  {
+    id: "before-after", label: "Before & after", description: "Two captioned images that stack on mobile.",
+    blocks: [
+      { type: "heading", text: "See the difference" },
+      { type: "gallery", images: [{ url: "", alt: "", caption: "Before" }, { url: "", alt: "", caption: "After" }] },
+    ],
+  },
+  {
+    id: "walkthrough", label: "Three-step walkthrough", description: "Numbered screenshots that stack on a phone.",
+    blocks: [
+      { type: "heading", text: "Get started in three steps" },
+      { type: "gallery", images: [
+        { url: "", alt: "", caption: "1. Start here" },
+        { url: "", alt: "", caption: "2. Make it yours" },
+        { url: "", alt: "", caption: "3. See the result" },
+      ] },
+    ],
+  },
+  {
+    id: "feature-pair", label: "Feature pair", description: "Screenshot first, then the copy — the same order on mobile.",
+    blocks: [
+      { type: "image", url: "", alt: "" },
+      { type: "heading", text: "A feature worth opening" },
+      { type: "text", text: "Lead with the screenshot, then the benefit. Narrow screens keep this order." },
+    ],
+  },
+  {
+    id: "product-gallery", label: "Product gallery", description: "Three images with captions and optional links.",
+    blocks: [{ type: "gallery", images: [{ url: "", alt: "", caption: "" }, { url: "", alt: "", caption: "" }, { url: "", alt: "", caption: "" }] }],
+  },
+  {
+    id: "release-note", label: "Release note", description: "A small update label, heading, short description and optional link.",
+    blocks: [
+      { type: "text", text: "Product update", style: { fontSize: 12, textColor: "#8a5b13" } },
+      { type: "heading", text: "A small change with a clear payoff" },
+      { type: "text", text: "One short paragraph. Keep the longer version behind the link." },
+      { type: "button", label: "Read the notes", url: "", variant: "secondary" },
+    ],
+  },
+];
+
 /**
  * Starting layouts for the advanced product-update email builder. Every
  * preset keeps the same visual language as the Orivraa email templates and

@@ -11,6 +11,8 @@ export * from "./i18n/translation";
 
 // Invoice / bill layouts
 export * from "./invoice/bill-templates";
+export * from "./email/email-design";
+export * from "./email/email-renderer";
 
 // Product catalogue helpers
 export * from "./ai/credits";

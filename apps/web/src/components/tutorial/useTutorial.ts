@@ -2304,7 +2304,7 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
       popover: {
         title: "Recovery, festival, and product updates",
         description:
-          "This panel shows the campaigns of the active tab. On Product updates, use Design email to build the announcement from blocks — hero GIFs, demo video posters, buttons, and light animations. Product updates email registered shops only and never grant Pro.",
+          "This panel shows the campaigns of the active tab. On Product updates, use Design email to open Live Email Studio — a persistent canvas with sections, desktop/mobile widths, and Images off. Product updates email registered shops only and never grant Pro.",
         side: "bottom",
         align: "center",
       },
