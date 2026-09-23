@@ -394,6 +394,7 @@ function KarigarSupplyChainLedger() {
   });
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [workshopLedgerVersion, setWorkshopLedgerVersion] = useState<"LEGACY" | "TRACEABLE">("LEGACY");
   const [goldLoss, setGoldLoss] = useState<any>(null);
   const [customMaterials, setCustomMaterials] = useState<
     { key: string; label: string; vaultKey: string }[]
@@ -550,6 +551,9 @@ function KarigarSupplyChainLedger() {
       const res = await karigarApi.getSnapshot();
       const dbConfig = res.data ?? res;
       if (dbConfig) {
+        setWorkshopLedgerVersion(
+          dbConfig.workshopLedgerVersion === "TRACEABLE" ? "TRACEABLE" : "LEGACY",
+        );
         if (dbConfig.vaultReserves) setVaultReserves(dbConfig.vaultReserves);
         if (dbConfig.workshops) setWorkshops(dbConfig.workshops);
         if (dbConfig.jobs) setJobs(dbConfig.jobs);
@@ -1592,6 +1596,7 @@ function KarigarSupplyChainLedger() {
                       <KarigarJobGoldCard
                         key={j.id}
                         job={j}
+                        traceableLedger={workshopLedgerVersion === "TRACEABLE"}
                         onChanged={() => void loadDatabaseConfig()}
                         onEdit={() => {
                           setEditJobForm({ ...j });

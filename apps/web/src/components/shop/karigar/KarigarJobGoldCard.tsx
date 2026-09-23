@@ -86,6 +86,7 @@ function CastingTreeEditor({
   jobId,
   tree,
   defaultAllowed,
+  traceableLedger = false,
   readOnly = false,
   onChanged,
   onCancelNew,
@@ -93,12 +94,13 @@ function CastingTreeEditor({
   jobId: string;
   tree?: CastingTree;
   defaultAllowed: number;
+  traceableLedger?: boolean;
   readOnly?: boolean;
   onChanged: () => void;
   onCancelNew?: () => void;
 }) {
-  const traceableGold995Tree =
-    tree?.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY;
+  const traceableGold995Tree = traceableLedger &&
+    (!tree || tree.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY);
   const [treeForm, setTreeForm] = useState({
     issued: String(tree?.issuedGrams ?? ""),
     finished: String(tree?.finishedGrams ?? ""),
@@ -122,9 +124,12 @@ function CastingTreeEditor({
       };
       if (tree) {
         await karigarApi.updateTree(jobId, tree.id, payload);
-      } else if (issued > 0) {
+      } else if (traceableGold995Tree || issued > 0) {
         const created = await karigarApi.createTree(jobId, {
-          issuedGrams: issued,
+          issuedGrams: traceableGold995Tree ? 0 : issued,
+          ...(traceableGold995Tree
+            ? { metalKey: WORKSHOP_GOLD_995_MATERIAL_KEY, purity: "995" }
+            : {}),
           allowedWastagePercent: payload.allowedWastagePercent,
         });
         const raw = created.data as { id?: string; data?: { id?: string } };
@@ -140,8 +145,13 @@ function CastingTreeEditor({
   return (
     <div className="rounded-lg border border-amber-100 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 space-y-2">
       <p className="text-[11px] font-semibold uppercase text-amber-700">
-        {tree?.label ? tree.label : <T>New casting tree</T>}
+        {tree?.label ? tree.label : traceableGold995Tree ? <T>New Gold 995 casting tree</T> : <T>New casting tree</T>}
       </p>
+      {!tree && traceableGold995Tree && (
+        <p className="text-[11px] text-gray-500">
+          <T>Save the empty tree, then capture its actual Gold 995 issue on the Workshop Ledger. No typed issue weight is posted.</T>
+        </p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         {traceableGold995Tree && (
           <div className="text-[10px] text-gray-500 space-y-1">
@@ -202,12 +212,14 @@ function CastingTreeEditor({
 export function KarigarJobGoldCard({
   job,
   currency: currencyProp,
+  traceableLedger = false,
   onChanged,
   onEdit,
   onDelete,
 }: {
   job: JobGold;
   currency?: string;
+  traceableLedger?: boolean;
   onChanged: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -304,6 +316,7 @@ export function KarigarJobGoldCard({
             jobId={job.id}
             tree={tree}
             defaultAllowed={job.allowedWastagePercent ?? 1}
+            traceableLedger={traceableLedger}
             readOnly={archived}
             onChanged={onChanged}
           />
@@ -312,6 +325,7 @@ export function KarigarJobGoldCard({
           <CastingTreeEditor
             jobId={job.id}
             defaultAllowed={job.allowedWastagePercent ?? 1}
+            traceableLedger={traceableLedger}
             readOnly={archived}
             onChanged={() => {
               setAddingTree(false);
