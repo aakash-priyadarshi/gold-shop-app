@@ -56,6 +56,7 @@ export interface User {
     currency?: string;
     address?: string;
     workshopMode?: boolean;
+    workshopLedgerVersion?: "LEGACY" | "TRACEABLE";
     verificationRequests?: Array<{
       id: string;
       status: string;

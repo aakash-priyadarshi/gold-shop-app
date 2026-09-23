@@ -26,6 +26,8 @@ export * from "./location-data";
 export * from "./utils/market-config";
 export * from "./utils/wastage";
 export * from "./utils/gold-loss";
+export * from "./utils/workshop-decimal";
+export * from "./utils/workshop-scale";
 export * from "./utils/weight-conversion";
 export * from "./utils/jewellery-weight";
 

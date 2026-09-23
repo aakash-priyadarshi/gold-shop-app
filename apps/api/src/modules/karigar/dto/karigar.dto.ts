@@ -555,9 +555,10 @@ export class CreateCastingTreeDto {
   @MaxLength(80)
   label?: string;
 
+  @IsOptional()
   @IsNumber()
-  @Min(0.001)
-  issuedGrams: number;
+  @Min(0)
+  issuedGrams?: number;
 
   @IsOptional()
   @IsString()

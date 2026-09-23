@@ -399,6 +399,8 @@ model Shop {
   billingWastagePercent     Float?
   /// Factory floor UI. Off = Supply Chain karigar book. On + workshopManufacturing = Workshop nav.
   workshopMode              Boolean               @default(false)
+  /// LEGACY = KarigarMetalMovement Float ledger. TRACEABLE = workshop metal journal.
+  workshopLedgerVersion     WorkshopLedgerVersion @default(LEGACY)
   /// Ordered KarigarStage keys for Floor queues. Null = CASTING → … → QC.
   workshopDepartments       Json?
   nickelCompliantFlag       Boolean               @default(false)
@@ -496,6 +498,11 @@ model Shop {
   karigarCastingTrees         KarigarCastingTree[]
   karigarFinancialEntries     KarigarFinancialEntry[]
   karigarFinancialAllocations KarigarFinancialAllocation[]
+  workshopMetalAccounts       WorkshopMetalAccount[]
+  workshopMetalJournals       WorkshopMetalJournal[]
+  workshopScaleDevices        WorkshopScaleDevice[]
+  workshopScaleReadings       WorkshopScaleReading[]
+  workshopWeighingSessions    WorkshopWeighingSession[]
 
   // POS Registers & Shifts & Returns
   posRegisters PosRegister[]
@@ -4444,6 +4451,11 @@ model GoldLoan {
 }
 
 // ─── Karigar / Workshop supply chain ──────────────────────
+enum WorkshopLedgerVersion {
+  LEGACY
+  TRACEABLE
+}
+
 enum KarigarStage {
   CASTING
   FILING
@@ -4531,11 +4543,13 @@ model KarigarJob {
   walkInCustomer        WalkInCustomer?              @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
   shopQuote             ShopQuote?                   @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
   inventoryItem         InventoryItem?               @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  stages                KarigarJobStage[]
-  movements             KarigarMetalMovement[]
-  trees                 KarigarCastingTree[]
-  financialEntries      KarigarFinancialEntry[]
-  financialAllocations  KarigarFinancialAllocation[]
+  stages                 KarigarJobStage[]
+  movements              KarigarMetalMovement[]
+  trees                  KarigarCastingTree[]
+  financialEntries       KarigarFinancialEntry[]
+  financialAllocations   KarigarFinancialAllocation[]
+  workshopMetalJournals  WorkshopMetalJournal[]
+  workshopWeighingSessions WorkshopWeighingSession[]
 
   @@index([shopId])
   @@index([workshopId])
@@ -4591,8 +4605,10 @@ model KarigarCastingTree {
   updatedAt             DateTime                 @updatedAt
   shop                  Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   job                   KarigarJob               @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  lines                 KarigarCastingTreeLine[]
-  movements             KarigarMetalMovement[]
+  lines                    KarigarCastingTreeLine[]
+  movements                KarigarMetalMovement[]
+  workshopMetalJournals    WorkshopMetalJournal[]
+  workshopWeighingSessions WorkshopWeighingSession[]
 
   @@index([shopId, jobId])
 }
@@ -4695,6 +4711,196 @@ model KarigarFinancialAllocation {
 
   @@index([financialEntryId, jobId])
   @@index([shopId])
+  @@index([jobId])
+}
+
+enum WorkshopScalePurpose {
+  GOLD
+  STONE
+}
+
+enum WorkshopScaleCaptureMethod {
+  SIMULATOR
+  DEVICE
+}
+
+enum WorkshopWeighingSessionStatus {
+  OPEN
+  STABLE_CAPTURED
+  POSTED
+  EXPIRED
+  CANCELLED
+}
+
+enum WorkshopMetalJournalStatus {
+  DRAFT
+  POSTED
+}
+
+enum WorkshopMetalJournalReferenceType {
+  GOLD995_OPENING_BALANCE
+  GOLD995_ISSUE_TO_TREE
+  REVERSAL
+}
+
+enum WorkshopMetalAccountKey {
+  GOLD995_VAULT
+  CASTING_TREE_WIP
+  OPENING_EQUITY
+}
+
+/// Shop-level gram accounts for TRACEABLE workshop mode.
+/// Gold 995 (goldGrains995, 0.995) is not goldGrains24k / 24K 0.999.
+model WorkshopMetalAccount {
+  id            String                   @id
+  shopId        String
+  code          String                   @db.VarChar(32)
+  name          String
+  systemKey     WorkshopMetalAccountKey
+  materialKey   String
+  purity        Decimal                  @db.Decimal(10, 6)
+  balanceGrams  Decimal                  @default(0) @db.Decimal(20, 6)
+  isSystem      Boolean                  @default(true)
+  isActive      Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  shop          Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lines         WorkshopMetalJournalLine[]
+
+  @@unique([shopId, systemKey])
+  @@unique([shopId, code])
+  @@index([shopId, isActive])
+}
+
+/// Append-only metal journal (patterned on JournalEntry, grams not NPR).
+model WorkshopMetalJournal {
+  id                 String                            @id @default(uuid())
+  shopId             String
+  entryNumber        String                            @db.VarChar(64)
+  status             WorkshopMetalJournalStatus        @default(DRAFT)
+  referenceType      WorkshopMetalJournalReferenceType
+  referenceId        String
+  idempotencyKey     String                            @db.VarChar(191)
+  description        String
+  transactionDate    DateTime
+  postedAt           DateTime                          @default(now())
+  weightGrams        Decimal                           @db.Decimal(20, 6)
+  materialKey        String
+  jobId              String?
+  treeId             String?
+  weighingSessionId  String?                           @unique
+  scaleReadingId     String?                           @unique
+  actorUserId        String?
+  captureMethod      WorkshopScaleCaptureMethod?
+  reversalOfId       String?                           @unique
+  metadata           Json?
+  createdAt          DateTime                          @default(now())
+
+  shop            Shop                      @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  job             KarigarJob?               @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  tree            KarigarCastingTree?       @relation(fields: [treeId], references: [id], onDelete: Restrict)
+  weighingSession WorkshopWeighingSession?  @relation(fields: [weighingSessionId], references: [id], onDelete: Restrict)
+  scaleReading    WorkshopScaleReading?     @relation(fields: [scaleReadingId], references: [id], onDelete: Restrict)
+  reversalOf      WorkshopMetalJournal?     @relation("WorkshopMetalJournalReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy      WorkshopMetalJournal?     @relation("WorkshopMetalJournalReversal")
+  lines           WorkshopMetalJournalLine[]
+
+  @@unique([shopId, entryNumber])
+  @@unique([shopId, idempotencyKey])
+  @@unique([shopId, referenceType, referenceId])
+  @@index([shopId, transactionDate])
+  @@index([jobId])
+  @@index([treeId])
+}
+
+model WorkshopMetalJournalLine {
+  id          String               @id @default(uuid())
+  journalId   String
+  accountId   String
+  description String?
+  debitGrams  Decimal              @default(0) @db.Decimal(20, 6)
+  creditGrams Decimal              @default(0) @db.Decimal(20, 6)
+  createdAt   DateTime             @default(now())
+
+  journal WorkshopMetalJournal @relation(fields: [journalId], references: [id], onDelete: Restrict)
+  account WorkshopMetalAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([journalId])
+  @@index([accountId])
+}
+
+model WorkshopScaleDevice {
+  id              String                 @id @default(uuid())
+  shopId          String
+  name            String
+  purpose         WorkshopScalePurpose
+  precisionGrams  Decimal                @db.Decimal(10, 6)
+  adapterKind     String                 @db.VarChar(32)
+  isActive        Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  shop            Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  readings        WorkshopScaleReading[]
+  sessions        WorkshopWeighingSession[]
+
+  @@unique([shopId, name])
+  @@index([shopId, purpose, isActive])
+}
+
+model WorkshopScaleReading {
+  id            String                     @id @default(uuid())
+  shopId        String
+  deviceId      String
+  sessionId     String                     @unique
+  purpose       WorkshopScalePurpose
+  weightGrams   Decimal                    @db.Decimal(20, 6)
+  unit          String                     @default("g") @db.VarChar(8)
+  precisionGrams Decimal                   @db.Decimal(10, 6)
+  stable        Boolean
+  /// Adapter-issued, monotonic within a registered device. Reuse is rejected.
+  sequence      Int
+  rawFrame      String?
+  readingAt     DateTime
+  capturedAt    DateTime                   @default(now())
+  captureMethod WorkshopScaleCaptureMethod
+  actorUserId   String?
+  createdAt     DateTime                   @default(now())
+
+  shop     Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  device   WorkshopScaleDevice       @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  session  WorkshopWeighingSession   @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  journal  WorkshopMetalJournal?
+
+  @@index([shopId, capturedAt])
+  @@index([deviceId])
+  @@unique([deviceId, sequence])
+}
+
+model WorkshopWeighingSession {
+  id               String                         @id @default(uuid())
+  shopId           String
+  /// A session is bound to one registered scale before capture begins.
+  deviceId         String
+  jobId            String?
+  treeId           String
+  materialKey      String
+  requiredPurpose  WorkshopScalePurpose
+  status           WorkshopWeighingSessionStatus  @default(OPEN)
+  captureMethod    WorkshopScaleCaptureMethod
+  actorUserId      String?
+  expiresAt        DateTime
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+
+  shop    Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  device  WorkshopScaleDevice    @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  job     KarigarJob?            @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  tree    KarigarCastingTree     @relation(fields: [treeId], references: [id], onDelete: Restrict)
+  reading WorkshopScaleReading?
+  journal WorkshopMetalJournal?
+
+  @@index([shopId, status])
+  @@index([treeId])
   @@index([jobId])
 }
 

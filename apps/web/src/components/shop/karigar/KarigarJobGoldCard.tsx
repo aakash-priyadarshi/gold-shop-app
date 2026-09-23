@@ -7,6 +7,7 @@ import { karigarApi } from "@/lib/api";
 import {
   KARIGAR_STAGE_LABELS,
   KARIGAR_STAGES,
+  WORKSHOP_GOLD_995_MATERIAL_KEY,
   type GoldLossResult,
   type KarigarStageCode,
 } from "@gold-shop/shared";
@@ -38,6 +39,7 @@ export type JobGold = {
   trees?: Array<{
     id: string;
     label: string;
+    metalKey?: string;
     issuedGrams: number;
     finishedGrams: number;
     sprueButtonGrams: number;
@@ -95,6 +97,8 @@ function CastingTreeEditor({
   onChanged: () => void;
   onCancelNew?: () => void;
 }) {
+  const traceableGold995Tree =
+    tree?.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY;
   const [treeForm, setTreeForm] = useState({
     issued: String(tree?.issuedGrams ?? ""),
     finished: String(tree?.finishedGrams ?? ""),
@@ -110,7 +114,7 @@ function CastingTreeEditor({
     try {
       const issued = parseFloat(treeForm.issued) || 0;
       const payload = {
-        issuedGrams: issued,
+        ...(traceableGold995Tree ? {} : { issuedGrams: issued }),
         finishedGrams: parseFloat(treeForm.finished) || 0,
         sprueButtonGrams: parseFloat(treeForm.sprue) || 0,
         recoverableGrams: parseFloat(treeForm.recoverable) || 0,
@@ -139,6 +143,14 @@ function CastingTreeEditor({
         {tree?.label ? tree.label : <T>New casting tree</T>}
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {traceableGold995Tree && (
+          <div className="text-[10px] text-gray-500 space-y-1">
+            <T>Issued g</T>
+            <p className="h-8 rounded border bg-muted px-2 py-2 text-xs tabular-nums">
+              {grams(tree?.issuedGrams)}
+            </p>
+          </div>
+        )}
         {(
           [
             ["issued", "Issued g"],
@@ -147,7 +159,9 @@ function CastingTreeEditor({
             ["recoverable", "Recoverable g"],
             ["allowed", "Allowed %"],
           ] as const
-        ).map(([key, label]) => (
+        )
+          .filter(([key]) => !(traceableGold995Tree && key === "issued"))
+          .map(([key, label]) => (
           <label key={key} className="text-[10px] text-gray-500 space-y-1">
             <T>{label}</T>
             <Input

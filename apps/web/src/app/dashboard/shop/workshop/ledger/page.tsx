@@ -1,5 +1,17 @@
 "use client";
 
+import { CaptureWeightDialog } from "@/components/shop/workshop/CaptureWeightDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +51,9 @@ export default function WorkshopLedgerPage() {
   const [lotId, setLotId] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [ledgerVersion, setLedgerVersion] = useState<"LEGACY" | "TRACEABLE">(
+    "LEGACY",
+  );
 
   const load = () =>
     karigarApi.getSnapshot().then((res) => {
@@ -46,6 +61,7 @@ export default function WorkshopLedgerPage() {
       setVault(data.vaultReserves ?? {});
       setWorkshops(data.workshops ?? []);
       setJobs(data.jobs ?? []);
+      setLedgerVersion(data.workshopLedgerVersion === "TRACEABLE" ? "TRACEABLE" : "LEGACY");
       if (!workshopId && data.workshops?.[0])
         setWorkshopId(data.workshops[0].id);
     });
@@ -56,6 +72,16 @@ export default function WorkshopLedgerPage() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const enableTraceable = async () => {
+    setError(null);
+    try {
+      await karigarApi.setWorkshopLedgerVersion("TRACEABLE");
+      setLedgerVersion("TRACEABLE");
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Could not enable TRACEABLE ledger");
+    }
+  };
 
   const submit = async () => {
     setError(null);
@@ -92,6 +118,30 @@ export default function WorkshopLedgerPage() {
           </T>
         </p>
       </div>
+      {ledgerVersion !== "TRACEABLE" && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button type="button" variant="outline">
+              <T>Enable Gold 995 scale ledger</T>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle><T>Enable traceable Gold 995 ledger?</T></AlertDialogTitle>
+              <AlertDialogDescription>
+                <T>Gold 995 issues will require a captured Gold Scale reading. This mode cannot be switched back to legacy, and a verified opening balance is needed before an issue can post.</T>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel><T>Cancel</T></AlertDialogCancel>
+              <AlertDialogAction onClick={enableTraceable}>
+                <T>Enable traceable ledger</T>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {ledgerVersion === "TRACEABLE" && <CaptureWeightDialog />}
       <Card data-tour="workshop-metal-vault">
         <CardHeader>
           <CardTitle>
@@ -110,7 +160,7 @@ export default function WorkshopLedgerPage() {
       <Card data-tour="workshop-metal-form">
         <CardHeader>
           <CardTitle>
-            <T>Record movement</T>
+            <T>Record 24K / legacy movement</T>
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
