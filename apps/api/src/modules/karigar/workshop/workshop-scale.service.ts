@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -39,6 +40,22 @@ export class WorkshopScaleService {
     private readonly prisma: PrismaService,
     private readonly metalJournal: WorkshopMetalJournalService,
   ) {}
+
+  private simulatorAllowed(shopId: string): boolean {
+    return (
+      process.env.NODE_ENV === "development" ||
+      process.env.NODE_ENV === "test" ||
+      (process.env.WORKSHOP_SIMULATOR_SHOP_IDS ?? "")
+        .split(",")
+        .some((id) => id.trim() === shopId)
+    );
+  }
+
+  private requireSimulatorAllowed(shopId: string): void {
+    if (!this.simulatorAllowed(shopId)) {
+      throw new ForbiddenException("Gold Scale simulator is not enabled for this shop");
+    }
+  }
 
   private isUniqueConstraint(error: unknown): boolean {
     return (
@@ -135,6 +152,7 @@ export class WorkshopScaleService {
     return {
       materialKey: WORKSHOP_GOLD_995_MATERIAL_KEY,
       purity: WORKSHOP_GOLD_995_PURITY,
+      simulatorAllowed: this.simulatorAllowed(shopId),
       note: "Gold 995 is not goldGrains24k / 24K 0.999 vault gold",
       accounts: accounts.map((account) => ({
         id: account.id,
@@ -150,6 +168,7 @@ export class WorkshopScaleService {
 
   async ensureGoldSimulatorDevice(shopId: string) {
     await this.requireTraceableShop(shopId);
+    this.requireSimulatorAllowed(shopId);
     const name = "Gold Scale simulator";
     const device = await this.prisma.workshopScaleDevice.upsert({
       where: { shopId_name: { shopId, name } },
@@ -240,6 +259,9 @@ export class WorkshopScaleService {
         device.adapterKind === "SIMULATOR"
           ? WorkshopScaleCaptureMethod.SIMULATOR
           : WorkshopScaleCaptureMethod.DEVICE;
+      if (captureMethod === WorkshopScaleCaptureMethod.SIMULATOR) {
+        this.requireSimulatorAllowed(shopId);
+      }
 
       if (tree.metalKey !== WORKSHOP_GOLD_995_MATERIAL_KEY) {
         await tx.karigarCastingTree.update({
@@ -315,6 +337,12 @@ export class WorkshopScaleService {
         where: { id: dto.deviceId, shopId, isActive: true },
       });
       if (!device) throw new NotFoundException("Scale device not found");
+      if (
+        device.adapterKind === "SIMULATOR" ||
+        session.captureMethod === WorkshopScaleCaptureMethod.SIMULATOR
+      ) {
+        this.requireSimulatorAllowed(shopId);
+      }
       if (session.deviceId !== device.id) {
         throw new BadRequestException(
           "Scale device does not match the device bound to this weighing session",
@@ -382,7 +410,7 @@ export class WorkshopScaleService {
         weightGrams: this.metalJournal.serializeGrams(normalized.weightGrams),
         stable: true,
         sequence: normalized.sequence,
-        rawFrame: normalized.rawFrame,
+        rawFrame: normalized.rawFrame || null,
       });
 
       if (session.reading) {
@@ -553,6 +581,13 @@ export class WorkshopScaleService {
           idempotent: true,
           treeIssuedGrams: session.tree.issuedGrams,
         };
+      }
+
+      if (
+        session.captureMethod === WorkshopScaleCaptureMethod.SIMULATOR ||
+        session.reading.captureMethod === WorkshopScaleCaptureMethod.SIMULATOR
+      ) {
+        this.requireSimulatorAllowed(shopId);
       }
 
       const weight = this.metalJournal.serializeGrams(session.reading.weightGrams);

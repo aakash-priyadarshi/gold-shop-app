@@ -72,6 +72,7 @@ export function CaptureWeightDialog() {
   const [treeId, setTreeId] = useState("");
   const [vaultGrams, setVaultGrams] = useState("0.000000");
   const [wipGrams, setWipGrams] = useState("0.000000");
+  const [simulatorAllowed, setSimulatorAllowed] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [live, setLive] = useState<LiveReading | null>(null);
@@ -127,6 +128,7 @@ export function CaptureWeightDialog() {
       const wip = acc.accounts?.find((a: { systemKey: string }) => a.systemKey === "CASTING_TREE_WIP");
       setVaultGrams(vault?.balanceGrams ?? "0.000000");
       setWipGrams(wip?.balanceGrams ?? "0.000000");
+      setSimulatorAllowed(acc.simulatorAllowed === true);
     } catch {
       // accounts endpoint requires TRACEABLE; ignore until enabled
     }
@@ -251,6 +253,13 @@ export function CaptureWeightDialog() {
     }
   };
 
+  const discardReading = () => {
+    setSessionId(null);
+    setCaptured(null);
+    setLive(null);
+    setError(null);
+  };
+
   return (
     <Card data-tour="workshop-gold995-capture">
       <CardHeader>
@@ -258,7 +267,7 @@ export function CaptureWeightDialog() {
           <T>Gold 995 — Capture Weight</T>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          <T>Gold 995 is not 24K / 999 vault gold. Actual grams come from the Gold Scale simulator. Tare on the device; software does not subtract a tray weight.</T>
+          <T>Gold 995 is not 24K / 999 vault gold. Actual grams come from a connected Gold Scale. Tare on the device; software does not subtract a tray weight.</T>
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -318,11 +327,13 @@ export function CaptureWeightDialog() {
             </T>
           </p>
         )}
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={connectSimulator} disabled={busy || (!!captured && !journalId)}>
-            {connected ? <T>Simulator connected</T> : <T>Connect Gold Scale simulator</T>}
-          </Button>
-        </div>
+        {simulatorAllowed && (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={connectSimulator} disabled={busy || (!!captured && !journalId)}>
+              {connected ? <T>Simulator connected</T> : <T>Connect Gold Scale simulator</T>}
+            </Button>
+          </div>
+        )}
         <div
           className="rounded-lg border p-3 text-sm"
           data-testid="scale-live-reading"
@@ -370,9 +381,14 @@ export function CaptureWeightDialog() {
             {captured.actorUserId && (
               <p><T>Operator</T>: <span dir="ltr">{captured.actorUserId}</span></p>
             )}
-            <Button type="button" onClick={confirm} disabled={busy}>
-              <T>Confirm</T>
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" onClick={confirm} disabled={busy}>
+                <T>Confirm</T>
+              </Button>
+              <Button type="button" variant="outline" onClick={discardReading} disabled={busy}>
+                <T>Discard reading</T>
+              </Button>
+            </div>
           </div>
         )}
         {journalId && (

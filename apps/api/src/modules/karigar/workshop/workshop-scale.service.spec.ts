@@ -539,6 +539,88 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
     expect(again.reading.id).toBe(captured.reading.id);
   });
 
+  it("replays a capture with no raw frame idempotently", async () => {
+    const session = await service.createSession("shop-1", "user-1", {
+      treeId: "tree-1",
+      deviceId: "device-1",
+    });
+    const payload = {
+      deviceId: "device-1",
+      reading: { weightGrams: "100.25", unit: "g" as const, stable: true, sequence: 1 },
+    };
+    const first = await service.capture("shop-1", "user-1", session.id, payload);
+    const replay = await service.capture("shop-1", "user-1", session.id, payload);
+    expect(first.idempotent).toBe(false);
+    expect(replay.idempotent).toBe(true);
+    expect(replay.reading.id).toBe(first.reading.id);
+    expect(prisma.workshopScaleReading.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("denies simulator provisioning and posting in production unless the shop is allowlisted", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousAllowedShops = process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+    try {
+      process.env.NODE_ENV = "production";
+      delete process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+      await expect(service.ensureGoldSimulatorDevice("shop-1")).rejects.toThrow(/not enabled/);
+      expect(prisma.workshopScaleDevice.upsert).not.toHaveBeenCalled();
+      await expect(service.createSession("shop-1", "user-1", {
+        treeId: "tree-1", deviceId: "device-1",
+      })).rejects.toThrow(/not enabled/);
+      expect(prisma.workshopWeighingSession.create).not.toHaveBeenCalled();
+
+      process.env.WORKSHOP_SIMULATOR_SHOP_IDS = "shop-2, shop-1";
+      const session = await service.createSession("shop-1", "user-1", {
+        treeId: "tree-1", deviceId: "device-1",
+      });
+      const captured = await service.capture("shop-1", "user-1", session.id, {
+        deviceId: "device-1",
+        reading: { weightGrams: "100.25", unit: "g", stable: true, sequence: 1 },
+      });
+      delete process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+      await expect(service.capture("shop-1", "user-1", session.id, {
+        deviceId: "device-1",
+        reading: { weightGrams: "100.25", unit: "g", stable: true, sequence: 1 },
+      })).rejects.toThrow(/not enabled/);
+      await expect(service.confirm("shop-1", "user-1", session.id, {
+        readingId: captured.reading.id,
+      })).rejects.toThrow(/not enabled/);
+      expect(Object.keys(journals)).toHaveLength(0);
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousAllowedShops === undefined) delete process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+      else process.env.WORKSHOP_SIMULATOR_SHOP_IDS = previousAllowedShops;
+    }
+  });
+
+  it("allows real-device capture in production", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousAllowedShops = process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+    try {
+      process.env.NODE_ENV = "production";
+      delete process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+      device.adapterKind = "SERIAL";
+      const session = await service.createSession("shop-1", "user-1", {
+        treeId: "tree-1", deviceId: "device-1",
+      });
+      const captured = await service.capture("shop-1", "user-1", session.id, {
+        deviceId: "device-1",
+        reading: { weightGrams: "100.25", unit: "g", stable: true, sequence: 1 },
+      });
+      seedVault();
+      const posted = await service.confirm("shop-1", "user-1", session.id, {
+        readingId: captured.reading.id,
+      });
+      expect(posted.journal.weightGrams).toBe("100.250000");
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousAllowedShops === undefined) delete process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
+      else process.env.WORKSHOP_SIMULATOR_SHOP_IDS = previousAllowedShops;
+    }
+  });
+
   it("rejects confirm payloads that include a weight field", async () => {
     seedVault("1000.00");
     const { captured } = await captureStable("100.25");

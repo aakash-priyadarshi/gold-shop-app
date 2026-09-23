@@ -21,6 +21,7 @@ export type JobGold = {
   artisan: string;
   workshopId?: string | null;
   status: string;
+  metalKey?: string;
   archived?: boolean;
   readOnly?: boolean;
   allowedWastagePercent?: number;
@@ -84,6 +85,7 @@ function LossGrid({ loss }: { loss?: GoldLossResult }) {
 
 function CastingTreeEditor({
   jobId,
+  jobMetalKey,
   tree,
   defaultAllowed,
   traceableLedger = false,
@@ -92,6 +94,7 @@ function CastingTreeEditor({
   onCancelNew,
 }: {
   jobId: string;
+  jobMetalKey?: string;
   tree?: CastingTree;
   defaultAllowed: number;
   traceableLedger?: boolean;
@@ -100,7 +103,7 @@ function CastingTreeEditor({
   onCancelNew?: () => void;
 }) {
   const traceableGold995Tree = traceableLedger &&
-    (!tree || tree.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY);
+    (tree ? tree.metalKey : jobMetalKey) === WORKSHOP_GOLD_995_MATERIAL_KEY;
   const [treeForm, setTreeForm] = useState({
     issued: String(tree?.issuedGrams ?? ""),
     finished: String(tree?.finishedGrams ?? ""),
@@ -314,6 +317,7 @@ export function KarigarJobGoldCard({
           <CastingTreeEditor
             key={tree.id}
             jobId={job.id}
+            jobMetalKey={job.metalKey}
             tree={tree}
             defaultAllowed={job.allowedWastagePercent ?? 1}
             traceableLedger={traceableLedger}
@@ -324,6 +328,7 @@ export function KarigarJobGoldCard({
         {addingTree && (
           <CastingTreeEditor
             jobId={job.id}
+            jobMetalKey={job.metalKey}
             defaultAllowed={job.allowedWastagePercent ?? 1}
             traceableLedger={traceableLedger}
             readOnly={archived}

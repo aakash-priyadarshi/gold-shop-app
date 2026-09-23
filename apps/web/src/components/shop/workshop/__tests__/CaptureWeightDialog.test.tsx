@@ -46,6 +46,7 @@ describe("CaptureWeightDialog", () => {
     } as never);
     vi.mocked(karigarApi.workshopMetalAccounts).mockResolvedValue({
       data: {
+        simulatorAllowed: true,
         accounts: [
           { systemKey: "GOLD995_VAULT", balanceGrams: "1000.000000" },
           { systemKey: "CASTING_TREE_WIP", balanceGrams: "0.000000" },
@@ -122,5 +123,31 @@ describe("CaptureWeightDialog", () => {
       "weightGrams",
     );
     await waitFor(() => screen.getByTestId("scale-success"));
+  });
+
+  it("discards an unposted capture so the operator can capture again", async () => {
+    render(<CaptureWeightDialog />);
+    await waitFor(() => screen.getByRole("button", { name: "Connect Gold Scale simulator" }));
+    fireEvent.click(screen.getByRole("button", { name: "Connect Gold Scale simulator" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Capture Weight" })).not.toBeDisabled(), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: "Capture Weight" }));
+    await waitFor(() => screen.getByTestId("scale-confirm"));
+    expect(screen.getByRole("combobox")).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Discard reading" }));
+    expect(screen.queryByTestId("scale-confirm")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox")).not.toBeDisabled();
+    expect(karigarApi.confirmWeighingSession).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Capture Weight" })).not.toBeDisabled(), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: "Capture Weight" }));
+    await waitFor(() => expect(karigarApi.createWeighingSession).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not offer the simulator when the server has not authorized it", async () => {
+    vi.mocked(karigarApi.workshopMetalAccounts).mockResolvedValue({
+      data: { simulatorAllowed: false, accounts: [] },
+    } as never);
+    render(<CaptureWeightDialog />);
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Connect Gold Scale simulator" })).not.toBeInTheDocument());
+    expect(karigarApi.workshopMetalAccounts).toHaveBeenCalled();
   });
 });

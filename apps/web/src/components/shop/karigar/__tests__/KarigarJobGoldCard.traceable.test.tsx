@@ -32,6 +32,7 @@ describe("KarigarJobGoldCard casting tree creation", () => {
     product: "Gold ring",
     artisan: "Workshop",
     status: "IN_PROGRESS",
+    metalKey: "goldGrains995",
     trees: [],
   };
 
@@ -94,5 +95,47 @@ describe("KarigarJobGoldCard casting tree creation", () => {
         allowedWastagePercent: 1,
       }),
     );
+  });
+
+  it("keeps typed 24K tree creation for a TRACEABLE job whose metal is 24K", async () => {
+    render(
+      <KarigarJobGoldCard
+        job={{ ...job, metalKey: "goldGrains24k" }}
+        traceableLedger
+        onChanged={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add casting tree" }));
+    expect(screen.getByText("New casting tree")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "Issued g" }), {
+      target: { value: "12.5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save tree" }));
+    await waitFor(() => expect(karigarApi.createTree).toHaveBeenCalledWith("job-1", {
+      issuedGrams: 12.5,
+      allowedWastagePercent: 1,
+    }));
+  });
+
+  it("uses an existing tree's metal ahead of the job's metal", () => {
+    render(
+      <KarigarJobGoldCard
+        job={{
+          ...job,
+          trees: [{
+            id: "tree-24k", label: "24K tree", metalKey: "goldGrains24k",
+            issuedGrams: 12.5, finishedGrams: 0, sprueButtonGrams: 0,
+            recoverableGrams: 0, allowedWastagePercent: 1,
+          }],
+        }}
+        traceableLedger
+        onChanged={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: "Issued g" })).toHaveValue("12.5");
   });
 });
