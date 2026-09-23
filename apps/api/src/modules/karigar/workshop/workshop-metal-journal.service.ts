@@ -69,7 +69,7 @@ export class WorkshopMetalJournalService {
   }
 
   private accountId(shopId: string, key: WorkshopMetalAccountKey): string {
-    const hash = createHash("md5").update(`${shopId}:workshop-metal:${key}`).digest("hex");
+    const hash = createHash("sha256").update(`${shopId}:workshop-metal:${key}`).digest("hex");
     return `wmacct_${hash.slice(0, 24)}`;
   }
 

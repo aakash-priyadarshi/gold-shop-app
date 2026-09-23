@@ -1,4 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
+import { createHash } from "crypto";
 import {
   Prisma,
   WorkshopMetalAccountKey,
@@ -192,5 +193,21 @@ describe("WorkshopMetalJournalService", () => {
     expect(
       DEFAULT_WORKSHOP_METAL_ACCOUNTS.some((a) => a.purity === "0.995"),
     ).toBe(true);
+  });
+
+  it("derives stable account IDs with SHA-256 rather than a weak hash", async () => {
+    const first = await service.ensureDefaultAccounts(tx, "shop-1");
+    const second = await service.ensureDefaultAccounts(tx, "shop-1");
+    const expected = createHash("sha256")
+      .update("shop-1:workshop-metal:GOLD995_VAULT")
+      .digest("hex")
+      .slice(0, 24);
+
+    expect(first.get(WorkshopMetalAccountKey.GOLD995_VAULT)).toBe(
+      `wmacct_${expected}`,
+    );
+    expect(second.get(WorkshopMetalAccountKey.GOLD995_VAULT)).toBe(
+      first.get(WorkshopMetalAccountKey.GOLD995_VAULT),
+    );
   });
 });
