@@ -11,81 +11,81 @@ datasource db {
 }
 
 model User {
-  supportGrantsGiven SupportAccessGrant[] @relation("SupportSeller")
-  supportGrantsReceived SupportAccessGrant[] @relation("SupportAdmin")
-  id                   String                  @id @default(uuid())
-  email                String                  @unique
-  phone                String?                 @unique
-  passwordHash         String
-  googleId             String?                 @unique
-  role                 UserRole
-  status               UserStatus              @default(PENDING_VERIFICATION)
-  firstName            String
-  lastName             String
-  preferredLanguage    String                  @default("en")
-  preferredCurrency    CurrencyCode            @default(NPR)
-  preferredCountry     String                  @default("US")
-  preferredState       String?
-  preferredCity        String?
-  themeMode            String                  @default("system")
-  emailVerified        Boolean                 @default(false)
-  emailVerifiedAt      DateTime?
-  phoneVerifiedAt      DateTime?
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  lastLoginAt          DateTime?
+  supportGrantsGiven    SupportAccessGrant[]    @relation("SupportSeller")
+  supportGrantsReceived SupportAccessGrant[]    @relation("SupportAdmin")
+  id                    String                  @id @default(uuid())
+  email                 String                  @unique
+  phone                 String?                 @unique
+  passwordHash          String
+  googleId              String?                 @unique
+  role                  UserRole
+  status                UserStatus              @default(PENDING_VERIFICATION)
+  firstName             String
+  lastName              String
+  preferredLanguage     String                  @default("en")
+  preferredCurrency     CurrencyCode            @default(NPR)
+  preferredCountry      String                  @default("US")
+  preferredState        String?
+  preferredCity         String?
+  themeMode             String                  @default("system")
+  emailVerified         Boolean                 @default(false)
+  emailVerifiedAt       DateTime?
+  phoneVerifiedAt       DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  lastLoginAt           DateTime?
   // Multi-shop support
-  activeShopId         String?
+  activeShopId          String?
   // 2FA support
-  twoFactorEnabled     Boolean                 @default(false)
-  twoFactorSecret      String?
-  twoFactorBackupCodes String[]
-  apiTokens            ApiToken[]
-  auditLogs            AuditLog[]
-  emailLogs            EmailLog[]
-  recoveryOffers       RecoveryOffer[]
-  planInquiries        PlanInquiry[]
-  notifications        Notification[]
-  customerOrders       Order[]                 @relation("CustomerOrders")
-  refreshTokens        RefreshToken[]
-  reportsAgainst       Report[]                @relation("ReportReported")
-  reportsFiled         Report[]                @relation("ReportReporter")
-  rfqRequests          RfqRequest[]            @relation("CustomerRfqs")
-  shops                Shop[]
-  verificationRequests VerificationRequest[]   @relation("UserVerificationRequests")
-  purchaseStats        CustomerPurchaseStats[]
+  twoFactorEnabled      Boolean                 @default(false)
+  twoFactorSecret       String?
+  twoFactorBackupCodes  String[]
+  apiTokens             ApiToken[]
+  auditLogs             AuditLog[]
+  emailLogs             EmailLog[]
+  recoveryOffers        RecoveryOffer[]
+  planInquiries         PlanInquiry[]
+  notifications         Notification[]
+  customerOrders        Order[]                 @relation("CustomerOrders")
+  refreshTokens         RefreshToken[]
+  reportsAgainst        Report[]                @relation("ReportReported")
+  reportsFiled          Report[]                @relation("ReportReporter")
+  rfqRequests           RfqRequest[]            @relation("CustomerRfqs")
+  shops                 Shop[]
+  verificationRequests  VerificationRequest[]   @relation("UserVerificationRequests")
+  purchaseStats         CustomerPurchaseStats[]
   // Design gallery
-  designs              Design[]                @relation("DesignCreator")
-  designLikes          DesignLike[]
+  designs               Design[]                @relation("DesignCreator")
+  designLikes           DesignLike[]
   // Delivery addresses
-  deliveryAddresses    CustomerAddress[]
+  deliveryAddresses     CustomerAddress[]
   // CRM notes
-  customerNotes        CustomerNote[]          @relation("CustomerNotes")
-  authoredNotes        CustomerNote[]          @relation("AuthoredNotes")
+  customerNotes         CustomerNote[]          @relation("CustomerNotes")
+  authoredNotes         CustomerNote[]          @relation("AuthoredNotes")
   // Chat
-  sentMessages         Message[]               @relation("MessageSender")
-  buyerConversations   Conversation[]          @relation("BuyerConversations")
+  sentMessages          Message[]               @relation("MessageSender")
+  buyerConversations    Conversation[]          @relation("BuyerConversations")
   // Support Tickets
-  supportTickets       SupportTicket[]         @relation("UserTickets")
-  assignedTickets      SupportTicket[]         @relation("AssignedTickets")
-  ticketMessages       TicketMessage[]         @relation("TicketMessageSender")
+  supportTickets        SupportTicket[]         @relation("UserTickets")
+  assignedTickets       SupportTicket[]         @relation("AssignedTickets")
+  ticketMessages        TicketMessage[]         @relation("TicketMessageSender")
   // POS / Wishlist
-  wishlistItems        WishlistItem[]
+  wishlistItems         WishlistItem[]
   // AI Credits (fractional — product descriptions cost 0.25)
-  aiCreditsBalance     Decimal                 @default(0) @db.Decimal(12, 2)
-  aiCreditsGrantedAt   DateTime?
-  aiCreditLedger       AiCreditLedger[]
+  aiCreditsBalance      Decimal                 @default(0) @db.Decimal(12, 2)
+  aiCreditsGrantedAt    DateTime?
+  aiCreditLedger        AiCreditLedger[]
   // Enterprise staff
-  staffAccounts        StaffAccount[]
+  staffAccounts         StaffAccount[]
   // Desktop app sessions
-  desktopSessions      DesktopSession[]
+  desktopSessions       DesktopSession[]
   // Web app sessions
-  webSessions          WebSession[]
+  webSessions           WebSession[]
   // POS Shifts & POS Actions
-  shiftsOpened         PosShift[]              @relation("ShiftOpenedBy")
-  shiftsClosed         PosShift[]              @relation("ShiftClosedBy")
-  posInvoiceCashiers   Invoice[]               @relation("InvoicePosCashier")
-  posReturnCashiers    PosReturn[]             @relation("PosReturnCashier")
+  shiftsOpened          PosShift[]              @relation("ShiftOpenedBy")
+  shiftsClosed          PosShift[]              @relation("ShiftClosedBy")
+  posInvoiceCashiers    Invoice[]               @relation("InvoicePosCashier")
+  posReturnCashiers     PosReturn[]             @relation("PosReturnCashier")
 
   // Custom Profile Enrivhment fields
   dateOfBirth DateTime?
@@ -344,7 +344,7 @@ model Session {
 }
 
 model Shop {
-  supportAccessGrants SupportAccessGrant[]
+  supportAccessGrants       SupportAccessGrant[]
   id                        String                @id @default(uuid())
   userId                    String
   shopName                  String
@@ -2928,67 +2928,70 @@ model QuoteAnomaly {
 // ═══════════════════════════════════════════
 
 model SupportAccessGrant {
-  id String @id @default(uuid())
-  sellerId String
-  adminId String
-  shopId String
-  conversationId String
-  reason String
-  status String @default("PENDING")
-  permissions String[] @default([])
-  recordingEnabled Boolean @default(false)
-  createdAt DateTime @default(now())
-  approvedAt DateTime?
-  expiresAt DateTime?
-  revokedAt DateTime?
-  seller User @relation("SupportSeller", fields: [sellerId], references: [id])
-  admin User @relation("SupportAdmin", fields: [adminId], references: [id])
-  shop Shop @relation(fields: [shopId], references: [id])
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-  sessions SupportAccessSession[]
-  events SupportAccessAuditEvent[]
+  id               String                    @id @default(uuid())
+  sellerId         String
+  adminId          String
+  shopId           String
+  conversationId   String
+  reason           String
+  status           String                    @default("PENDING")
+  permissions      String[]                  @default([])
+  recordingEnabled Boolean                   @default(false)
+  createdAt        DateTime                  @default(now())
+  approvedAt       DateTime?
+  expiresAt        DateTime?
+  revokedAt        DateTime?
+  seller           User                      @relation("SupportSeller", fields: [sellerId], references: [id])
+  admin            User                      @relation("SupportAdmin", fields: [adminId], references: [id])
+  shop             Shop                      @relation(fields: [shopId], references: [id])
+  conversation     Conversation              @relation(fields: [conversationId], references: [id])
+  sessions         SupportAccessSession[]
+  events           SupportAccessAuditEvent[]
+
   @@index([sellerId, createdAt])
   @@index([adminId, status])
 }
 
 model SupportAccessSession {
-  id String @id @default(uuid())
-  grantId String
-  tokenHash String @unique
-  startedAt DateTime @default(now())
-  lastUsedAt DateTime @default(now())
-  expiresAt DateTime
-  endedAt DateTime?
-  endReason String?
-  grant SupportAccessGrant @relation(fields: [grantId], references: [id])
-  events SupportAccessAuditEvent[]
+  id         String                    @id @default(uuid())
+  grantId    String
+  tokenHash  String                    @unique
+  startedAt  DateTime                  @default(now())
+  lastUsedAt DateTime                  @default(now())
+  expiresAt  DateTime
+  endedAt    DateTime?
+  endReason  String?
+  grant      SupportAccessGrant        @relation(fields: [grantId], references: [id])
+  events     SupportAccessAuditEvent[]
+
   @@index([grantId])
 }
 
 model SupportAccessAuditEvent {
-  id String @id @default(uuid())
-  grantId String
+  id        String                @id @default(uuid())
+  grantId   String
   sessionId String?
-  actorId String
-  action String
-  resource String?
-  outcome String
-  createdAt DateTime @default(now())
-  grant SupportAccessGrant @relation(fields: [grantId], references: [id])
-  session SupportAccessSession? @relation(fields: [sessionId], references: [id])
+  actorId   String
+  action    String
+  resource  String?
+  outcome   String
+  createdAt DateTime              @default(now())
+  grant     SupportAccessGrant    @relation(fields: [grantId], references: [id])
+  session   SupportAccessSession? @relation(fields: [sessionId], references: [id])
+
   @@index([grantId, createdAt])
 }
 
 model Conversation {
   supportAccessGrants SupportAccessGrant[]
-  id        String             @id @default(uuid())
-  orderId   String?            @unique
-  rfqId     String?
-  buyerId   String
-  shopId    String
-  status    ConversationStatus @default(ACTIVE)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id                  String               @id @default(uuid())
+  orderId             String?              @unique
+  rfqId               String?
+  buyerId             String
+  shopId              String
+  status              ConversationStatus   @default(ACTIVE)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   messages Message[]
   buyer    User      @relation("BuyerConversations", fields: [buyerId], references: [id])
@@ -4513,42 +4516,42 @@ model KarigarWorkshop {
 }
 
 model KarigarJob {
-  id                    String                       @id // client-generated id (e.g. job-...)
-  shopId                String
-  workshopId            String?
-  product               String
-  artisan               String
-  grossWeight           Float                        @default(0)
-  metalKey              String                       @default("goldGrains24k")
-  allowedWastagePercent Float                        @default(1)
-  status                String                       @default("PENDING")
-  steps                 Json? // legacy checkboxes; stages table is source of truth
-  walkInCustomerId      String?
-  shopQuoteId           String?
-  inventoryItemId       String?                      @unique
-  dueAt                 DateTime?
-  priority              String                       @default("NORMAL")
-  qty                   Int                          @default(1)
-  sizeLabel             String?
-  purity                String?
-  metalColor            String?
-  photos                String[]                     @default([])
-  notes                 String?
-  bom                   Json?
-  currentStage          KarigarStage?
-  createdAt             DateTime                     @default(now())
-  updatedAt             DateTime                     @updatedAt
-  shop                  Shop                         @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workshop              KarigarWorkshop?             @relation(fields: [workshopId], references: [id], onDelete: SetNull)
-  walkInCustomer        WalkInCustomer?              @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
-  shopQuote             ShopQuote?                   @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
-  inventoryItem         InventoryItem?               @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  stages                 KarigarJobStage[]
-  movements              KarigarMetalMovement[]
-  trees                  KarigarCastingTree[]
-  financialEntries       KarigarFinancialEntry[]
-  financialAllocations   KarigarFinancialAllocation[]
-  workshopMetalJournals  WorkshopMetalJournal[]
+  id                       String                       @id // client-generated id (e.g. job-...)
+  shopId                   String
+  workshopId               String?
+  product                  String
+  artisan                  String
+  grossWeight              Float                        @default(0)
+  metalKey                 String                       @default("goldGrains24k")
+  allowedWastagePercent    Float                        @default(1)
+  status                   String                       @default("PENDING")
+  steps                    Json? // legacy checkboxes; stages table is source of truth
+  walkInCustomerId         String?
+  shopQuoteId              String?
+  inventoryItemId          String?                      @unique
+  dueAt                    DateTime?
+  priority                 String                       @default("NORMAL")
+  qty                      Int                          @default(1)
+  sizeLabel                String?
+  purity                   String?
+  metalColor               String?
+  photos                   String[]                     @default([])
+  notes                    String?
+  bom                      Json?
+  currentStage             KarigarStage?
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
+  shop                     Shop                         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workshop                 KarigarWorkshop?             @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  walkInCustomer           WalkInCustomer?              @relation(fields: [walkInCustomerId], references: [id], onDelete: SetNull)
+  shopQuote                ShopQuote?                   @relation(fields: [shopQuoteId], references: [id], onDelete: SetNull)
+  inventoryItem            InventoryItem?               @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  stages                   KarigarJobStage[]
+  movements                KarigarMetalMovement[]
+  trees                    KarigarCastingTree[]
+  financialEntries         KarigarFinancialEntry[]
+  financialAllocations     KarigarFinancialAllocation[]
+  workshopMetalJournals    WorkshopMetalJournal[]
   workshopWeighingSessions WorkshopWeighingSession[]
 
   @@index([shopId])
@@ -4589,22 +4592,22 @@ model KarigarJobStage {
 }
 
 model KarigarCastingTree {
-  id                    String                   @id @default(uuid())
-  shopId                String
-  jobId                 String
-  label                 String                   @default("Tree")
-  metalKey              String                   @default("goldGrains24k")
-  purity                String                   @default("24K")
-  issuedGrams           Float                    @default(0)
-  finishedGrams         Float                    @default(0)
-  sprueButtonGrams      Float                    @default(0)
-  recoverableGrams      Float                    @default(0)
-  allowedWastagePercent Float                    @default(1)
-  status                String                   @default("OPEN")
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
-  shop                  Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  job                   KarigarJob               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id                       String                    @id @default(uuid())
+  shopId                   String
+  jobId                    String
+  label                    String                    @default("Tree")
+  metalKey                 String                    @default("goldGrains24k")
+  purity                   String                    @default("24K")
+  issuedGrams              Float                     @default(0)
+  finishedGrams            Float                     @default(0)
+  sprueButtonGrams         Float                     @default(0)
+  recoverableGrams         Float                     @default(0)
+  allowedWastagePercent    Float                     @default(1)
+  status                   String                    @default("OPEN")
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  shop                     Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  job                      KarigarJob                @relation(fields: [jobId], references: [id], onDelete: Cascade)
   lines                    KarigarCastingTreeLine[]
   movements                KarigarMetalMovement[]
   workshopMetalJournals    WorkshopMetalJournal[]
@@ -4752,20 +4755,20 @@ enum WorkshopMetalAccountKey {
 /// Shop-level gram accounts for TRACEABLE workshop mode.
 /// Gold 995 (goldGrains995, 0.995) is not goldGrains24k / 24K 0.999.
 model WorkshopMetalAccount {
-  id            String                   @id
-  shopId        String
-  code          String                   @db.VarChar(32)
-  name          String
-  systemKey     WorkshopMetalAccountKey
-  materialKey   String
-  purity        Decimal                  @db.Decimal(10, 6)
-  balanceGrams  Decimal                  @default(0) @db.Decimal(20, 6)
-  isSystem      Boolean                  @default(true)
-  isActive      Boolean                  @default(true)
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  shop          Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  lines         WorkshopMetalJournalLine[]
+  id           String                     @id
+  shopId       String
+  code         String                     @db.VarChar(32)
+  name         String
+  systemKey    WorkshopMetalAccountKey
+  materialKey  String
+  purity       Decimal                    @db.Decimal(10, 6)
+  balanceGrams Decimal                    @default(0) @db.Decimal(20, 6)
+  isSystem     Boolean                    @default(true)
+  isActive     Boolean                    @default(true)
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  shop         Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lines        WorkshopMetalJournalLine[]
 
   @@unique([shopId, systemKey])
   @@unique([shopId, code])
@@ -4774,35 +4777,35 @@ model WorkshopMetalAccount {
 
 /// Append-only metal journal (patterned on JournalEntry, grams not NPR).
 model WorkshopMetalJournal {
-  id                 String                            @id @default(uuid())
-  shopId             String
-  entryNumber        String                            @db.VarChar(64)
-  status             WorkshopMetalJournalStatus        @default(DRAFT)
-  referenceType      WorkshopMetalJournalReferenceType
-  referenceId        String
-  idempotencyKey     String                            @db.VarChar(191)
-  description        String
-  transactionDate    DateTime
-  postedAt           DateTime                          @default(now())
-  weightGrams        Decimal                           @db.Decimal(20, 6)
-  materialKey        String
-  jobId              String?
-  treeId             String?
-  weighingSessionId  String?                           @unique
-  scaleReadingId     String?                           @unique
-  actorUserId        String?
-  captureMethod      WorkshopScaleCaptureMethod?
-  reversalOfId       String?                           @unique
-  metadata           Json?
-  createdAt          DateTime                          @default(now())
+  id                String                            @id @default(uuid())
+  shopId            String
+  entryNumber       String                            @db.VarChar(64)
+  status            WorkshopMetalJournalStatus        @default(DRAFT)
+  referenceType     WorkshopMetalJournalReferenceType
+  referenceId       String
+  idempotencyKey    String                            @db.VarChar(191)
+  description       String
+  transactionDate   DateTime
+  postedAt          DateTime                          @default(now())
+  weightGrams       Decimal                           @db.Decimal(20, 6)
+  materialKey       String
+  jobId             String?
+  treeId            String?
+  weighingSessionId String?                           @unique
+  scaleReadingId    String?                           @unique
+  actorUserId       String?
+  captureMethod     WorkshopScaleCaptureMethod?
+  reversalOfId      String?                           @unique
+  metadata          Json?
+  createdAt         DateTime                          @default(now())
 
-  shop            Shop                      @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  job             KarigarJob?               @relation(fields: [jobId], references: [id], onDelete: Restrict)
-  tree            KarigarCastingTree?       @relation(fields: [treeId], references: [id], onDelete: Restrict)
-  weighingSession WorkshopWeighingSession?  @relation(fields: [weighingSessionId], references: [id], onDelete: Restrict)
-  scaleReading    WorkshopScaleReading?     @relation(fields: [scaleReadingId], references: [id], onDelete: Restrict)
-  reversalOf      WorkshopMetalJournal?     @relation("WorkshopMetalJournalReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
-  reversedBy      WorkshopMetalJournal?     @relation("WorkshopMetalJournalReversal")
+  shop            Shop                       @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  job             KarigarJob?                @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  tree            KarigarCastingTree?        @relation(fields: [treeId], references: [id], onDelete: Restrict)
+  weighingSession WorkshopWeighingSession?   @relation(fields: [weighingSessionId], references: [id], onDelete: Restrict)
+  scaleReading    WorkshopScaleReading?      @relation(fields: [scaleReadingId], references: [id], onDelete: Restrict)
+  reversalOf      WorkshopMetalJournal?      @relation("WorkshopMetalJournalReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy      WorkshopMetalJournal?      @relation("WorkshopMetalJournalReversal")
   lines           WorkshopMetalJournalLine[]
 
   @@unique([shopId, entryNumber])
@@ -4814,13 +4817,13 @@ model WorkshopMetalJournal {
 }
 
 model WorkshopMetalJournalLine {
-  id          String               @id @default(uuid())
+  id          String   @id @default(uuid())
   journalId   String
   accountId   String
   description String?
-  debitGrams  Decimal              @default(0) @db.Decimal(20, 6)
-  creditGrams Decimal              @default(0) @db.Decimal(20, 6)
-  createdAt   DateTime             @default(now())
+  debitGrams  Decimal  @default(0) @db.Decimal(20, 6)
+  creditGrams Decimal  @default(0) @db.Decimal(20, 6)
+  createdAt   DateTime @default(now())
 
   journal WorkshopMetalJournal @relation(fields: [journalId], references: [id], onDelete: Restrict)
   account WorkshopMetalAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
@@ -4830,72 +4833,72 @@ model WorkshopMetalJournalLine {
 }
 
 model WorkshopScaleDevice {
-  id              String                 @id @default(uuid())
-  shopId          String
-  name            String
-  purpose         WorkshopScalePurpose
-  precisionGrams  Decimal                @db.Decimal(10, 6)
-  adapterKind     String                 @db.VarChar(32)
-  isActive        Boolean                @default(true)
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  shop            Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  readings        WorkshopScaleReading[]
-  sessions        WorkshopWeighingSession[]
+  id             String                    @id @default(uuid())
+  shopId         String
+  name           String
+  purpose        WorkshopScalePurpose
+  precisionGrams Decimal                   @db.Decimal(10, 6)
+  adapterKind    String                    @db.VarChar(32)
+  isActive       Boolean                   @default(true)
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  shop           Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  readings       WorkshopScaleReading[]
+  sessions       WorkshopWeighingSession[]
 
   @@unique([shopId, name])
   @@index([shopId, purpose, isActive])
 }
 
 model WorkshopScaleReading {
-  id            String                     @id @default(uuid())
-  shopId        String
-  deviceId      String
-  sessionId     String                     @unique
-  purpose       WorkshopScalePurpose
-  weightGrams   Decimal                    @db.Decimal(20, 6)
-  unit          String                     @default("g") @db.VarChar(8)
-  precisionGrams Decimal                   @db.Decimal(10, 6)
-  stable        Boolean
+  id             String                     @id @default(uuid())
+  shopId         String
+  deviceId       String
+  sessionId      String                     @unique
+  purpose        WorkshopScalePurpose
+  weightGrams    Decimal                    @db.Decimal(20, 6)
+  unit           String                     @default("g") @db.VarChar(8)
+  precisionGrams Decimal                    @db.Decimal(10, 6)
+  stable         Boolean
   /// Adapter-issued, monotonic within a registered device. Reuse is rejected.
-  sequence      Int
-  rawFrame      String?
-  readingAt     DateTime
-  capturedAt    DateTime                   @default(now())
-  captureMethod WorkshopScaleCaptureMethod
-  actorUserId   String?
-  createdAt     DateTime                   @default(now())
+  sequence       Int
+  rawFrame       String?
+  readingAt      DateTime
+  capturedAt     DateTime                   @default(now())
+  captureMethod  WorkshopScaleCaptureMethod
+  actorUserId    String?
+  createdAt      DateTime                   @default(now())
 
-  shop     Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  device   WorkshopScaleDevice       @relation(fields: [deviceId], references: [id], onDelete: Restrict)
-  session  WorkshopWeighingSession   @relation(fields: [sessionId], references: [id], onDelete: Restrict)
-  journal  WorkshopMetalJournal?
+  shop    Shop                    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  device  WorkshopScaleDevice     @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  session WorkshopWeighingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  journal WorkshopMetalJournal?
 
+  @@unique([deviceId, sequence])
   @@index([shopId, capturedAt])
   @@index([deviceId])
-  @@unique([deviceId, sequence])
 }
 
 model WorkshopWeighingSession {
-  id               String                         @id @default(uuid())
-  shopId           String
+  id              String                        @id @default(uuid())
+  shopId          String
   /// A session is bound to one registered scale before capture begins.
-  deviceId         String
-  jobId            String?
-  treeId           String
-  materialKey      String
-  requiredPurpose  WorkshopScalePurpose
-  status           WorkshopWeighingSessionStatus  @default(OPEN)
-  captureMethod    WorkshopScaleCaptureMethod
-  actorUserId      String?
-  expiresAt        DateTime
-  createdAt        DateTime                       @default(now())
-  updatedAt        DateTime                       @updatedAt
+  deviceId        String
+  jobId           String?
+  treeId          String
+  materialKey     String
+  requiredPurpose WorkshopScalePurpose
+  status          WorkshopWeighingSessionStatus @default(OPEN)
+  captureMethod   WorkshopScaleCaptureMethod
+  actorUserId     String?
+  expiresAt       DateTime
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
 
-  shop    Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  device  WorkshopScaleDevice    @relation(fields: [deviceId], references: [id], onDelete: Restrict)
-  job     KarigarJob?            @relation(fields: [jobId], references: [id], onDelete: Restrict)
-  tree    KarigarCastingTree     @relation(fields: [treeId], references: [id], onDelete: Restrict)
+  shop    Shop                  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  device  WorkshopScaleDevice   @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  job     KarigarJob?           @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  tree    KarigarCastingTree    @relation(fields: [treeId], references: [id], onDelete: Restrict)
   reading WorkshopScaleReading?
   journal WorkshopMetalJournal?
 
