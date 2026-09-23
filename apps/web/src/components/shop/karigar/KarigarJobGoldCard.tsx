@@ -7,6 +7,7 @@ import { karigarApi } from "@/lib/api";
 import {
   KARIGAR_STAGE_LABELS,
   KARIGAR_STAGES,
+  WORKSHOP_GOLD_995_MATERIAL_KEY,
   type GoldLossResult,
   type KarigarStageCode,
 } from "@gold-shop/shared";
@@ -20,6 +21,7 @@ export type JobGold = {
   artisan: string;
   workshopId?: string | null;
   status: string;
+  metalKey?: string;
   archived?: boolean;
   readOnly?: boolean;
   allowedWastagePercent?: number;
@@ -38,6 +40,7 @@ export type JobGold = {
   trees?: Array<{
     id: string;
     label: string;
+    metalKey?: string;
     issuedGrams: number;
     finishedGrams: number;
     sprueButtonGrams: number;
@@ -82,19 +85,25 @@ function LossGrid({ loss }: { loss?: GoldLossResult }) {
 
 function CastingTreeEditor({
   jobId,
+  jobMetalKey,
   tree,
   defaultAllowed,
+  traceableLedger = false,
   readOnly = false,
   onChanged,
   onCancelNew,
 }: {
   jobId: string;
+  jobMetalKey?: string;
   tree?: CastingTree;
   defaultAllowed: number;
+  traceableLedger?: boolean;
   readOnly?: boolean;
   onChanged: () => void;
   onCancelNew?: () => void;
 }) {
+  const traceableGold995Tree = traceableLedger &&
+    (tree ? tree.metalKey : jobMetalKey) === WORKSHOP_GOLD_995_MATERIAL_KEY;
   const [treeForm, setTreeForm] = useState({
     issued: String(tree?.issuedGrams ?? ""),
     finished: String(tree?.finishedGrams ?? ""),
@@ -110,7 +119,7 @@ function CastingTreeEditor({
     try {
       const issued = parseFloat(treeForm.issued) || 0;
       const payload = {
-        issuedGrams: issued,
+        ...(traceableGold995Tree ? {} : { issuedGrams: issued }),
         finishedGrams: parseFloat(treeForm.finished) || 0,
         sprueButtonGrams: parseFloat(treeForm.sprue) || 0,
         recoverableGrams: parseFloat(treeForm.recoverable) || 0,
@@ -118,9 +127,12 @@ function CastingTreeEditor({
       };
       if (tree) {
         await karigarApi.updateTree(jobId, tree.id, payload);
-      } else if (issued > 0) {
+      } else if (traceableGold995Tree || issued > 0) {
         const created = await karigarApi.createTree(jobId, {
-          issuedGrams: issued,
+          issuedGrams: traceableGold995Tree ? 0 : issued,
+          ...(traceableGold995Tree
+            ? { metalKey: WORKSHOP_GOLD_995_MATERIAL_KEY, purity: "995" }
+            : {}),
           allowedWastagePercent: payload.allowedWastagePercent,
         });
         const raw = created.data as { id?: string; data?: { id?: string } };
@@ -136,9 +148,22 @@ function CastingTreeEditor({
   return (
     <div className="rounded-lg border border-amber-100 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 space-y-2">
       <p className="text-[11px] font-semibold uppercase text-amber-700">
-        {tree?.label ? tree.label : <T>New casting tree</T>}
+        {tree?.label ? tree.label : traceableGold995Tree ? <T>New Gold 995 casting tree</T> : <T>New casting tree</T>}
       </p>
+      {!tree && traceableGold995Tree && (
+        <p className="text-[11px] text-gray-500">
+          <T>Save the empty tree, then capture its actual Gold 995 issue on the Workshop Ledger. No typed issue weight is posted.</T>
+        </p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {traceableGold995Tree && (
+          <div className="text-[10px] text-gray-500 space-y-1">
+            <T>Issued g</T>
+            <p className="h-8 rounded border bg-muted px-2 py-2 text-xs tabular-nums">
+              {grams(tree?.issuedGrams)}
+            </p>
+          </div>
+        )}
         {(
           [
             ["issued", "Issued g"],
@@ -147,7 +172,9 @@ function CastingTreeEditor({
             ["recoverable", "Recoverable g"],
             ["allowed", "Allowed %"],
           ] as const
-        ).map(([key, label]) => (
+        )
+          .filter(([key]) => !(traceableGold995Tree && key === "issued"))
+          .map(([key, label]) => (
           <label key={key} className="text-[10px] text-gray-500 space-y-1">
             <T>{label}</T>
             <Input
@@ -188,12 +215,14 @@ function CastingTreeEditor({
 export function KarigarJobGoldCard({
   job,
   currency: currencyProp,
+  traceableLedger = false,
   onChanged,
   onEdit,
   onDelete,
 }: {
   job: JobGold;
   currency?: string;
+  traceableLedger?: boolean;
   onChanged: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -288,8 +317,10 @@ export function KarigarJobGoldCard({
           <CastingTreeEditor
             key={tree.id}
             jobId={job.id}
+            jobMetalKey={job.metalKey}
             tree={tree}
             defaultAllowed={job.allowedWastagePercent ?? 1}
+            traceableLedger={traceableLedger}
             readOnly={archived}
             onChanged={onChanged}
           />
@@ -297,7 +328,9 @@ export function KarigarJobGoldCard({
         {addingTree && (
           <CastingTreeEditor
             jobId={job.id}
+            jobMetalKey={job.metalKey}
             defaultAllowed={job.allowedWastagePercent ?? 1}
+            traceableLedger={traceableLedger}
             readOnly={archived}
             onChanged={() => {
               setAddingTree(false);

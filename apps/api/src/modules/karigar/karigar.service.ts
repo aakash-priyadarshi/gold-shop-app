@@ -12,10 +12,12 @@ import {
   JewelleryType,
   InventoryStatus,
   Prisma,
+  WorkshopLedgerVersion,
 } from "@prisma/client";
 import { createHash } from "crypto";
 import {
   KARIGAR_STAGES,
+  WORKSHOP_GOLD_995_MATERIAL_KEY,
   computeGoldLoss,
   stageGoldLoss,
   isReturnMovementType,
@@ -96,7 +98,14 @@ export class KarigarService {
 
   async getSnapshot(shopId: string) {
     if (!shopId) {
-      return { vaultReserves: {}, workshops: [], jobs: [], customMaterials: [] };
+      return {
+        workshopLedgerVersion: "LEGACY",
+        gold995: null,
+        vaultReserves: {},
+        workshops: [],
+        jobs: [],
+        customMaterials: [],
+      };
     }
     await this.priceRebase.ensureShopPricesMatchCurrency(shopId);
 
@@ -112,7 +121,7 @@ export class KarigarService {
       await Promise.all([
         this.prisma.shop.findUnique({
           where: { id: shopId },
-          select: { currency: true },
+          select: { currency: true, workshopLedgerVersion: true },
         }),
         this.prisma.karigarWorkshop.findMany({
           where: { shopId },
@@ -247,7 +256,26 @@ export class KarigarService {
       entriesByWorkshop.set(fg.workshopId, list);
     }
 
+    const traceable =
+      shop?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE;
+    let gold995 = null;
+    if (traceable) {
+      const metalAccounts = await this.prisma.workshopMetalAccount.findMany({
+        where: { shopId },
+        select: { systemKey: true, balanceGrams: true, materialKey: true },
+      });
+      const vault = metalAccounts.find((a) => a.systemKey === "GOLD995_VAULT");
+      const wip = metalAccounts.find((a) => a.systemKey === "CASTING_TREE_WIP");
+      gold995 = {
+        materialKey: WORKSHOP_GOLD_995_MATERIAL_KEY,
+        vaultGrams: vault ? vault.balanceGrams.toFixed(6) : "0.000000",
+        castingWipGrams: wip ? wip.balanceGrams.toFixed(6) : "0.000000",
+      };
+    }
+
     return {
+      workshopLedgerVersion: shop?.workshopLedgerVersion ?? "LEGACY",
+      gold995,
       vaultReserves,
       workshops: workshops.map((w) => {
         const agg = byWorkshop.get(w.id);
@@ -685,9 +713,29 @@ export class KarigarService {
   ) {
     const weight = dto.weightGrams;
     const metalKey = dto.metalKey ?? "goldGrains24k";
+    const selectedTree = dto.treeId
+      ? await this.prisma.karigarCastingTree.findFirst({
+          where: { id: dto.treeId, shopId },
+          select: { metalKey: true },
+        })
+      : null;
+    if (
+      metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY ||
+      selectedTree?.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY
+    ) {
+      const shopLedger = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { workshopLedgerVersion: true },
+      });
+      if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE) {
+        throw new BadRequestException(
+          "Gold 995 in TRACEABLE mode must be posted from a Gold Scale reading. Typed KarigarMetalMovement is not allowed for this material or casting tree.",
+        );
+      }
+    }
     const stage = (dto.stage as KarigarStage | undefined) ?? undefined;
     const type = dto.type as KarigarMovementType;
-    let job: Awaited<ReturnType<typeof this.requireJob>> | null = null;
+    let job: Awaited<ReturnType<KarigarService["requireJob"]>> | null = null;
     if (jobId) {
       job = await this.requireJob(shopId, jobId);
       if (job.status === "CANCELLED") {
@@ -780,6 +828,33 @@ export class KarigarService {
           }
           throw new ConflictException(
             "Idempotency key reused for a different metal movement payload",
+          );
+        }
+      }
+
+      // Recheck under the tree lock: a weighing session may have claimed a
+      // previously empty 24K tree after the initial request validation.
+      if (dto.treeId || metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY) {
+        const shopLedger = await tx.shop.findUnique({
+          where: { id: shopId },
+          select: { workshopLedgerVersion: true },
+        });
+        let lockedTree: { id: string; metalKey: string } | undefined;
+        if (dto.treeId) {
+          const rows = await tx.$queryRaw<{ id: string; metalKey: string }[]>`
+            SELECT "id", "metalKey" FROM "KarigarCastingTree"
+            WHERE "id" = ${dto.treeId} AND "shopId" = ${shopId}
+            FOR SHARE`;
+          lockedTree = rows[0];
+          if (!lockedTree) throw new NotFoundException("Casting tree not found");
+        }
+        if (
+          shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE &&
+          (metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY ||
+            lockedTree?.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY)
+        ) {
+          throw new BadRequestException(
+            "Gold 995 in TRACEABLE mode must be posted from a Gold Scale reading",
           );
         }
       }
@@ -1151,14 +1226,39 @@ export class KarigarService {
       job.workshopId,
       job.allowedWastagePercent,
     );
+    const metalKey = dto.metalKey ?? job.metalKey;
+    let traceableGold995 = false;
+    if (metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY) {
+      const shopLedger = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { workshopLedgerVersion: true },
+      });
+      traceableGold995 =
+        shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE;
+      if (
+        traceableGold995 &&
+        (dto.issuedGrams ?? 0) > 0
+      ) {
+        throw new BadRequestException(
+          "Gold 995 tree issue weight comes from the scale journal, not typed issuedGrams",
+        );
+      }
+    }
+    if (!traceableGold995 && (dto.issuedGrams == null || dto.issuedGrams <= 0)) {
+      throw new BadRequestException(
+        "Legacy casting trees require a positive typed issuedGrams value",
+      );
+    }
     const tree = await this.prisma.karigarCastingTree.create({
       data: {
         shopId,
         jobId,
         label: dto.label ?? "Tree",
-        issuedGrams: dto.issuedGrams,
-        metalKey: dto.metalKey ?? job.metalKey,
-        purity: dto.purity ?? "24K",
+        issuedGrams: dto.issuedGrams ?? 0,
+        metalKey,
+        purity:
+          dto.purity ??
+          (metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY ? "995" : "24K"),
         allowedWastagePercent:
           dto.allowedWastagePercent ?? job.allowedWastagePercent,
       },
@@ -1184,30 +1284,47 @@ export class KarigarService {
   ) {
     const job = await this.requireJob(shopId, jobId);
     this.assertProductionJobActive(job);
-    const tree = await this.prisma.karigarCastingTree.findFirst({
-      where: { id: treeId, jobId, shopId },
-    });
-    if (!tree) throw new NotFoundException("Casting tree not found");
+    return this.prisma.$transaction(async (tx) => {
+      // A new weighing session also locks this tree before claiming it as 995.
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "KarigarCastingTree"
+        WHERE "id" = ${treeId} AND "jobId" = ${jobId} AND "shopId" = ${shopId}
+        FOR UPDATE`;
+      if (!locked.length) throw new NotFoundException("Casting tree not found");
+      const tree = await tx.karigarCastingTree.findFirst({
+        where: { id: treeId, jobId, shopId },
+      });
+      if (!tree) throw new NotFoundException("Casting tree not found");
 
-    if (dto.lines) {
-      await this.prisma.$transaction([
-        this.prisma.karigarCastingTreeLine.deleteMany({ where: { treeId } }),
-        this.prisma.karigarCastingTreeLine.createMany({
+      if (dto.issuedGrams != null && tree.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY) {
+        const shopLedger = await tx.shop.findUnique({
+          where: { id: shopId },
+          select: { workshopLedgerVersion: true },
+        });
+        if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE) {
+          throw new BadRequestException(
+            "Gold 995 tree issue weight is immutable from typed updates; use scale capture",
+          );
+        }
+      }
+
+      if (dto.lines) {
+        await tx.karigarCastingTreeLine.deleteMany({ where: { treeId } });
+        await tx.karigarCastingTreeLine.createMany({
           data: dto.lines.map((line, index) => ({
             treeId,
             label: line.label,
             weightGrams: line.weightGrams,
             sortOrder: index,
           })),
-        }),
-      ]);
-    }
+        });
+      }
 
     const finishedFromLines = dto.lines
       ? dto.lines.reduce((sum, line) => sum + line.weightGrams, 0)
       : undefined;
 
-    const updated = await this.prisma.karigarCastingTree.update({
+    const updated = await tx.karigarCastingTree.update({
       where: { id: treeId },
       data: {
         ...(dto.label != null ? { label: dto.label } : {}),
@@ -1230,7 +1347,7 @@ export class KarigarService {
       include: { lines: { orderBy: { sortOrder: "asc" } } },
     });
 
-    await this.prisma.karigarJobStage.update({
+    await tx.karigarJobStage.update({
       where: { jobId_stage: { jobId, stage: KarigarStage.CASTING } },
       data: {
         goldInGrams: updated.issuedGrams,
@@ -1249,6 +1366,7 @@ export class KarigarService {
         allowedPercent: updated.allowedWastagePercent,
       }),
     };
+    });
   }
 
   async goldLossReport(shopId: string, from?: string, to?: string) {

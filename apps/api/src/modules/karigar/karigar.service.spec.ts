@@ -17,8 +17,10 @@ describe("KarigarService workshop safeguards", () => {
       },
       karigarVaultReserve: { findUnique: jest.fn(), upsert: jest.fn() },
       karigarWorkshop: { findFirst: jest.fn(), update: jest.fn() },
+      karigarCastingTree: { findFirst: jest.fn(), create: jest.fn() },
       karigarMetalMovement: { create: jest.fn() },
       karigarFinancialEntry: { findMany: jest.fn().mockResolvedValue([]) },
+      workshopMetalAccount: { findMany: jest.fn().mockResolvedValue([]) },
       inventoryItem: { update: jest.fn() },
       $transaction: jest.fn(async (cb) => (typeof cb === "function" ? cb(prisma) : cb)),
       $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
@@ -668,5 +670,125 @@ describe("KarigarService workshop safeguards", () => {
         data: expect.objectContaining({ outstandingBalance: { decrement: 1 } }),
       }),
     );
+  });
+
+  it("rejects typed Gold 995 KarigarMetalMovement when the shop is TRACEABLE", async () => {
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopLedgerVersion: "TRACEABLE",
+    });
+    prisma.karigarJob.findFirst.mockResolvedValue(activeJob);
+
+    await expect(
+      service.addMovement("shop-1", "job-1", "user-1", {
+        type: "ISSUE",
+        weightGrams: 100.25,
+        workshopId: "ws-1",
+        metalKey: "goldGrains995",
+      }),
+    ).rejects.toThrow(/Gold Scale reading/);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a typed default-metal movement when its tree is traceable Gold 995", async () => {
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopLedgerVersion: "TRACEABLE",
+    });
+    prisma.karigarCastingTree.findFirst.mockResolvedValue({
+      metalKey: "goldGrains995",
+    });
+
+    await expect(
+      service.addMovement("shop-1", "job-1", "user-1", {
+        type: "ISSUE",
+        weightGrams: 100.25,
+        workshopId: "ws-1",
+        treeId: "tree-1",
+      }),
+    ).rejects.toThrow(/Gold Scale reading/);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a typed movement when a weighing session claims its tree after preflight", async () => {
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopLedgerVersion: "TRACEABLE",
+    });
+    prisma.karigarCastingTree.findFirst.mockResolvedValue({
+      metalKey: "goldGrains24k",
+    });
+    prisma.karigarJob.findFirst.mockResolvedValue(activeJob);
+    jest.spyOn(service as any, "ensureStages").mockResolvedValue(undefined);
+    prisma.$queryRaw.mockResolvedValue([{ id: "tree-1", metalKey: "goldGrains995" }]);
+
+    await expect(
+      service.addMovement("shop-1", "job-1", "user-1", {
+        type: "ISSUE",
+        weightGrams: 100.25,
+        workshopId: "ws-1",
+        treeId: "tree-1",
+      }),
+    ).rejects.toThrow(/Gold Scale reading/);
+    expect(prisma.karigarMetalMovement.create).not.toHaveBeenCalled();
+  });
+
+  it("leaves the legacy 24K movement path available in TRACEABLE shops", async () => {
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopLedgerVersion: "TRACEABLE",
+    });
+    prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
+
+    await expect(
+      service.addMovement("shop-1", "job-1", "user-1", {
+        type: "ISSUE",
+        weightGrams: 1,
+        workshopId: "ws-1",
+        metalKey: "goldGrains24k",
+      }),
+    ).rejects.toThrow("Cancelled jobs are archived and cannot resume production");
+  });
+
+  it("still allows typed 24K KarigarMetalMovement on LEGACY shops", async () => {
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopLedgerVersion: "LEGACY",
+    });
+    prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
+
+    await expect(
+      service.addMovement("shop-1", "job-1", "user-1", {
+        type: "ISSUE",
+        weightGrams: 1,
+        workshopId: "ws-1",
+        metalKey: "goldGrains24k",
+      }),
+    ).rejects.toThrow("Cancelled jobs are archived and cannot resume production");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects typed Gold 995 issuedGrams on TRACEABLE casting trees", async () => {
+    prisma.karigarJob.findFirst.mockResolvedValue({
+      ...activeJob,
+      workshopId: "ws-1",
+      metalKey: "goldGrains24k",
+      allowedWastagePercent: 1,
+    });
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopLedgerVersion: "TRACEABLE",
+    });
+    prisma.karigarJobStage.findMany.mockResolvedValue([
+      { stage: "CASTING" },
+      { stage: "FILING" },
+      { stage: "POLISHING" },
+      { stage: "SETTING" },
+      { stage: "FINAL_POLISH" },
+      { stage: "QC" },
+    ]);
+    prisma.karigarCastingTree = { create: jest.fn() };
+
+    await expect(
+      service.createTree("shop-1", "job-1", {
+        issuedGrams: 100.25,
+        metalKey: "goldGrains995",
+      }),
+    ).rejects.toThrow(/scale journal/);
+    expect(prisma.karigarCastingTree.create).not.toHaveBeenCalled();
   });
 });

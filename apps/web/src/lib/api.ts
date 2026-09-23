@@ -617,9 +617,10 @@ export const karigarApi = {
     jobId: string,
     data: {
       label?: string;
-      issuedGrams: number;
+      issuedGrams?: number;
       allowedWastagePercent?: number;
       purity?: string;
+      metalKey?: string;
     },
   ) => api.post(`/karigar/jobs/${jobId}/trees`, data),
   updateTree: (
@@ -720,6 +721,34 @@ export const karigarApi = {
   ) => api.post(`/karigar/workshops/${workshopId}/account/metal-return`, data),
   getJobCostSummary: (jobId: string) =>
     api.get(`/karigar/jobs/${jobId}/cost-summary`),
+  setWorkshopLedgerVersion: (workshopLedgerVersion: "LEGACY" | "TRACEABLE") =>
+    api.patch("/karigar/workshop/ledger-version", { workshopLedgerVersion }),
+  workshopMetalAccounts: () => api.get("/karigar/workshop/metal/accounts"),
+  workshopSimulatorDevice: () => api.post("/karigar/workshop/simulator/device"),
+  createWeighingSession: (data: {
+    treeId: string;
+    jobId: string;
+    deviceId: string;
+  }) => api.post("/karigar/workshop/weighing-sessions", data),
+  captureWeighingSession: (
+    sessionId: string,
+    data: {
+      deviceId: string;
+      reading: {
+        weightGrams: string;
+        unit: "g";
+        stable: boolean;
+        sequence: number;
+        rawFrame?: string;
+        readingAt?: string;
+      };
+    },
+  ) => api.post(`/karigar/workshop/weighing-sessions/${sessionId}/capture`, data),
+  confirmWeighingSession: (
+    sessionId: string,
+    data: { readingId: string; idempotencyKey?: string },
+  ) =>
+    api.post(`/karigar/workshop/weighing-sessions/${sessionId}/confirm`, data),
 };
 
 // RFQ API

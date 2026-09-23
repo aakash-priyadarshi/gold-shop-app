@@ -43,6 +43,7 @@ import {
   supplyChainHref,
   type WorkshopView,
 } from "@/lib/workshop-route";
+import { WORKSHOP_GOLD_995_MATERIAL_KEY } from "@gold-shop/shared";
 import { useT } from "@/providers/translation-provider";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -93,6 +94,7 @@ interface Job {
   id: string;
   product: string;
   artisan: string;
+  metalKey?: string;
   workshopId?: string | null;
   grossWeight: number;
   status: string;
@@ -394,6 +396,7 @@ function KarigarSupplyChainLedger() {
   });
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [workshopLedgerVersion, setWorkshopLedgerVersion] = useState<"LEGACY" | "TRACEABLE">("LEGACY");
   const [goldLoss, setGoldLoss] = useState<any>(null);
   const [customMaterials, setCustomMaterials] = useState<
     { key: string; label: string; vaultKey: string }[]
@@ -464,6 +467,7 @@ function KarigarSupplyChainLedger() {
     product: "",
     workshopId: "",
     grossWeight: "",
+    metalKey: "goldGrains24k",
   });
 
   // ── Edit Job Modal ──
@@ -550,6 +554,9 @@ function KarigarSupplyChainLedger() {
       const res = await karigarApi.getSnapshot();
       const dbConfig = res.data ?? res;
       if (dbConfig) {
+        setWorkshopLedgerVersion(
+          dbConfig.workshopLedgerVersion === "TRACEABLE" ? "TRACEABLE" : "LEGACY",
+        );
         if (dbConfig.vaultReserves) setVaultReserves(dbConfig.vaultReserves);
         if (dbConfig.workshops) setWorkshops(dbConfig.workshops);
         if (dbConfig.jobs) setJobs(dbConfig.jobs);
@@ -830,9 +837,10 @@ function KarigarSupplyChainLedger() {
         artisan: workshop.artisan,
         workshopId: workshop.id,
         grossWeight: parseFloat(jobForm.grossWeight) || 0,
+        metalKey: jobForm.metalKey,
       });
       setAddJobModalOpen(false);
-      setJobForm({ product: "", workshopId: "", grossWeight: "" });
+      setJobForm({ product: "", workshopId: "", grossWeight: "", metalKey: "goldGrains24k" });
       showToast(`${t("Job")} "${jobForm.product}" ${t("created!")}`);
       await loadDatabaseConfig();
     } catch (err: any) {
@@ -1592,6 +1600,7 @@ function KarigarSupplyChainLedger() {
                       <KarigarJobGoldCard
                         key={j.id}
                         job={j}
+                        traceableLedger={workshopLedgerVersion === "TRACEABLE"}
                         onChanged={() => void loadDatabaseConfig()}
                         onEdit={() => {
                           setEditJobForm({ ...j });
@@ -2335,6 +2344,21 @@ function KarigarSupplyChainLedger() {
                   className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
                 />
               </div>
+              {workshopLedgerVersion === "TRACEABLE" && (
+                <div className="space-y-1">
+                  <Label><T>Job metal</T></Label>
+                  <Select
+                    value={jobForm.metalKey}
+                    onValueChange={(metalKey) => setJobForm((p) => ({ ...p, metalKey }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="goldGrains24k"><T>Gold 24K</T></SelectItem>
+                      <SelectItem value={WORKSHOP_GOLD_995_MATERIAL_KEY}><T>Gold 995</T></SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

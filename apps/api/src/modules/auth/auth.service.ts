@@ -1140,6 +1140,7 @@ export class AuthService {
             isOnHold: true,
             holdReason: true,
             workshopMode: true,
+            workshopLedgerVersion: true,
           },
         },
       },
