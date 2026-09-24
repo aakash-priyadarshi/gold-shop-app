@@ -16,6 +16,7 @@ import { sellerSubscriptionsApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
 import { isPreviewableFeature } from "@/lib/feature-tiers";
 import { UpgradeNudge } from "@/components/UpgradeNudge";
+import { useFeatures } from "@/hooks/useFeatures";
 
 /**
  * FeatureGate — wraps UI sections and shows an upgrade prompt when the
@@ -43,6 +44,7 @@ export function FeatureGate({
   children: React.ReactNode;
 }) {
   const t = useT();
+  const { eligiblePlans, hasUpgradeCatalog } = useFeatures();
   const [activating, setActivating] = useState(false);
 
   const handleActivateTrial = async () => {
@@ -78,7 +80,8 @@ export function FeatureGate({
 
   if (!hasFeature(feature)) {
     const label = featureLabel || feature.replace(/([A-Z])/g, " $1").trim();
-    const isFree = planName?.toUpperCase() === "FREE";
+    const isFree = planName?.toUpperCase().startsWith("FREE") ?? false;
+    const plans = eligiblePlans(feature);
 
     // Basic USP features (billing, CRM, inventory, repairs, savings, etc.) are
     // never hard-walled — render them with a soft, dismissible upgrade nudge so
@@ -104,7 +107,12 @@ export function FeatureGate({
           </CardTitle>
           <CardDescription className="text-sm">
             Your <strong>{planName || "current"}</strong> plan does not include{" "}
-            <strong>{t(label)}</strong>. Upgrade to unlock this feature.
+            <strong>{t(label)}</strong>.{" "}
+            {plans.length > 0
+              ? <>{t("Available on")} {plans.map((plan) => plan.displayName).join(", ")}.</>
+              : hasUpgradeCatalog
+                ? t("No available plans currently include this feature. Contact support.")
+                : t("View plans to check availability.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6 pb-8">
@@ -117,7 +125,7 @@ export function FeatureGate({
           </div>
 
           {/* Contextual 60-Day Free Trial Offer Banner for FREE Plan Sellers */}
-          {isFree && (
+          {isFree && plans.some((plan) => plan.name === "PRO") && (
             <div className="w-full max-w-lg rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-gradient-to-br from-amber-50/40 via-orange-50/10 to-transparent dark:from-amber-950/20 dark:via-orange-950/10 p-5 text-center space-y-4 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
                 <Crown className="h-4 w-4 text-amber-500" />

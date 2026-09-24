@@ -11,11 +11,18 @@ export interface PlanFeature {
   enabled: boolean;
 }
 
+export interface UpgradePlan {
+  name: string;
+  displayName: string;
+}
+
 export interface FeaturesState {
   planName: string;
   planId: string | null;
   planTier: string | null;
   features: PlanFeature[];
+  upgradePlans: Record<string, UpgradePlan[]>;
+  hasUpgradeCatalog: boolean;
   /** Fast lookup: pass a feature key, get true/false */
   map: Record<string, boolean>;
   lastUpdatedAt: number;
@@ -35,6 +42,7 @@ export function unwrapFeaturesPayload(payload: unknown): {
   planId?: string | null;
   planTier?: string | null;
   features?: unknown;
+  upgradePlans?: unknown;
 } {
   if (!payload || typeof payload !== "object") return {};
   const root = payload as Record<string, unknown>;
@@ -50,6 +58,7 @@ export function unwrapFeaturesPayload(payload: unknown): {
       planId?: string | null;
       planTier?: string | null;
       features?: unknown;
+      upgradePlans?: unknown;
     };
   }
   return root as {
@@ -57,22 +66,8 @@ export function unwrapFeaturesPayload(payload: unknown): {
     planId?: string | null;
     planTier?: string | null;
     features?: unknown;
+    upgradePlans?: unknown;
   };
-}
-
-export function isWorkshopPlanTier(
-  planName?: string | null,
-  planTier?: string | null,
-): boolean {
-  const tier = typeof planTier === "string" ? planTier.toUpperCase() : "";
-  if (tier) return tier === "ENTERPRISE" || tier === "PRO_PLUS";
-  const name = (planName || "").toUpperCase();
-  return (
-    name.includes("ENTERPRISE") ||
-    name.includes("PRO+") ||
-    name.includes("PRO PLUS") ||
-    name.includes("PRO_PLUS")
-  );
 }
 
 export function featureListToMap(features: unknown): Record<string, boolean> {
@@ -105,11 +100,18 @@ export function buildFeaturesState(data: unknown): FeaturesState {
   const planName = payload.planName || "Free Plan";
   const planTier = payload.planTier ?? null;
   const map = featureListToMap(payload.features);
-  if (
-    map.workshopManufacturing === undefined &&
-    isWorkshopPlanTier(planName, planTier)
-  ) {
-    map.workshopManufacturing = true;
+  const upgradePlans: Record<string, UpgradePlan[]> = {};
+  if (payload.upgradePlans && typeof payload.upgradePlans === "object") {
+    for (const [key, plans] of Object.entries(payload.upgradePlans)) {
+      if (Array.isArray(plans)) {
+        upgradePlans[key] = plans.filter(
+          (plan): plan is UpgradePlan =>
+            plan &&
+            typeof plan.name === "string" &&
+            typeof plan.displayName === "string",
+        );
+      }
+    }
   }
 
   const features = Array.isArray(payload.features)
@@ -126,6 +128,8 @@ export function buildFeaturesState(data: unknown): FeaturesState {
     planId: payload.planId ?? null,
     planTier,
     features,
+    upgradePlans,
+    hasUpgradeCatalog: payload.upgradePlans !== undefined,
     map,
     lastUpdatedAt: Date.now(),
   };
@@ -236,6 +240,10 @@ export function useFeatures() {
     (key: string): boolean => state?.map[key] === true,
     [state],
   );
+  const eligiblePlans = useCallback(
+    (key: string): UpgradePlan[] => state?.upgradePlans[key] ?? [],
+    [state],
+  );
 
   return {
     /** All features with metadata */
@@ -246,6 +254,9 @@ export function useFeatures() {
     planId: state?.planId ?? null,
     /** Check if a specific feature is enabled */
     hasFeature,
+    /** Active plans for this shop's country that the admin enabled for a feature */
+    eligiblePlans,
+    hasUpgradeCatalog: state?.hasUpgradeCatalog ?? false,
     /** True only for the first load; refreshes preserve rendered access */
     loading: status === "loading",
     /** True while a focus/manual refresh is in flight */

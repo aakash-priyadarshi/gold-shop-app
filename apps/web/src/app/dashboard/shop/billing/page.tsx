@@ -322,9 +322,25 @@ function CurrentPlanTab() {
   }
 
   const isFreePlan = !sub || sub.plan.name === "FREE" || sub.status === "FREE";
+  const expiredPaidPlan = isFreePlan
+    ? history.find((entry) => entry.status === "EXPIRED" && entry.plan.name !== "FREE")
+    : null;
 
   return (
     <div className="space-y-4">
+      {expiredPaidPlan && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="pt-5 text-sm">
+            <T>Your previous plan has expired.</T>{" "}
+            <strong>{expiredPaidPlan.plan.displayName}</strong>{" "}
+            <T>ended on</T>{" "}
+            {new Date(expiredPaidPlan.currentPeriodEnd).toLocaleDateString()}.{" "}
+            <a href="/dashboard/shop/billing?tab=plans" className="font-semibold underline">
+              <T>View available plans</T>
+            </a>
+          </CardContent>
+        </Card>
+      )}
       {isFreePlan && (
         <Card className="border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50/50 to-orange-100/30 dark:from-amber-950/20 dark:via-yellow-900/10 dark:to-orange-950/20 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 relative group">
           <div className="absolute top-0 right-0 p-32 bg-amber-400/5 blur-3xl rounded-full pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
@@ -388,7 +404,7 @@ function CurrentPlanTab() {
                 variant={
                   sub.status === "ACTIVE"
                     ? "default"
-                    : sub.status === "TRIALING"
+                    : sub.status === "TRIALING" || sub.status === "FREE"
                       ? "secondary"
                       : "destructive"
                 }
