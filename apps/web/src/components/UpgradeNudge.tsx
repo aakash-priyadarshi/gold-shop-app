@@ -4,7 +4,7 @@ import { Crown, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/providers/translation-provider";
-import { useFeatures } from "@/hooks/useFeatures";
+import type { UpgradePlan } from "@/hooks/useFeatures";
 
 interface UpgradeNudgeProps {
   /** Feature key — used to remember dismissal so we don't nag on every visit. */
@@ -13,6 +13,8 @@ interface UpgradeNudgeProps {
   featureName?: string;
   /** Compact styling for mobile screens. */
   compact?: boolean;
+  plans: UpgradePlan[];
+  hasUpgradeCatalog: boolean;
 }
 
 /**
@@ -20,10 +22,14 @@ interface UpgradeNudgeProps {
  * a hard pay-wall. Lets people keep using core USP features while gently
  * pointing them at plans enabled for the feature in admin billing.
  */
-export function UpgradeNudge({ featureKey, featureName, compact }: UpgradeNudgeProps) {
+export function UpgradeNudge({
+  featureKey,
+  featureName,
+  compact,
+  plans,
+  hasUpgradeCatalog,
+}: UpgradeNudgeProps) {
   const t = useT();
-  const { eligiblePlans, hasUpgradeCatalog } = useFeatures();
-  const plans = eligiblePlans(featureKey);
   const storageKey = `orivraa_nudge_dismissed_${featureKey}`;
   const [dismissed, setDismissed] = useState(true);
 
@@ -68,7 +74,7 @@ export function UpgradeNudge({ featureKey, featureName, compact }: UpgradeNudgeP
         </p>
       </div>
       <Link
-        href="/dashboard/shop/billing?tab=plans"
+        href="/dashboard/shop/billing?tab=upgrade"
         className={`whitespace-nowrap font-bold text-amber-600 underline dark:text-amber-400 ${compact ? "text-[10px]" : "text-[11px]"}`}
       >
         {t("View plans")}

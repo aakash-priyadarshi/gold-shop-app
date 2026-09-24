@@ -335,7 +335,7 @@ function CurrentPlanTab() {
             <strong>{expiredPaidPlan.plan.displayName}</strong>{" "}
             <T>ended on</T>{" "}
             {new Date(expiredPaidPlan.currentPeriodEnd).toLocaleDateString()}.{" "}
-            <a href="/dashboard/shop/billing?tab=plans" className="font-semibold underline">
+            <a href="/dashboard/shop/billing?tab=upgrade" className="font-semibold underline">
               <T>View available plans</T>
             </a>
           </CardContent>

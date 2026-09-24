@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 const DISMISS_KEY = "orivraa_smart_nudge_dismissed";
-const BILLING_HREF = "/dashboard/shop/billing?tab=plans";
+const BILLING_HREF = "/dashboard/shop/billing?tab=upgrade";
 
 const METRIC_LABELS: Record<keyof typeof FREE_SOFT_LIMITS, string> = {
   customers: "customers",

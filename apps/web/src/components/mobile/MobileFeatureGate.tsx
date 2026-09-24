@@ -132,7 +132,13 @@ export function MobileFeatureGate({
     if (isPreviewableFeature(effectiveKey)) {
       return (
         <div className="flex flex-col h-full">
-          <UpgradeNudge featureKey={effectiveKey} featureName={featureName} compact />
+          <UpgradeNudge
+            featureKey={effectiveKey}
+            featureName={featureName}
+            compact
+            plans={plans}
+            hasUpgradeCatalog={hasUpgradeCatalog}
+          />
           {children}
         </div>
       );
@@ -207,7 +213,7 @@ export function MobileFeatureGate({
         ) : (
           <div className="flex flex-col gap-3 w-full max-w-[280px]">
             <Link
-              href="/dashboard/shop/billing?tab=plans"
+              href="/dashboard/shop/billing?tab=upgrade"
               className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow transition-colors text-center"
             >
               {t("View Plans")}

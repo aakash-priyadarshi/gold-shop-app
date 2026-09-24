@@ -90,7 +90,12 @@ export function FeatureGate({
     if (isPreviewableFeature(feature)) {
       return (
         <>
-          <UpgradeNudge featureKey={feature} featureName={t(label)} />
+          <UpgradeNudge
+            featureKey={feature}
+            featureName={t(label)}
+            plans={plans}
+            hasUpgradeCatalog={hasUpgradeCatalog}
+          />
           {children}
         </>
       );
@@ -117,7 +122,7 @@ export function FeatureGate({
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6 pb-8">
           <div className="flex gap-3">
-            <Link href="/dashboard/shop/billing?tab=plans">
+            <Link href="/dashboard/shop/billing?tab=upgrade">
               <Button variant="outline" className="h-10 px-6 font-semibold">
                 {t("View Plans & Pricing")}
               </Button>
