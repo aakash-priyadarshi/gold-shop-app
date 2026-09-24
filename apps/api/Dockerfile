@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:20-slim AS base
 
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
 # git is needed to clone the private gold-shop-core submodule
@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y curl ca-certificates gnupg git \
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
+
+FROM base AS build
 
 # Copy workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
@@ -53,6 +55,12 @@ RUN pnpm exec nest build
 
 # Verify dist/src/main.js was produced (must stay under apps/api/dist/src — not monorepo-root dist/)
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
+
+# The credential-bearing ARG is scoped to the build stage; the runtime image
+# contains only its output, never the build-stage history or Git metadata.
+FROM base AS runtime
+COPY --from=build /app /app
+WORKDIR /app/apps/api
 
 EXPOSE 3001
 
