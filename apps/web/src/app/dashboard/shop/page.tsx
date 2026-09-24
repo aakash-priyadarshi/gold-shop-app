@@ -1027,9 +1027,9 @@ export default function ShopDashboard() {
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
                   <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg flex items-center gap-1">
-                    <Link href="/dashboard/shop/billing">
+                    <Link href="/dashboard/shop/billing?tab=upgrade">
                       <Zap className="h-4 w-4 fill-white" />
-                      <T>Upgrade to Pro / Enterprise</T>
+                      <T>View Plans With Supply Chain Access</T>
                     </Link>
                   </Button>
                   <Button variant="outline" asChild className="border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-300 font-semibold px-6 py-2.5 rounded-xl">

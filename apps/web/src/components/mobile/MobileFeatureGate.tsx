@@ -74,7 +74,7 @@ export function MobileFeatureGate({
   children,
 }: MobileFeatureGateProps) {
   const t = useT();
-  const { hasFeature, loading, planName } = useFeatures();
+  const { hasFeature, loading, planName, eligiblePlans, hasUpgradeCatalog } = useFeatures();
   const [activating, setActivating] = useState(false);
 
   const handleActivateTrial = async () => {
@@ -122,7 +122,8 @@ export function MobileFeatureGate({
   }
 
   if (!hasFeature(effectiveKey)) {
-    const isFree = planName?.toUpperCase() === "FREE";
+    const isFree = planName?.toUpperCase().startsWith("FREE") ?? false;
+    const plans = eligiblePlans(effectiveKey);
 
     // Basic USP screens (quotes, customers, catalogue, WhatsApp share, tax
     // reports) are never hard-walled — render them with a soft, dismissible
@@ -131,7 +132,13 @@ export function MobileFeatureGate({
     if (isPreviewableFeature(effectiveKey)) {
       return (
         <div className="flex flex-col h-full">
-          <UpgradeNudge featureKey={effectiveKey} featureName={featureName} compact />
+          <UpgradeNudge
+            featureKey={effectiveKey}
+            featureName={featureName}
+            compact
+            plans={plans}
+            hasUpgradeCatalog={hasUpgradeCatalog}
+          />
           {children}
         </div>
       );
@@ -163,10 +170,17 @@ export function MobileFeatureGate({
               <>This feature requires a premium plan.</>
             )}
           </p>
+          {plans.length > 0 ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              {t("Available on")} {plans.map((plan) => plan.displayName).join(", ")}.
+            </p>
+          ) : hasUpgradeCatalog ? (
+            <p className="text-xs text-gray-400">{t("No available plans currently include this feature. Contact support.")}</p>
+          ) : null}
         </div>
 
         {/* 60-Day Premium Trial Offer (rendered for FREE users) */}
-        {isFree ? (
+        {isFree && plans.some((plan) => plan.name === "PRO") ? (
           <div className="w-full max-w-[320px] rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-gradient-to-b from-amber-50/50 to-orange-50/20 dark:from-amber-950/20 dark:to-orange-950/10 p-4 shadow-sm space-y-4">
             <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
               <Crown className="h-3.5 w-3.5 text-amber-500" />
@@ -199,7 +213,7 @@ export function MobileFeatureGate({
         ) : (
           <div className="flex flex-col gap-3 w-full max-w-[280px]">
             <Link
-              href="/dashboard/shop/billing?tab=plans"
+              href="/dashboard/shop/billing?tab=upgrade"
               className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow transition-colors text-center"
             >
               {t("View Plans")}

@@ -4,6 +4,7 @@ import { Crown, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/providers/translation-provider";
+import type { UpgradePlan } from "@/hooks/useFeatures";
 
 interface UpgradeNudgeProps {
   /** Feature key — used to remember dismissal so we don't nag on every visit. */
@@ -12,14 +13,22 @@ interface UpgradeNudgeProps {
   featureName?: string;
   /** Compact styling for mobile screens. */
   compact?: boolean;
+  plans: UpgradePlan[];
+  hasUpgradeCatalog: boolean;
 }
 
 /**
  * Soft, dismissible upgrade nudge shown above a previewable feature instead of
  * a hard pay-wall. Lets people keep using core USP features while gently
- * pointing them at the PRO plan for AI design & enterprise tools.
+ * pointing them at plans enabled for the feature in admin billing.
  */
-export function UpgradeNudge({ featureKey, featureName, compact }: UpgradeNudgeProps) {
+export function UpgradeNudge({
+  featureKey,
+  featureName,
+  compact,
+  plans,
+  hasUpgradeCatalog,
+}: UpgradeNudgeProps) {
   const t = useT();
   const storageKey = `orivraa_nudge_dismissed_${featureKey}`;
   const [dismissed, setDismissed] = useState(true);
@@ -57,11 +66,15 @@ export function UpgradeNudge({ featureKey, featureName, compact }: UpgradeNudgeP
             : t("You're previewing a premium feature")}
         </p>
         <p className={`mt-0.5 leading-normal text-amber-700 dark:text-amber-400 ${compact ? "text-[10px]" : "text-[11px]"}`}>
-          {t("Keep using it free. Upgrade to PRO for AI design generation, multi-branch and advanced tools.")}
+          {plans.length > 0
+            ? <>{t("Keep using it free. Included on")} {plans.map((plan) => plan.displayName).join(", ")}.</>
+            : hasUpgradeCatalog
+              ? t("Keep using it free. No available plan currently includes this feature.")
+              : t("Keep using it free. View plans for more options.")}
         </p>
       </div>
       <Link
-        href="/dashboard/shop/billing?tab=plans"
+        href="/dashboard/shop/billing?tab=upgrade"
         className={`whitespace-nowrap font-bold text-amber-600 underline dark:text-amber-400 ${compact ? "text-[10px]" : "text-[11px]"}`}
       >
         {t("View plans")}

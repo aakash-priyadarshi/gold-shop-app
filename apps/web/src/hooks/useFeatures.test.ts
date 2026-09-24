@@ -54,21 +54,39 @@ describe("useFeatures", () => {
     expect(state.map.workshopManufacturing).toBe(true);
   });
 
-  it("defaults a missing workshop key to enabled on Pro+ and Enterprise", () => {
+  it("never invents workshop access from Pro+ or Enterprise tier names", () => {
     const enterprise = buildFeaturesState({
       planName: "Enterprise (India)",
       planId: "enterprise-in",
       planTier: "ENTERPRISE",
       features: [{ key: "crm", label: "CRM", category: "CRM", enabled: true }],
     });
-    expect(enterprise.map.workshopManufacturing).toBe(true);
+    expect(enterprise.map.workshopManufacturing).not.toBe(true);
 
     const proPlus = buildFeaturesState({
       planName: "Pro+ (India)",
       planTier: "PRO_PLUS",
       features: { crm: true },
     });
-    expect(proPlus.map.workshopManufacturing).toBe(true);
+    expect(proPlus.map.workshopManufacturing).not.toBe(true);
+  });
+
+  it("keeps admin-configured eligible plans from the feature response", () => {
+    const state = buildFeaturesState({
+      planName: "Free (India)",
+      features: { workshopManufacturing: false },
+      upgradePlans: {
+        workshopManufacturing: [
+          { name: "PRO_PLUS", displayName: "Pro+ (India)" },
+          { name: "ENTERPRISE", displayName: "Enterprise (India)" },
+        ],
+      },
+    });
+    expect(state.upgradePlans.workshopManufacturing.map((plan) => plan.name)).toEqual([
+      "PRO_PLUS",
+      "ENTERPRISE",
+    ]);
+    expect(state.hasUpgradeCatalog).toBe(true);
   });
 
   it("does not invent workshop access on Free or Pro", () => {
