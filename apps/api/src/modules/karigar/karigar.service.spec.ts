@@ -21,6 +21,8 @@ describe("KarigarService workshop safeguards", () => {
       karigarMetalMovement: { create: jest.fn() },
       karigarFinancialEntry: { findMany: jest.fn().mockResolvedValue([]) },
       workshopMetalAccount: { findMany: jest.fn().mockResolvedValue([]) },
+      workshopMetalJournal: { findFirst: jest.fn().mockResolvedValue(null) },
+      workshopWeighingSession: { findFirst: jest.fn().mockResolvedValue(null) },
       inventoryItem: { update: jest.fn() },
       $transaction: jest.fn(async (cb) => (typeof cb === "function" ? cb(prisma) : cb)),
       $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
@@ -628,11 +630,11 @@ describe("KarigarService workshop safeguards", () => {
     });
   });
 
-  it("still allows physical metal return reconciliation after cancellation", async () => {
+  it.each(["LEGACY", "TRACEABLE"])("allows existing non-995 metal returns after cancellation in %s mode", async (version) => {
     prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
-    prisma.shop.findUnique.mockResolvedValue({ currency: "NPR" });
+    prisma.shop.findUnique.mockResolvedValue({ currency: "NPR", workshopLedgerVersion: version });
     const tx = {
-      shop: { findUnique: jest.fn().mockResolvedValue({ currency: "NPR" }) },
+      shop: { findUnique: jest.fn().mockResolvedValue({ currency: "NPR", workshopLedgerVersion: version }) },
       karigarVaultReserve: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 0 }),
         upsert: jest.fn(),
@@ -651,7 +653,7 @@ describe("KarigarService workshop safeguards", () => {
         create: jest.fn().mockResolvedValue({ id: "fin-entry-1" }),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1", workshopLedgerVersion: version }]),
       $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
     prisma.$transaction.mockImplementation(async (callback: any) => callback(tx));
@@ -730,7 +732,7 @@ describe("KarigarService workshop safeguards", () => {
     expect(prisma.karigarMetalMovement.create).not.toHaveBeenCalled();
   });
 
-  it("leaves the legacy 24K movement path available in TRACEABLE shops", async () => {
+  it("rejects typed 24K movement as a TRACEABLE physical-accounting escape route", async () => {
     prisma.shop.findUnique.mockResolvedValue({
       workshopLedgerVersion: "TRACEABLE",
     });
@@ -743,7 +745,64 @@ describe("KarigarService workshop safeguards", () => {
         workshopId: "ws-1",
         metalKey: "goldGrains24k",
       }),
-    ).rejects.toThrow("Cancelled jobs are archived and cannot resume production");
+    ).rejects.toThrow(/captured Gold Scale reading/);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a typed issue if cutover completed after request preflight", async () => {
+    prisma.shop.findUnique.mockResolvedValue({ workshopLedgerVersion: "LEGACY" });
+    prisma.karigarJob.findFirst.mockResolvedValue(activeJob);
+    jest.spyOn(service as any, "ensureStages").mockResolvedValue(undefined);
+    prisma.$queryRaw.mockResolvedValue([{ workshopLedgerVersion: "TRACEABLE" }]);
+
+    await expect(service.addMovement("shop-1", "job-1", "user-1", {
+      type: "ISSUE", weightGrams: 1, workshopId: "ws-1", metalKey: "goldGrains24k",
+    })).rejects.toThrow("typed KarigarMetalMovement is disabled");
+    expect(prisma.karigarMetalMovement.create).not.toHaveBeenCalled();
+  });
+
+  it("freezes job metal identity after a TRACEABLE journal is posted", async () => {
+    prisma.karigarJob.findFirst.mockResolvedValue({ ...activeJob, metalKey: "gold995", workshopId: "ws-1" });
+    prisma.workshopMetalJournal.findFirst.mockResolvedValue({ id: "journal-1" });
+
+    await expect(service.updateJob("shop-1", "job-1", { metalKey: "goldGrains24k" }))
+      .rejects.toThrow("Cannot change job metal or workshop");
+    expect(prisma.karigarJob.update).not.toHaveBeenCalled();
+  });
+
+  it("does not cancel a job with an active TRACEABLE weighing session", async () => {
+    prisma.workshopWeighingSession.findFirst.mockResolvedValue({ id: "session-1" });
+
+    await expect(service.deleteJob("shop-1", "job-1"))
+      .rejects.toThrow("Resolve TRACEABLE material and weighing sessions");
+    expect(prisma.karigarJob.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects typed stage weights for TRACEABLE jobs before any journal exists", async () => {
+    prisma.karigarJob.findFirst.mockResolvedValue(activeJob);
+    prisma.shop.findUnique.mockResolvedValue({
+      workshopMode: true,
+      workshopLedgerVersion: "TRACEABLE",
+    });
+
+    await expect(
+      service.updateStage("shop-1", "job-1", "CASTING", { goldOutGrams: 10 }),
+    ).rejects.toThrow("measured process runs and QC");
+    expect(prisma.karigarJobStage.update).not.toHaveBeenCalled();
+  });
+
+  it("closes legacy typed Floor, QC and finished receipt paths for TRACEABLE shops before any journal exists", async () => {
+    (service as any).requireWorkshopShop = jest.fn().mockResolvedValue({ workshopLedgerVersion: "TRACEABLE", workshopDepartments: ["CASTING", "QC"] });
+    prisma.karigarJob.findFirst.mockResolvedValue({ ...activeJob, stages: [], trees: [] });
+
+    await expect(service.advanceFloor("shop-1", "job-1", { goldOutGrams: 10 }))
+      .rejects.toThrow("measured process runs and transfers");
+    await expect(service.inspectQc("shop-1", "job-1", { decision: "APPROVED" }))
+      .rejects.toThrow("reconciled TRACEABLE process QC");
+    await expect(service.receiveFg("shop-1", "job-1", {}))
+      .rejects.toThrow("final Gold Scale reading and journal receipt");
+    expect(prisma.workshopMetalJournal.findFirst).not.toHaveBeenCalled();
+    expect(prisma.inventoryItem.update).not.toHaveBeenCalled();
   });
 
   it("still allows typed 24K KarigarMetalMovement on LEGACY shops", async () => {
@@ -790,5 +849,17 @@ describe("KarigarService workshop safeguards", () => {
       }),
     ).rejects.toThrow(/scale journal/);
     expect(prisma.karigarCastingTree.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps CAD tree lines theoretical instead of deriving finished physical grams", async () => {
+    prisma.karigarJob.findFirst.mockResolvedValue({ ...activeJob, allowedWastagePercent: 1 });
+    prisma.karigarCastingTree.findFirst.mockResolvedValue({ id: "tree-1", shopId: "shop-1", jobId: "job-1", metalKey: "goldGrains995", finishedGrams: 0 });
+    prisma.karigarCastingTreeLine = { deleteMany: jest.fn(), createMany: jest.fn() };
+    prisma.karigarCastingTree.update = jest.fn().mockResolvedValue({ id: "tree-1", issuedGrams: 0, finishedGrams: 0, sprueButtonGrams: 0, recoverableGrams: 0, allowedWastagePercent: 1 });
+    prisma.shop.findUnique.mockResolvedValue({ workshopLedgerVersion: "TRACEABLE" });
+
+    await service.updateTree("shop-1", "job-1", "tree-1", { lines: [{ label: "CAD design", weightGrams: 50 }] });
+    expect(prisma.karigarCastingTree.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.not.objectContaining({ finishedGrams: expect.anything() }) }));
+    await expect(service.updateTree("shop-1", "job-1", "tree-1", { finishedGrams: 50 })).rejects.toThrow(/scale journals/);
   });
 });

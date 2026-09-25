@@ -14,6 +14,7 @@ import {
 import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { ordersApi, rfqApi, shopsApi } from "@/lib/api";
+import { workshopApi } from "@/lib/workshop-api";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
@@ -79,9 +80,13 @@ export default function CustomerDashboard() {
     [],
   );
   const [totalSpent, setTotalSpent] = useState<string>("NPR 0");
+  const [hasWorkshopAssignment, setHasWorkshopAssignment] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    Promise.all([workshopApi.myAssignments(), workshopApi.myInvitations()])
+      .then(([assigned, pending]) => setHasWorkshopAssignment((assigned.data ?? []).length > 0 || (pending.data ?? []).length > 0))
+      .catch(() => setHasWorkshopAssignment(false));
 
     // Fetch recent orders
     ordersApi
@@ -178,6 +183,7 @@ export default function CustomerDashboard() {
                   <T>Request Custom Design</T>
                 </Link>
               </Button>
+              {hasWorkshopAssignment && <Button variant="secondary" asChild><Link href="/dashboard/workshop-staff"><T>Open staff workshop station</T></Link></Button>}
             </div>
           </div>
 

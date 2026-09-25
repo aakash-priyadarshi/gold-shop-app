@@ -53,6 +53,7 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
       adapterKind: "SIMULATOR",
       isActive: true,
       precisionGrams: new Prisma.Decimal("0.01"),
+      nextSequence: 1,
       name: "Gold Scale simulator",
     };
 
@@ -65,6 +66,7 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
       tx.workshopWeighingSession = prisma.workshopWeighingSession;
       tx.workshopScaleReading = prisma.workshopScaleReading;
       tx.karigarCastingTree = prisma.karigarCastingTree;
+      tx.karigarJob = prisma.karigarJob;
       tx.karigarMetalMovement = prisma.karigarMetalMovement;
       tx.$queryRaw = prisma.$queryRaw;
     };
@@ -75,6 +77,7 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
           id: "shop-1",
           workshopMode: true,
           workshopLedgerVersion: WorkshopLedgerVersion.TRACEABLE,
+          workshopInitializedAt: new Date(),
         }),
       },
       workshopMetalAccount: {
@@ -147,6 +150,7 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
         }),
         create: jest.fn(async ({ data }: any) => ({ id: "device-1", ...data })),
         upsert: jest.fn(async ({ create }: any) => ({ id: "device-1", ...create })),
+        update: jest.fn(async () => ({ ...device, nextSequence: ++device.nextSequence })),
       },
       workshopWeighingSession: {
         create: jest.fn(async ({ data }: any) => {
@@ -212,6 +216,9 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
           return tree;
         }),
       },
+      karigarJob: {
+        findFirst: jest.fn(async () => tree.job),
+      },
       karigarMetalMovement: {
         create: jest.fn(async () => {
           movementCreates += 1;
@@ -225,6 +232,9 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
         }
         if (sql.includes("KarigarCastingTree")) {
           return [{ id: tree.id, issuedGrams: tree.issuedGrams }];
+        }
+        if (sql.includes("KarigarJob")) {
+          return [{ id: tree.jobId }];
         }
         return Object.values(accounts).map((a: any) => ({
           id: a.id,
@@ -279,7 +289,7 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
         weightGrams: reading.weightGrams,
         unit: "g",
         stable: reading.stable,
-        sequence: reading.sequence,
+        sequence: session.assignedSequence ?? reading.sequence,
         rawFrame: reading.rawFrame,
         readingAt: reading.readingAt,
       },
@@ -312,6 +322,25 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
     );
     expect(debit.debitGrams).toBe("100.250000");
     expect(credit.creditGrams).toBe("100.250000");
+  });
+
+  it("does not start a Gold 995 issue after traceable QC completes the job", async () => {
+    tree.job.status = "Completed";
+    await expect(service.createSession("shop-1", "user-1", {
+      treeId: "tree-1", jobId: "job-1", deviceId: "device-1",
+    })).rejects.toThrow("Finished or archived jobs");
+    expect(prisma.workshopWeighingSession.create).not.toHaveBeenCalled();
+  });
+
+  it("does not post a captured Gold 995 issue if QC completes the job before confirmation", async () => {
+    seedVault("1000.00");
+    const { session, captured } = await captureStable("100.25");
+    tree.job.status = "Completed";
+
+    await expect(service.confirm("shop-1", "user-1", session.id, {
+      readingId: captured.reading.id,
+    })).rejects.toThrow("Job changed state");
+    expect(Object.keys(journals)).toHaveLength(0);
   });
 
   it("claims a fresh legacy tree as Gold 995 before accepting a scale session", async () => {
@@ -445,7 +474,7 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
           readingAt: reading.readingAt,
         },
       }),
-    ).rejects.toThrow(/sequence has already been captured/);
+    ).rejects.toThrow(/server-assigned session sequence/);
   });
 
   it("rejects stale readings and expired sessions", async () => {
@@ -601,12 +630,15 @@ describe("WorkshopScaleService Gold 995 issue slice", () => {
       process.env.NODE_ENV = "production";
       delete process.env.WORKSHOP_SIMULATOR_SHOP_IDS;
       device.adapterKind = "SERIAL";
+      device.profile = { parser: { kind: "ASCII_LINE", stableToken: "ST", unstableToken: "US" } };
       const session = await service.createSession("shop-1", "user-1", {
         treeId: "tree-1", deviceId: "device-1",
       });
+      const now = Date.now();
+      const samples = [-500, -300, -100].map((offset) => ({ rawFrame: "ST,NET,+100.25,g", readingAt: new Date(now + offset).toISOString() }));
       const captured = await service.capture("shop-1", "user-1", session.id, {
         deviceId: "device-1",
-        reading: { weightGrams: "100.25", unit: "g", stable: true, sequence: 1 },
+        reading: { weightGrams: "100.25", unit: "g", stable: true, sequence: 1, rawFrame: samples[2].rawFrame, readingAt: samples[2].readingAt, samples },
       });
       seedVault();
       const posted = await service.confirm("shop-1", "user-1", session.id, {

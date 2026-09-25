@@ -6,6 +6,7 @@ pub mod commands;
 pub mod db;
 pub mod printers;
 pub mod sync;
+pub mod workshop_scale;
 
 use commands::{AuthTokenReceiver, PendingUpdateState, SyncState};
 use db::Database;
@@ -263,6 +264,8 @@ pub fn run() {
             commands::is_desktop,
             commands::check_connectivity,
             commands::send_raw_tcp_print,
+            workshop_scale::list_scale_serial_ports,
+            workshop_scale::read_scale_frames,
             commands::list_os_printers,
             commands::send_raw_to_named_printer,
             // Auth

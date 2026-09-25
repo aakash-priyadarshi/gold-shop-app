@@ -34,15 +34,25 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [sku, setSku] = useState("");
   const [busy, setBusy] = useState(false);
+  const [traceable, setTraceable] = useState<boolean | null>(null);
 
   const load = useCallback(() => {
     setError(null);
-    return karigarApi
-      .getJob(jobId)
-      .then((res) => setJob((res.data ?? res) as Job))
-      .catch((err) =>
-        setError(err?.response?.data?.message || "Job not found"),
-      );
+    setTraceable(null);
+    return Promise.allSettled([karigarApi.getJob(jobId), karigarApi.workshopCutoverStatus()])
+      .then(([jobResult, cutoverResult]) => {
+        if (jobResult.status === "rejected") {
+          setJob(null);
+          setError(jobResult.reason?.response?.data?.message || "Job not found");
+          return;
+        }
+        setJob((jobResult.value.data ?? jobResult.value) as Job);
+        if (cutoverResult.status === "fulfilled") {
+          setTraceable((cutoverResult.value.data ?? cutoverResult.value).workshopLedgerVersion === "TRACEABLE");
+        } else {
+          setError("Could not load workshop ledger status");
+        }
+      });
   }, [jobId]);
 
   useEffect(() => {
@@ -132,8 +142,9 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
           </div>
         </CardContent>
       </Card>
-      <KarigarJobGoldCard
+      {traceable !== null && <KarigarJobGoldCard
         job={job}
+        traceableLedger={traceable}
         onChanged={load}
         onEdit={() => {
           /* work-order fields live on this view */
@@ -146,7 +157,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
             setError(err?.response?.data?.message || "Could not cancel job");
           }
         }}
-      />
+      />}
       <Card data-tour="workshop-receive-fg">
         <CardHeader>
           <CardTitle>
@@ -154,6 +165,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
+          {traceable === null ? <p className="w-full text-sm"><T>Finished-goods receipt is unavailable until Workshop ledger status loads.</T></p> : traceable ? <><p className="w-full text-sm"><T>TRACEABLE finished goods require QC approval and a final physical Gold Scale reading. The legacy typed-weight receipt is disabled.</T></p><Button variant="outline" asChild><Link href={supplyChainHref("metal")}><T>Open measured factory workstation</T></Link></Button></> : <>
           <div className="space-y-1">
             <Label>
               <T>SKU (optional)</T>
@@ -171,6 +183,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
               <T>Create inventory item</T>
             )}
           </Button>
+          </>}
           {job.inventoryItemId && (
             <Link
               className="text-sm underline"

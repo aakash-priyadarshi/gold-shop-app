@@ -521,9 +521,26 @@ export class KarigarService {
         );
       }
     }
-    await this.prisma.karigarJob.update({
-      where: { id: jobId },
-      data: {
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "KarigarJob" WHERE "id" = ${jobId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!locked.length) throw new NotFoundException("Job not found");
+      const current = await tx.karigarJob.findFirst({ where: { id: jobId, shopId } });
+      if (!current) throw new NotFoundException("Job not found");
+      this.assertProductionJobActive(current);
+      if ((dto.metalKey != null && dto.metalKey !== current.metalKey) ||
+          (dto.workshopId !== undefined && dto.workshopId !== current.workshopId)) {
+        const [journal, session] = await Promise.all([
+          tx.workshopMetalJournal.findFirst({ where: { shopId, jobId, status: "POSTED" }, select: { id: true } }),
+          tx.workshopWeighingSession.findFirst({ where: { shopId, jobId }, select: { id: true } }),
+        ]);
+        if (journal || session) {
+          throw new BadRequestException("Cannot change job metal or workshop after TRACEABLE weighing has begun");
+        }
+      }
+      await tx.karigarJob.update({
+        where: { id: jobId },
+        data: {
         ...(dto.product != null ? { product: dto.product } : {}),
         ...(dto.artisan != null ? { artisan: dto.artisan } : {}),
         ...(dto.workshopId !== undefined
@@ -553,16 +570,28 @@ export class KarigarService {
         ...(dto.bom !== undefined
           ? { bom: dto.bom ? (dto.bom as Prisma.InputJsonValue) : Prisma.JsonNull }
           : {}),
-      },
+        },
+      });
     });
     return this.getJob(shopId, jobId);
   }
 
   async deleteJob(shopId: string, jobId: string) {
-    await this.requireJob(shopId, jobId);
-    await this.prisma.karigarJob.update({
-      where: { id: jobId },
-      data: { status: "CANCELLED" },
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "KarigarJob" WHERE "id" = ${jobId} AND "shopId" = ${shopId} FOR UPDATE`;
+      if (!locked.length) throw new NotFoundException("Job not found");
+      const [journal, session] = await Promise.all([
+        tx.workshopMetalJournal.findFirst({ where: { shopId, jobId, status: "POSTED" }, select: { id: true } }),
+        tx.workshopWeighingSession.findFirst({ where: { shopId, jobId, status: { in: ["OPEN", "STABLE_CAPTURED"] } }, select: { id: true } }),
+      ]);
+      if (journal || session) {
+        throw new BadRequestException("Resolve TRACEABLE material and weighing sessions before cancelling this job");
+      }
+      await tx.karigarJob.update({
+        where: { id: jobId },
+        data: { status: "CANCELLED" },
+      });
     });
     return { ok: true, status: "CANCELLED" };
   }
@@ -713,25 +742,17 @@ export class KarigarService {
   ) {
     const weight = dto.weightGrams;
     const metalKey = dto.metalKey ?? "goldGrains24k";
-    const selectedTree = dto.treeId
-      ? await this.prisma.karigarCastingTree.findFirst({
-          where: { id: dto.treeId, shopId },
-          select: { metalKey: true },
-        })
-      : null;
-    if (
-      metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY ||
-      selectedTree?.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY
-    ) {
-      const shopLedger = await this.prisma.shop.findUnique({
-        where: { id: shopId },
-        select: { workshopLedgerVersion: true },
-      });
-      if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE) {
-        throw new BadRequestException(
-          "Gold 995 in TRACEABLE mode must be posted from a Gold Scale reading. Typed KarigarMetalMovement is not allowed for this material or casting tree.",
-        );
-      }
+    // Existing non-995 issues remain in the legacy Float book after cutover.
+    // Only their returns may settle there; new issues still require the scale journal.
+    const legacyReturn = isReturnMovementType(dto.type) && metalKey !== WORKSHOP_GOLD_995_MATERIAL_KEY;
+    const shopLedger = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { workshopLedgerVersion: true },
+    });
+    if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE && !legacyReturn) {
+      throw new BadRequestException(
+        "TRACEABLE Workshop physical movements require a captured Gold Scale reading (or Stone Scale for stones); typed KarigarMetalMovement is disabled.",
+      );
     }
     const stage = (dto.stage as KarigarStage | undefined) ?? undefined;
     const type = dto.type as KarigarMovementType;
@@ -800,6 +821,15 @@ export class KarigarService {
           monetaryPreflight,
           (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode,
         );
+      }
+
+      // Serialize typed legacy work with the LEGACY -> TRACEABLE shop update.
+      // A request preflighted before cutover must not issue typed stock afterward.
+      const lockedLedgerShop = await tx.$queryRaw<{ workshopLedgerVersion: WorkshopLedgerVersion }[]>`
+        SELECT "workshopLedgerVersion" FROM "Shop" WHERE "id" = ${shopId} FOR SHARE`;
+      if (!lockedLedgerShop.length) throw new NotFoundException("Shop not found");
+      if (lockedLedgerShop[0].workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE && !legacyReturn) {
+        throw new BadRequestException("TRACEABLE Workshop physical movements require a captured Gold Scale reading (or Stone Scale for stones); typed KarigarMetalMovement is disabled.");
       }
 
       // Row lock on workshop to serialize metal float and financial mutation
@@ -1160,8 +1190,13 @@ export class KarigarService {
     const stageEnum = this.parseStage(stage);
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
-      select: { workshopMode: true, workshopDepartments: true },
+      select: { workshopMode: true, workshopLedgerVersion: true, workshopDepartments: true },
     });
+    if (shop?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE) {
+      throw new BadRequestException(
+        "TRACEABLE production uses measured process runs and QC, not typed stage weights",
+      );
+    }
     const workshopQc = shop?.workshopMode && stageEnum === KarigarStage.QC;
     if (workshopQc && dto.status != null) {
       throw new BadRequestException(
@@ -1227,22 +1262,13 @@ export class KarigarService {
       job.allowedWastagePercent,
     );
     const metalKey = dto.metalKey ?? job.metalKey;
-    let traceableGold995 = false;
-    if (metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY) {
-      const shopLedger = await this.prisma.shop.findUnique({
-        where: { id: shopId },
-        select: { workshopLedgerVersion: true },
-      });
-      traceableGold995 =
-        shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE;
-      if (
-        traceableGold995 &&
-        (dto.issuedGrams ?? 0) > 0
-      ) {
-        throw new BadRequestException(
-          "Gold 995 tree issue weight comes from the scale journal, not typed issuedGrams",
-        );
-      }
+    const shopLedger = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { workshopLedgerVersion: true } });
+    const traceableGold995 = shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE;
+    if (traceableGold995 && metalKey !== WORKSHOP_GOLD_995_MATERIAL_KEY) {
+      throw new BadRequestException("TRACEABLE casting trees must start with Gold 995, not legacy 24K stock");
+    }
+    if (traceableGold995 && (dto.issuedGrams ?? 0) > 0) {
+      throw new BadRequestException("Gold 995 tree issue weight comes from the scale journal, not typed issuedGrams");
     }
     if (!traceableGold995 && (dto.issuedGrams == null || dto.issuedGrams <= 0)) {
       throw new BadRequestException(
@@ -1296,16 +1322,10 @@ export class KarigarService {
       });
       if (!tree) throw new NotFoundException("Casting tree not found");
 
-      if (dto.issuedGrams != null && tree.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY) {
-        const shopLedger = await tx.shop.findUnique({
-          where: { id: shopId },
-          select: { workshopLedgerVersion: true },
-        });
-        if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE) {
-          throw new BadRequestException(
-            "Gold 995 tree issue weight is immutable from typed updates; use scale capture",
-          );
-        }
+      const shopLedger = await tx.shop.findUnique({ where: { id: shopId }, select: { workshopLedgerVersion: true } });
+      const traceable = shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE;
+      if (traceable && [dto.issuedGrams, dto.finishedGrams, dto.sprueButtonGrams, dto.recoverableGrams].some((value) => value != null)) {
+        throw new BadRequestException("TRACEABLE tree physical weights come from scale journals; CAD lines are reference only");
       }
 
       if (dto.lines) {
@@ -1320,7 +1340,7 @@ export class KarigarService {
         });
       }
 
-    const finishedFromLines = dto.lines
+    const finishedFromLines = !traceable && dto.lines
       ? dto.lines.reduce((sum, line) => sum + line.weightGrams, 0)
       : undefined;
 
@@ -1552,7 +1572,7 @@ export class KarigarService {
   private async requireWorkshopShop(shopId: string) {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
-      select: { workshopMode: true, workshopDepartments: true },
+      select: { workshopMode: true, workshopLedgerVersion: true, workshopDepartments: true },
     });
     if (!shop) throw new NotFoundException("Shop not found");
     if (!shop.workshopMode) {
@@ -1619,7 +1639,7 @@ export class KarigarService {
     const departments = this.workflowDepartments(
       resolveDepartments(shop.workshopDepartments),
     );
-    const stageFilter = dept ? this.parseStage(dept) : undefined;
+    const stageFilter = shop.workshopLedgerVersion === "TRACEABLE" ? undefined : dept ? this.parseStage(dept) : undefined;
     const [jobs, stageUnusedMovements] = await Promise.all([
       this.prisma.karigarJob.findMany({
         where: {
@@ -1655,6 +1675,7 @@ export class KarigarService {
     return {
       departments,
       dept: stageFilter ?? null,
+      ledgerVersion: shop.workshopLedgerVersion,
       jobs: jobs.map((job) =>
         this.serializeJob({
           ...job,
@@ -1675,6 +1696,9 @@ export class KarigarService {
     );
     const job = await this.requireJob(shopId, jobId);
     this.assertProductionJobActive(job);
+    if (shop.workshopLedgerVersion === "TRACEABLE") {
+      throw new BadRequestException("TRACEABLE production uses measured process runs and transfers, not typed Floor stage weights");
+    }
     const current = (job.currentStage ??
       departments[0] ??
       KarigarStage.CASTING) as KarigarStageCode;
@@ -1745,9 +1769,12 @@ export class KarigarService {
   }
 
   async inspectQc(shopId: string, jobId: string, dto: InspectKarigarQcDto) {
-    await this.requireWorkshopShop(shopId);
+    const shop = await this.requireWorkshopShop(shopId);
     const job = await this.requireJob(shopId, jobId);
     this.assertProductionJobActive(job);
+    if (shop.workshopLedgerVersion === "TRACEABLE") {
+      throw new BadRequestException("Use the reconciled TRACEABLE process QC action, not legacy stage inspection");
+    }
     if (job.currentStage !== KarigarStage.QC) {
       throw new BadRequestException(
         "Advance this job to Workshop QC before recording an inspection",
@@ -1826,13 +1853,22 @@ export class KarigarService {
   }
 
   async receiveFg(shopId: string, jobId: string, dto: ReceiveKarigarFgDto) {
-    await this.requireWorkshopShop(shopId);
+    const shop = await this.requireWorkshopShop(shopId);
     const job = await this.prisma.karigarJob.findFirst({
       where: { id: jobId, shopId },
       include: { stages: true, trees: true },
     });
     if (!job) throw new NotFoundException("Job not found");
     this.assertProductionJobActive(job);
+    if (shop.workshopLedgerVersion === "TRACEABLE") {
+      throw new BadRequestException("TRACEABLE finished goods require a final Gold Scale reading and journal receipt");
+    }
+    const traceableReceiptSource = await this.prisma.workshopMetalJournal.findFirst({
+      where: { shopId, jobId, status: "POSTED" }, select: { id: true },
+    });
+    if (traceableReceiptSource) {
+      throw new BadRequestException("TRACEABLE finished goods must be received from a captured Gold Scale reading, not a derived Float weight");
+    }
     const qc = job.stages.find((stage) => stage.stage === KarigarStage.QC);
     if (qc?.status !== "DONE" || !qc.qcApprovedAt) {
       throw new BadRequestException(

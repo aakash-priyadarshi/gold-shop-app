@@ -13,6 +13,7 @@ import {
 } from "@gold-shop/shared";
 import { useState } from "react";
 import { useMarket } from "@/hooks/useMarket";
+import { useT } from "@/providers/translation-provider";
 import { JobCostSummaryModal } from "./JobCostSummaryModal";
 
 export type JobGold = {
@@ -102,6 +103,7 @@ function CastingTreeEditor({
   onChanged: () => void;
   onCancelNew?: () => void;
 }) {
+  const t = useT();
   const traceableGold995Tree = traceableLedger &&
     (tree ? tree.metalKey : jobMetalKey) === WORKSHOP_GOLD_995_MATERIAL_KEY;
   const [treeForm, setTreeForm] = useState({
@@ -112,22 +114,26 @@ function CastingTreeEditor({
     allowed: String(tree?.allowedWastagePercent ?? defaultAllowed),
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const saveTree = async () => {
     if (readOnly) return;
+    setError("");
     setSaving(true);
     try {
       const issued = parseFloat(treeForm.issued) || 0;
       const payload = {
-        ...(traceableGold995Tree ? {} : { issuedGrams: issued }),
-        finishedGrams: parseFloat(treeForm.finished) || 0,
-        sprueButtonGrams: parseFloat(treeForm.sprue) || 0,
-        recoverableGrams: parseFloat(treeForm.recoverable) || 0,
+        ...(traceableLedger ? {} : {
+          issuedGrams: issued,
+          finishedGrams: parseFloat(treeForm.finished) || 0,
+          sprueButtonGrams: parseFloat(treeForm.sprue) || 0,
+          recoverableGrams: parseFloat(treeForm.recoverable) || 0,
+        }),
         allowedWastagePercent: parseFloat(treeForm.allowed) || 0,
       };
       if (tree) {
         await karigarApi.updateTree(jobId, tree.id, payload);
-      } else if (traceableGold995Tree || issued > 0) {
+      } else if (traceableGold995Tree || (!traceableLedger && issued > 0)) {
         const created = await karigarApi.createTree(jobId, {
           issuedGrams: traceableGold995Tree ? 0 : issued,
           ...(traceableGold995Tree
@@ -140,6 +146,8 @@ function CastingTreeEditor({
         if (treeId) await karigarApi.updateTree(jobId, treeId, payload);
       }
       onChanged();
+    } catch (err: any) {
+      setError(String(err?.response?.data?.message ?? err?.message ?? "Could not save casting tree"));
     } finally {
       setSaving(false);
     }
@@ -156,14 +164,6 @@ function CastingTreeEditor({
         </p>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {traceableGold995Tree && (
-          <div className="text-[10px] text-gray-500 space-y-1">
-            <T>Issued g</T>
-            <p className="h-8 rounded border bg-muted px-2 py-2 text-xs tabular-nums">
-              {grams(tree?.issuedGrams)}
-            </p>
-          </div>
-        )}
         {(
           [
             ["issued", "Issued g"],
@@ -173,7 +173,7 @@ function CastingTreeEditor({
             ["allowed", "Allowed %"],
           ] as const
         )
-          .filter(([key]) => !(traceableGold995Tree && key === "issued"))
+          .filter(([key]) => !traceableLedger || key === "allowed")
           .map(([key, label]) => (
           <label key={key} className="text-[10px] text-gray-500 space-y-1">
             <T>{label}</T>
@@ -188,7 +188,7 @@ function CastingTreeEditor({
           </label>
         ))}
       </div>
-      {tree?.goldLoss && <LossGrid loss={tree.goldLoss} />}
+      {!traceableLedger && tree?.goldLoss && <LossGrid loss={tree.goldLoss} />}
       {tree?.lines && tree.lines.length > 0 && (
         <ul className="text-[11px] text-gray-600 space-y-0.5">
           {tree.lines.map((line) => (
@@ -208,6 +208,7 @@ function CastingTreeEditor({
           </Button>
         )}
       </div>
+      {error && <p role="alert" className="text-xs text-rose-600">{t(error)}</p>}
     </div>
   );
 }
@@ -304,15 +305,13 @@ export function KarigarJobGoldCard({
         />
       )}
 
-      <LossGrid loss={job.goldLoss} />
+      {!traceableLedger && <LossGrid loss={job.goldLoss} />}
 
       <div data-tour="supply-casting-tree" className="space-y-2">
         <p className="text-[11px] font-semibold uppercase text-amber-700">
           <T>Casting trees</T>
         </p>
-        <p className="text-[11px] text-gray-500">
-          <T>Issued gold vs finished pieces, sprue/button, and recoverable scrap. Loss is calculated — it is not billing wastage.</T>
-        </p>
+        <p className="text-[11px] text-gray-500">{traceableLedger ? <T>CAD tree lines are theoretical. Measured issues, outputs and loss live in the Workshop material journal and batch reconciliation report.</T> : <T>Issued gold vs finished pieces, sprue/button, and recoverable scrap. Loss is calculated — it is not billing wastage.</T>}</p>
         {trees.map((tree) => (
           <CastingTreeEditor
             key={tree.id}
@@ -339,7 +338,7 @@ export function KarigarJobGoldCard({
             onCancelNew={() => setAddingTree(false)}
           />
         )}
-        {!addingTree && !archived && (
+        {!addingTree && !archived && (!traceableLedger || job.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY) && (
           <Button
             size="sm"
             variant="outline"
@@ -349,9 +348,10 @@ export function KarigarJobGoldCard({
             <T>Add casting tree</T>
           </Button>
         )}
+        {traceableLedger && job.metalKey !== WORKSHOP_GOLD_995_MATERIAL_KEY && <p className="text-xs text-amber-700"><T>New TRACEABLE casting trees require a Gold 995 work order.</T></p>}
       </div>
 
-      <div className="space-y-2">
+      {traceableLedger ? <p className="rounded border p-2 text-xs text-muted-foreground"><T>Department stage gram fields are disabled in TRACEABLE mode. Use measured process runs, transfers and QC in the Factory workstation.</T></p> : <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase text-gray-400">
           <T>Department stages</T>
         </p>
@@ -405,7 +405,7 @@ export function KarigarJobGoldCard({
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

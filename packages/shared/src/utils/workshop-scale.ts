@@ -10,7 +10,34 @@ export type WorkshopScaleAdapterKind =
   | "SIMULATOR"
   | "SERIAL"
   | "USB"
-  | "ETHERNET";
+  | "ETHERNET"
+  | "TCP";
+
+export interface AsciiLineScaleParserProfile {
+  kind: "ASCII_LINE";
+  stableToken: string;
+  unstableToken: string;
+}
+
+/** Generic `ST,NET,+12.34,g`-style frame; a vendor profile supplies the two
+ *  explicit status tokens. Missing status, NET, unit, or a unique weight fails closed. */
+export function parseAsciiNetScaleFrame(rawFrame: string, profile: AsciiLineScaleParserProfile) {
+  if (rawFrame.length > 500 || !rawFrame.trim() || /[^\x09\x20-\x7e]/.test(rawFrame)) {
+    throw new Error("Invalid ASCII scale frame");
+  }
+  const tokens = rawFrame.trim().split(/[,;\s]+/).filter(Boolean);
+  if (tokens.some((token) => token === "-" || /^-\d/.test(token))) {
+    throw new Error("Scale frame reports a negative or signed-ambiguous weight");
+  }
+  const stable = tokens.includes(profile.stableToken);
+  const unstable = tokens.includes(profile.unstableToken);
+  if (stable === unstable) throw new Error("Scale frame must contain exactly one explicit stability token");
+  if (!tokens.some((token) => token.toUpperCase() === "NET")) throw new Error("Scale must report net weight after physical tare");
+  if (!tokens.some((token) => token.toLowerCase() === "g")) throw new Error("Scale frame must report grams");
+  const weights = tokens.filter((token) => /^\+?\d+(?:\.\d+)?$/.test(token));
+  if (weights.length !== 1) throw new Error("Scale frame must contain one unambiguous gram value");
+  return { weightGrams: weights[0].replace(/^\+/, ""), stable };
+}
 
 /**
  * Normalized reading every adapter (simulator, RS-232, USB, Ethernet) must
@@ -124,6 +151,42 @@ export class GoldScaleSimulator implements WorkshopScaleAdapter {
       rawFrame: `SIM,${stable ? "ST" : "US"},NET,${this.liveGrams} g`,
       readingAt: new Date().toISOString(),
       adapterKind: "SIMULATOR",
+    };
+  }
+}
+
+/** Demo-only Stone Scale with 0.001 g resolution and the same capture shape. */
+export class StoneScaleSimulator implements WorkshopScaleAdapter {
+  readonly kind = "SIMULATOR" as const;
+  readonly purpose = "STONE" as const;
+  private connected = false;
+  private sequence = 0;
+  private netGrams: string;
+  private stable = false;
+
+  constructor(initialNetGrams = "0.125", initialSequence = 0) {
+    assertPositiveQuantumGrams(initialNetGrams, "STONE");
+    if (!Number.isSafeInteger(initialSequence) || initialSequence < 0) throw new Error("Invalid simulator sequence");
+    this.netGrams = initialNetGrams;
+    this.sequence = initialSequence;
+  }
+
+  connect() { this.connected = true; }
+  disconnect() { this.connected = false; }
+  isConnected() { return this.connected; }
+  setNetWeight(grams: string) {
+    assertPositiveQuantumGrams(grams, "STONE");
+    this.netGrams = grams;
+  }
+  setStable(stable: boolean) { this.stable = stable; }
+  read(): NormalizedScaleReading | null {
+    if (!this.connected) return null;
+    this.sequence += 1;
+    return {
+      purpose: "STONE", weightGrams: this.netGrams, unit: "g",
+      precisionGrams: STONE_SCALE_QUANTUM_GRAMS, stable: this.stable,
+      sequence: this.sequence, rawFrame: `SIM,${this.stable ? "ST" : "US"},NET,${this.netGrams} g`,
+      readingAt: new Date().toISOString(), adapterKind: "SIMULATOR",
     };
   }
 }

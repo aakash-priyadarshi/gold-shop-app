@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { T } from "@/components/ui/T";
 import { karigarApi } from "@/lib/api";
+import { workshopApi } from "@/lib/workshop-api";
 import { supplyChainHref } from "@/lib/workshop-route";
 import { useT } from "@/providers/translation-provider";
 import { KARIGAR_STAGE_LABELS, type KarigarStageCode } from "@gold-shop/shared";
@@ -15,6 +16,7 @@ type Job = {
   id: string;
   product: string;
   artisan: string;
+  status?: string;
   currentStage?: KarigarStageCode | null;
   stages?: Array<{ stage: string; goldInGrams: number; reworkCount?: number }>;
 };
@@ -23,15 +25,25 @@ export default function WorkshopQcPage() {
   const t = useT();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [traceable, setTraceable] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    return karigarApi
-      .workshopFloor("QC")
-      .then((res) => setJobs((res.data ?? res).jobs ?? []))
-      .catch((err) =>
-        setError(err?.response?.data?.message || "Could not load QC queue"),
-      );
+  const load = useCallback(async () => {
+    try {
+      const response = await karigarApi.workshopFloor("QC");
+      const floor = response.data ?? response;
+      const isTraceable = floor.ledgerVersion === "TRACEABLE";
+      setTraceable(isTraceable);
+      if (isTraceable) {
+        const jobsResponse = await workshopApi.jobs();
+        const active = (jobsResponse.data ?? jobsResponse) as Job[];
+        setJobs(active.filter((job) => !["Completed", "CANCELLED", "REJECTED"].includes(job.status ?? "")));
+      } else {
+        setJobs(floor.jobs ?? []);
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Could not load QC queue");
+    }
   }, []);
 
   useEffect(() => {
@@ -44,11 +56,15 @@ export default function WorkshopQcPage() {
   ) => {
     setError(null);
     try {
-      await karigarApi.inspectQc(jobId, {
-        decision,
-        rejectionReason: reasons[jobId] || undefined,
-        reworkToStage: decision === "REWORK" ? "FILING" : undefined,
-      });
+      if (traceable) {
+        await workshopApi.inspectQc(jobId, { decision, reason: reasons[jobId]?.trim() || undefined });
+      } else {
+        await karigarApi.inspectQc(jobId, {
+          decision,
+          rejectionReason: reasons[jobId] || undefined,
+          reworkToStage: decision === "REWORK" ? "FILING" : undefined,
+        });
+      }
       await load();
     } catch (err: any) {
       setError(err?.response?.data?.message || "QC action failed");
@@ -61,12 +77,8 @@ export default function WorkshopQcPage() {
         <h1 className="text-2xl font-bold" data-tour="workshop-qc-page">
           <T>QC</T>
         </h1>
-        <p className="text-sm text-muted-foreground">
-          <T>
-            Inspect, send back for rework, or reject. Approve does not write
-            invoices.
-          </T>
-        </p>
+        <p className="text-sm text-muted-foreground">{traceable ? <T>Approve only after every physical process run, route step and transfer is reconciled. Final inventory still requires a Gold Scale receipt.</T> : <T>Inspect, send back for rework, or reject. Approve does not write invoices.</T>}</p>
+        {traceable && <Link href={supplyChainHref("metal")} className="text-sm underline"><T>Open measured factory workstation</T></Link>}
       </div>
       {error && <p className="text-sm text-rose-600">{t(error)}</p>}
       <div className="space-y-3" data-tour="workshop-qc-queue">
@@ -106,6 +118,7 @@ export default function WorkshopQcPage() {
             <Button
               size="sm"
               variant="outline"
+              disabled={traceable && !reasons[job.id]?.trim()}
               onClick={() => inspect(job.id, "REWORK")}
             >
               <T>Rework</T>
@@ -113,6 +126,7 @@ export default function WorkshopQcPage() {
             <Button
               size="sm"
               variant="destructive"
+              disabled={traceable && !reasons[job.id]?.trim()}
               onClick={() => inspect(job.id, "REJECTED")}
             >
               <T>Reject</T>
