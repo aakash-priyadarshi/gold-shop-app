@@ -20,6 +20,7 @@ const CORE_DIR = path.join(API_SRC, "modules", "core");
 const WORKFLOWS_DIR = path.join(PROJECT_ROOT, ".github", "workflows");
 const GITMODULES = path.join(PROJECT_ROOT, ".gitmodules");
 const DOCKERFILE = path.join(PROJECT_ROOT, "apps", "api", "Dockerfile");
+const CLONE_SCRIPT = path.join(PROJECT_ROOT, "apps", "api", "scripts", "clone-core.sh");
 const APP_MODULE = path.join(API_SRC, "app.module.ts");
 
 const CORE_MODULES = [
@@ -197,16 +198,21 @@ describe("gold-shop-core submodule architecture", () => {
       expect(content).toContain("ARG SUBMODULE_PAT");
     });
 
-    test("Dockerfile clones gold-shop-core when SUBMODULE_PAT is set", () => {
-      const content = fs.readFileSync(DOCKERFILE, "utf-8");
-      expect(content).toContain("gold-shop-core.git");
-      expect(content).toContain("${SUBMODULE_PAT}");
+    test("Dockerfile runs the credentialed clone script only in its build stage", () => {
+      const dockerfile = fs.readFileSync(DOCKERFILE, "utf-8");
+      const script = fs.readFileSync(CLONE_SCRIPT, "utf-8");
+      expect(dockerfile).toContain("RUN sh /tmp/clone-core.sh");
+      expect(dockerfile).not.toContain("${SUBMODULE_PAT}");
+      expect(dockerfile).toMatch(/FROM base AS runtime/);
+      expect(script).toContain("gold-shop-core.git");
+      expect(script).toContain("${SUBMODULE_PAT}");
+      expect(script).toContain('rm -rf "$core_dir/.git"');
     });
 
-    test("Dockerfile clone step is conditional (only if submodule not present)", () => {
-      const content = fs.readFileSync(DOCKERFILE, "utf-8");
-      // The clone should be guarded by a check to avoid re-cloning if already present
-      expect(content).toContain("subscription-plans.module.ts");
+    test("clone script requires either a token or an existing core checkout", () => {
+      const script = fs.readFileSync(CLONE_SCRIPT, "utf-8");
+      expect(script).toContain('if [ -n "${SUBMODULE_PAT:-}" ]');
+      expect(script).toContain("subscription-plans.module.ts");
     });
   });
 
