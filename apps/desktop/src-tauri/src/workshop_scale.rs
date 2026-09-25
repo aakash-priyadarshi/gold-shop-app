@@ -39,7 +39,9 @@ pub fn list_scale_serial_ports() -> Result<Vec<String>, String> {
 }
 
 fn private_lan_ip(host: &str) -> Result<Ipv4Addr, String> {
-    let ip: Ipv4Addr = host.parse().map_err(|_| "Scale TCP host must be an IPv4 address")?;
+    let ip: Ipv4Addr = host
+        .parse()
+        .map_err(|_| "Scale TCP host must be an IPv4 address")?;
     let octets = ip.octets();
     if octets[0] == 10
         || (octets[0] == 172 && (16..=31).contains(&octets[1]))
@@ -51,9 +53,14 @@ fn private_lan_ip(host: &str) -> Result<Ipv4Addr, String> {
     }
 }
 
-fn collect_frames(reader: &mut dyn Read, max_frames: usize) -> Result<Vec<ScaleFrame>, String> {
+fn collect_frames(
+    reader: &mut dyn Read,
+    max_frames: usize,
+    minimum_gap: Duration,
+) -> Result<Vec<ScaleFrame>, String> {
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut frames = Vec::with_capacity(max_frames);
+    let mut last_sample_at: Option<Instant> = None;
     let mut pending = Vec::<u8>::new();
     let mut chunk = [0_u8; 256];
     while frames.len() < max_frames && Instant::now() < deadline {
@@ -70,10 +77,17 @@ fn collect_frames(reader: &mut dyn Read, max_frames: usize) -> Result<Vec<ScaleF
                             if !line.is_ascii() {
                                 return Err("Scale sent a non-ASCII frame".into());
                             }
+                            let sampled_at = Instant::now();
+                            if last_sample_at
+                                .is_some_and(|last| sampled_at.duration_since(last) < minimum_gap)
+                            {
+                                continue;
+                            }
                             frames.push(ScaleFrame {
                                 raw_frame: line,
                                 reading_at: Utc::now().to_rfc3339(),
                             });
+                            last_sample_at = Some(sampled_at);
                             if frames.len() == max_frames {
                                 break;
                             }
@@ -86,7 +100,11 @@ fn collect_frames(reader: &mut dyn Read, max_frames: usize) -> Result<Vec<ScaleF
                     }
                 }
             }
-            Err(error) if error.kind() == ErrorKind::TimedOut || error.kind() == ErrorKind::WouldBlock => continue,
+            Err(error)
+                if error.kind() == ErrorKind::TimedOut || error.kind() == ErrorKind::WouldBlock =>
+            {
+                continue
+            }
             Err(error) => return Err(format!("Scale read failed: {error}")),
         }
     }
@@ -99,7 +117,13 @@ fn collect_frames(reader: &mut dyn Read, max_frames: usize) -> Result<Vec<ScaleF
 
 fn read_transport(transport: ScaleTransport, max_frames: usize) -> Result<Vec<ScaleFrame>, String> {
     match transport {
-        ScaleTransport::Serial { port, baud_rate, data_bits, stop_bits, parity } => {
+        ScaleTransport::Serial {
+            port,
+            baud_rate,
+            data_bits,
+            stop_bits,
+            parity,
+        } => {
             if port.len() > 256 || baud_rate < 300 || baud_rate > 115_200 {
                 return Err("Invalid serial scale port or baud rate".into());
             }
@@ -124,37 +148,49 @@ fn read_transport(transport: ScaleTransport, max_frames: usize) -> Result<Vec<Sc
                 _ => return Err("Unsupported serial parity".into()),
             };
             let mut serial = serialport::new(port, baud_rate)
-                .data_bits(bits).stop_bits(stops).parity(parity)
+                .data_bits(bits)
+                .stop_bits(stops)
+                .parity(parity)
                 .timeout(Duration::from_millis(250))
-                .open().map_err(|error| format!("Could not open serial scale: {error}"))?;
-            collect_frames(&mut serial, max_frames)
+                .open()
+                .map_err(|error| format!("Could not open serial scale: {error}"))?;
+            collect_frames(&mut serial, max_frames, Duration::from_millis(60))
         }
         ScaleTransport::Tcp { host, port } => {
-            if port == 0 { return Err("Scale TCP port is required".into()); }
+            if port == 0 {
+                return Err("Scale TCP port is required".into());
+            }
             let ip = private_lan_ip(&host)?;
             let address = SocketAddrV4::new(ip, port);
             let mut stream = TcpStream::connect_timeout(&address.into(), Duration::from_secs(2))
                 .map_err(|error| format!("Could not connect to LAN scale: {error}"))?;
-            stream.set_read_timeout(Some(Duration::from_millis(250)))
+            stream
+                .set_read_timeout(Some(Duration::from_millis(250)))
                 .map_err(|error| format!("Could not set scale read timeout: {error}"))?;
-            collect_frames(&mut stream, max_frames)
+            collect_frames(&mut stream, max_frames, Duration::from_millis(60))
         }
     }
 }
 
 #[tauri::command]
-pub async fn read_scale_frames(transport: ScaleTransport, max_frames: u8) -> Result<Vec<ScaleFrame>, String> {
+pub async fn read_scale_frames(
+    transport: ScaleTransport,
+    max_frames: u8,
+) -> Result<Vec<ScaleFrame>, String> {
     if !(1..=8).contains(&max_frames) {
         return Err("Scale frame request must be between one and eight frames".into());
     }
     tokio::task::spawn_blocking(move || read_transport(transport, max_frames as usize))
-        .await.map_err(|error| format!("Scale reader failed: {error}"))?
+        .await
+        .map_err(|error| format!("Scale reader failed: {error}"))?
 }
 
 #[cfg(test)]
 mod tests {
     use super::{collect_frames, private_lan_ip, ScaleTransport};
-    use std::io::Cursor;
+    use std::io::{Cursor, Read};
+    use std::thread::sleep;
+    use std::time::Duration;
 
     #[test]
     fn only_private_lan_scale_hosts_are_allowed() {
@@ -169,19 +205,63 @@ mod tests {
         let profile: ScaleTransport = serde_json::from_value(serde_json::json!({
             "kind": "SERIAL", "port": "COM3", "baudRate": 9600,
             "dataBits": 8, "stopBits": 1, "parity": "none"
-        })).unwrap();
-        assert!(matches!(profile, ScaleTransport::Serial { baud_rate: 9600, .. }));
+        }))
+        .unwrap();
+        assert!(matches!(
+            profile,
+            ScaleTransport::Serial {
+                baud_rate: 9600,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn serial_or_tcp_stream_returns_bounded_complete_raw_frames() {
         let mut stream = Cursor::new(b"ST NET 100.25 g\r\nUS NET 100.24 g\n".to_vec());
-        let frames = collect_frames(&mut stream, 3).unwrap();
+        let frames = collect_frames(&mut stream, 3, Duration::ZERO).unwrap();
         assert_eq!(frames.len(), 2);
         assert_eq!(frames[0].raw_frame, "ST NET 100.25 g");
         assert_eq!(frames[1].raw_frame, "US NET 100.24 g");
 
         let mut oversized = Cursor::new(vec![b'X'; 501]);
-        assert!(collect_frames(&mut oversized, 1).is_err());
+        assert!(collect_frames(&mut oversized, 1, Duration::ZERO).is_err());
+    }
+
+    #[test]
+    fn fast_stream_frames_are_sampled_across_a_real_stability_window() {
+        struct TimedStream {
+            index: usize,
+        }
+        impl Read for TimedStream {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                if self.index >= 3 {
+                    return Ok(0);
+                }
+                if self.index > 0 {
+                    sleep(Duration::from_millis(60));
+                }
+                let frame = b"ST NET 100.25 g\n";
+                buf[..frame.len()].copy_from_slice(frame);
+                self.index += 1;
+                Ok(frame.len())
+            }
+        }
+
+        let frames =
+            collect_frames(&mut TimedStream { index: 0 }, 3, Duration::from_millis(60)).unwrap();
+        assert_eq!(frames.len(), 3);
+        let first = chrono::DateTime::parse_from_rfc3339(&frames[0].reading_at).unwrap();
+        let last = chrono::DateTime::parse_from_rfc3339(&frames[2].reading_at).unwrap();
+        assert!((last - first).num_milliseconds() >= 100);
+
+        let mut burst =
+            Cursor::new(b"ST NET 100.25 g\nST NET 100.25 g\nST NET 100.25 g\n".to_vec());
+        assert_eq!(
+            collect_frames(&mut burst, 3, Duration::from_millis(60))
+                .unwrap()
+                .len(),
+            1
+        );
     }
 }
