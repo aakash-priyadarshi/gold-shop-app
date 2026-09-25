@@ -52,13 +52,19 @@ export class WorkshopControlService {
       if (!material?.isActive) throw new NotFoundException("Active workshop material not found");
       const source = await this.journal.ensureAccount(tx, shopId, dto.materialKey, dto.sourceBucket as WorkshopAccountBucket, dto.sourceScopeId ?? "");
       const destination = await this.journal.ensureAccount(tx, shopId, dto.materialKey, dto.destinationBucket as WorkshopAccountBucket, dto.destinationScopeId ?? "");
+      if (dto.jobId) {
+        const job = await tx.karigarJob.findFirst({ where: { id: dto.jobId, shopId }, select: { id: true } });
+        if (!job) throw new BadRequestException("Job does not belong to this shop");
+      }
       if (dto.treeId) {
         const tree = await tx.karigarCastingTree.findFirst({ where: { id: dto.treeId, shopId } });
         if (!tree || (dto.jobId && tree.jobId !== dto.jobId)) throw new BadRequestException("Tree and job do not match this shop");
       }
       if (dto.processRunId) {
         const run = await tx.workshopProcessRun.findFirst({ where: { id: dto.processRunId, shopId } });
-        if (!run || (dto.treeId && run.treeId !== dto.treeId)) throw new BadRequestException("Process run does not match this tree");
+        if (!run || (dto.treeId && run.treeId !== dto.treeId) || (dto.jobId && run.jobId !== dto.jobId)) {
+          throw new BadRequestException("Process run does not match this tree and job");
+        }
       }
       const posted = await this.journal.postEntry(tx, {
         shopId, referenceType: WorkshopMetalJournalReferenceType.MANUAL_OVERRIDE,
