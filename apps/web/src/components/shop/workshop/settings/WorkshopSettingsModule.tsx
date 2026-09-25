@@ -209,6 +209,28 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
     }
   };
 
+  const handleSaveMaterial = async () => {
+    if (!matName.trim() || !matKey.trim()) return;
+    try {
+      await workshopApi.createMaterial({
+        name: matName.trim(),
+        key: matKey.trim(),
+        kind: matKind,
+        scalePurpose: matPurpose,
+        theoreticalPurity: matKind === "GOLD" && matPurity ? matPurity : undefined,
+      });
+      setShowAddMaterialModal(false);
+      setMatName("");
+      setMatKey("");
+      setMatKind("GOLD");
+      setMatPurpose("GOLD");
+      setMatPurity("0.995");
+      loadCatalog();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Failed to create material");
+    }
+  };
+
   // Recipe Component calculations
   const recipeTotalPercentage = useMemo(() => {
     return recipeComponents.reduce((sum, c) => sum + (c.percentage || 0), 0);
@@ -661,6 +683,114 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 disabled={!scaleName.trim()}
               >
                 <T>Save Scale Device</T>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Material Builder Modal */}
+      {showAddMaterialModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-background border rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Coins className="h-4 w-4 text-amber-500" />
+              <T>Add Manufacturing Material</T>
+            </h3>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs mb-1 block"><T>Material Name</T></Label>
+                  <Input
+                    placeholder="e.g. Gold 995 Bullion"
+                    value={matName}
+                    onChange={(e) => {
+                      setMatName(e.target.value);
+                      if (!matKey) {
+                        setMatKey(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 40));
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block"><T>Material Key (Code)</T></Label>
+                  <Input
+                    placeholder="e.g. gold_995_bullion"
+                    value={matKey}
+                    onChange={(e) => setMatKey(e.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs mb-1 block"><T>Material Kind</T></Label>
+                  <select
+                    value={matKind}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setMatKind(val);
+                      if (val === "DIAMOND" || val === "STONE") {
+                        setMatPurpose("STONE");
+                      } else {
+                        setMatPurpose("GOLD");
+                      }
+                    }}
+                    className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                  >
+                    <option value="GOLD">GOLD (Gold / Alloyed Gold)</option>
+                    <option value="ALLOY">ALLOY (Master Alloy)</option>
+                    <option value="SOLDER">SOLDER (Soldering Alloy)</option>
+                    <option value="MIXED">MIXED (Mixed Melt Output)</option>
+                    <option value="RECOVERED">RECOVERED (Sweeps / Polish / Recovery)</option>
+                    <option value="REFINERY">REFINERY (Refinery Result)</option>
+                    <option value="DIAMOND">DIAMOND (Natural / Lab Diamond)</option>
+                    <option value="STONE">STONE (Gemstone / Color Stone)</option>
+                    <option value="OTHER">OTHER (Consumable / Other)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block"><T>Scale Purpose</T></Label>
+                  <select
+                    value={matPurpose}
+                    onChange={(e: any) => setMatPurpose(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background p-2 text-xs"
+                  >
+                    <option value="GOLD">Gold Scale (0.01g)</option>
+                    <option value="STONE">Stone Scale (0.001g)</option>
+                  </select>
+                </div>
+              </div>
+
+              {matKind === "GOLD" && (
+                <div>
+                  <Label className="text-xs mb-1 block"><T>Theoretical Fine Gold Fraction (Purity)</T></Label>
+                  <Input
+                    placeholder="0.995000"
+                    value={matPurity}
+                    onChange={(e) => setMatPurity(e.target.value)}
+                    className="font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    <T>For Gold 995 use 0.995, for 22K use 0.916667, for 24K use 0.999</T>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="ghost" size="sm" onClick={() => setShowAddMaterialModal(false)}>
+                <T>Cancel</T>
+              </Button>
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleSaveMaterial}
+                disabled={!matName.trim() || !matKey.trim()}
+              >
+                <T>Save Material</T>
               </Button>
             </div>
           </div>

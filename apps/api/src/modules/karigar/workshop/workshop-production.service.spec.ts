@@ -210,7 +210,85 @@ describe("WorkshopProductionService completed-job boundaries", () => {
       });
     });
 
-    it("blocks closing a run when unclassified remainder requires classification", async () => {
+    it("blocks closing a run when unclassified remainder requires classification (policy: REQUIRE_CLASSIFICATION)", async () => {
+      const run = {
+        id: "run-1", shopId: "shop-1", jobId: "job-1", treeId: "tree-1", definitionId: "def-polishing",
+        status: "OPEN", operatorUserId: "operator-1", routeStepId: "step-1",
+      };
+      const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.02") };
+      const toleranceRule = {
+        id: "tol-1", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
+        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        policy: "REQUIRE_CLASSIFICATION", isActive: true,
+      };
+
+      const tx: any = {
+        $queryRaw: jest.fn().mockResolvedValue([{ id: "run-1" }]),
+        workshopProcessRun: {
+          findFirst: jest.fn().mockResolvedValue(run),
+          update: jest.fn(),
+        },
+        workshopMetalAccount: {
+          findMany: jest.fn().mockResolvedValue([account]),
+        },
+        workshopToleranceRule: {
+          findMany: jest.fn().mockResolvedValue([toleranceRule]),
+        },
+        workshopMetalJournal: {
+          findMany: jest.fn().mockResolvedValue([
+            { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.98") }] },
+          ]),
+        },
+      };
+
+      const service = new WorkshopProductionService(
+        { $transaction: (fn: (client: any) => Promise<unknown>) => fn(tx) } as any,
+        { serializeEntry: jest.fn() } as any,
+        { requireTraceableShop: jest.fn().mockResolvedValue({}) } as any,
+      );
+
+      await expect(service.closeRun("shop-1", "run-1"))
+        .rejects.toThrow("requires supervisor classification");
+      expect(tx.workshopProcessRun.update).not.toHaveBeenCalled();
+    });
+
+    it("blocks closing a run when no tolerance rule is configured", async () => {
+      const run = {
+        id: "run-1", shopId: "shop-1", jobId: "job-1", treeId: "tree-1", definitionId: "def-polishing",
+        status: "OPEN", operatorUserId: "operator-1", routeStepId: "step-1",
+      };
+      const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.02") };
+
+      const tx: any = {
+        $queryRaw: jest.fn().mockResolvedValue([{ id: "run-1" }]),
+        workshopProcessRun: {
+          findFirst: jest.fn().mockResolvedValue(run),
+          update: jest.fn(),
+        },
+        workshopMetalAccount: {
+          findMany: jest.fn().mockResolvedValue([account]),
+        },
+        workshopToleranceRule: {
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        workshopMetalJournal: {
+          findMany: jest.fn().mockResolvedValue([
+            { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.98") }] },
+          ]),
+        },
+      };
+
+      const service = new WorkshopProductionService(
+        { $transaction: (fn: (client: any) => Promise<unknown>) => fn(tx) } as any,
+        { serializeEntry: jest.fn() } as any,
+        { requireTraceableShop: jest.fn().mockResolvedValue({}) } as any,
+      );
+
+      await expect(service.closeRun("shop-1", "run-1"))
+        .rejects.toThrow("requires supervisor classification");
+    });
+
+    it("blocks closing a run when remainder is outside tolerance even with ACCEPT_WITHIN_TOLERANCE", async () => {
       const run = {
         id: "run-1", shopId: "shop-1", jobId: "job-1", treeId: "tree-1", definitionId: "def-polishing",
         status: "OPEN", operatorUserId: "operator-1", routeStepId: "step-1",
@@ -249,7 +327,88 @@ describe("WorkshopProductionService completed-job boundaries", () => {
 
       await expect(service.closeRun("shop-1", "run-1"))
         .rejects.toThrow("requires supervisor classification");
-      expect(tx.workshopProcessRun.update).not.toHaveBeenCalled();
+    });
+
+    it("applies process-specific tolerance rule and ignores mismatched process definition", async () => {
+      const run = {
+        id: "run-1", shopId: "shop-1", jobId: "job-1", treeId: "tree-1", definitionId: "def-casting",
+        status: "OPEN", operatorUserId: "operator-1", routeStepId: "step-1",
+      };
+      const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.03") };
+      const toleranceRule = {
+        id: "tol-polishing", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
+        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        policy: "ACCEPT_WITHIN_TOLERANCE", isActive: true,
+      };
+
+      const tx: any = {
+        $queryRaw: jest.fn().mockResolvedValue([{ id: "run-1" }]),
+        workshopProcessRun: {
+          findFirst: jest.fn().mockResolvedValue(run),
+          update: jest.fn(),
+        },
+        workshopMetalAccount: {
+          findMany: jest.fn().mockResolvedValue([account]),
+        },
+        workshopToleranceRule: {
+          findMany: jest.fn().mockResolvedValue([toleranceRule]),
+        },
+        workshopMetalJournal: {
+          findMany: jest.fn().mockResolvedValue([
+            { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.97") }] },
+          ]),
+        },
+      };
+
+      const service = new WorkshopProductionService(
+        { $transaction: (fn: (client: any) => Promise<unknown>) => fn(tx) } as any,
+        { serializeEntry: jest.fn() } as any,
+        { requireTraceableShop: jest.fn().mockResolvedValue({}) } as any,
+      );
+
+      await expect(service.closeRun("shop-1", "run-1"))
+        .rejects.toThrow("requires supervisor classification");
+    });
+
+    it("applies material-specific tolerance rule and ignores mismatched material key", async () => {
+      const run = {
+        id: "run-1", shopId: "shop-1", jobId: "job-1", treeId: "tree-1", definitionId: "def-polishing",
+        status: "OPEN", operatorUserId: "operator-1", routeStepId: "step-1",
+      };
+      const account = { id: "acc-proc-alloy", materialKey: "masterAlloy", balanceGrams: new Prisma.Decimal("0.03") };
+      const toleranceRule = {
+        id: "tol-gold-only", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
+        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        policy: "ACCEPT_WITHIN_TOLERANCE", isActive: true,
+      };
+
+      const tx: any = {
+        $queryRaw: jest.fn().mockResolvedValue([{ id: "run-1" }]),
+        workshopProcessRun: {
+          findFirst: jest.fn().mockResolvedValue(run),
+          update: jest.fn(),
+        },
+        workshopMetalAccount: {
+          findMany: jest.fn().mockResolvedValue([account]),
+        },
+        workshopToleranceRule: {
+          findMany: jest.fn().mockResolvedValue([toleranceRule]),
+        },
+        workshopMetalJournal: {
+          findMany: jest.fn().mockResolvedValue([
+            { lines: [{ accountId: "acc-proc-alloy", debitGrams: new Prisma.Decimal("5.00"), creditGrams: new Prisma.Decimal("4.97") }] },
+          ]),
+        },
+      };
+
+      const service = new WorkshopProductionService(
+        { $transaction: (fn: (client: any) => Promise<unknown>) => fn(tx) } as any,
+        { serializeEntry: jest.fn() } as any,
+        { requireTraceableShop: jest.fn().mockResolvedValue({}) } as any,
+      );
+
+      await expect(service.closeRun("shop-1", "run-1"))
+        .rejects.toThrow("requires supervisor classification");
     });
 
     it("prevents an operator from classifying/approving their own process variance", async () => {

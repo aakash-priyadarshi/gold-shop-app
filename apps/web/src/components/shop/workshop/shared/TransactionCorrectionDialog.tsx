@@ -90,12 +90,23 @@ export function TransactionCorrectionDialog({
           warning:
             "Reversing this stone movement updates tree stone counts. It will be blocked if a final finished receipt has already consumed the stones.",
         };
-      default:
+      default: {
+        const isAdditional =
+          (journal.metadata as any)?.movementKind === "ADDITIONAL_ISSUE" ||
+          (journal.referenceType === "MATERIAL_ISSUE" && !!journal.processRunId);
+        if (isAdditional) {
+          return {
+            title: "Additional Issue (Solder/Alloy) Correction",
+            warning:
+              "Reversing this additional issue will return the material to the original source account and remove it from the active process run. It will be BLOCKED if downstream process outputs have already consumed the material.",
+          };
+        }
         return {
           title: "Standard Physical Movement Correction",
           warning:
             "An audited reversal entry will negate the original movement. If replacement weight is provided, a replacement journal will immediately post.",
         };
+      }
     }
   };
 

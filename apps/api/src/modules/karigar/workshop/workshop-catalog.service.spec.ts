@@ -53,3 +53,74 @@ describe("WorkshopCatalogService alloy recommendations", () => {
     expect(tx.workshopAlloyRecipe.create).toHaveBeenCalledWith({ data: expect.objectContaining({ name: "22K", version: 3 }) });
   });
 });
+
+describe("WorkshopCatalogService material creation and GOLD vs GOLD_995 consistency", () => {
+  it("creates Gold 995 through the actual UI/API payload with kind=GOLD and theoreticalPurity=0.995000", async () => {
+    const tx = {
+      workshopMaterial: {
+        create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: "mat-995", ...data })),
+      },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      $transaction: (fn: any) => fn(tx),
+    } as any;
+    const service = new WorkshopCatalogService(prisma);
+
+    const payload = {
+      name: "Gold 995 Bullion",
+      key: "gold_995_bullion",
+      kind: "GOLD",
+      scalePurpose: "GOLD" as const,
+      theoreticalPurity: "0.995000",
+      composition: { Gold: "99.5" },
+    };
+
+    const result = await service.createMaterial("shop-1", "user-1", payload);
+
+    expect(result.kind).toBe("GOLD");
+    expect(result.key).toBe("gold_995_bullion");
+    expect(result.scalePurpose).toBe("GOLD");
+    expect(result.theoreticalPurity?.toFixed(6)).toBe("0.995000");
+    expect(tx.workshopMaterial.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        shopId: "shop-1",
+        key: "gold_995_bullion",
+        name: "Gold 995 Bullion",
+        kind: "GOLD",
+        scalePurpose: "GOLD",
+        theoreticalPurity: new Prisma.Decimal("0.995000"),
+      }),
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "WORKSHOP_MATERIAL_CREATE",
+        newValue: expect.objectContaining({
+          key: "gold_995_bullion",
+          kind: "GOLD",
+        }),
+      }),
+    });
+  });
+
+  it("ensures base materials represent Gold 995 with kind=GOLD and key=goldGrains995", async () => {
+    const upsertMock = jest.fn().mockResolvedValue({});
+    const prisma = {
+      workshopMaterial: { upsert: upsertMock },
+    } as any;
+    const service = new WorkshopCatalogService(prisma);
+
+    await service.ensureBaseMaterials("shop-1");
+
+    expect(upsertMock).toHaveBeenCalledWith(expect.objectContaining({
+      where: { shopId_key: { shopId: "shop-1", key: "goldGrains995" } },
+      create: expect.objectContaining({
+        key: "goldGrains995",
+        name: "Gold 995",
+        kind: "GOLD",
+        scalePurpose: "GOLD",
+        theoreticalPurity: new Prisma.Decimal("0.995"),
+      }),
+    }));
+  });
+});

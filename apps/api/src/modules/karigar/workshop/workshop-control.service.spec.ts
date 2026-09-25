@@ -261,5 +261,199 @@ describe("WorkshopControlService authoritative exceptions", () => {
       })).rejects.toThrow("already been commercially sold or reserved");
       expect(journal.postEntry).not.toHaveBeenCalled();
     });
+
+    it("blocks FINISHED_RECEIPT correction if InventoryItem is RESERVED", async () => {
+      const original = {
+        id: "fg-journal-2", shopId: "shop-1", status: "POSTED", referenceType: "FINISHED_RECEIPT",
+        materialKey: "goldGrains995", reversedBy: null, replacedBy: null,
+      };
+      tx.inventoryItem = {
+        findFirst: jest.fn().mockResolvedValue({ id: "inv-item-2", status: "RESERVED", stockQuantity: 1 }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "fg-journal-2", {
+        reason: "Correction", idempotencyKey: "corr-fg-reserved",
+      })).rejects.toThrow("already been commercially sold or reserved");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+
+    it("blocks FINISHED_RECEIPT correction if InventoryItem has active order reference", async () => {
+      const original = {
+        id: "fg-journal-3", shopId: "shop-1", status: "POSTED", referenceType: "FINISHED_RECEIPT",
+        materialKey: "goldGrains995", reversedBy: null, replacedBy: null,
+      };
+      tx.inventoryItem = {
+        findFirst: jest.fn().mockResolvedValue({ id: "inv-item-3", status: "AVAILABLE", stockQuantity: 1 }),
+      };
+      tx.order = {
+        findFirst: jest.fn().mockResolvedValue({ id: "ord-1", orderNumber: "ORD-9999", status: "PROCESSING" }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "fg-journal-3", {
+        reason: "Correction", idempotencyKey: "corr-fg-order",
+      })).rejects.toThrow("referenced on active order ORD-9999");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+
+    it("blocks FINISHED_RECEIPT correction if InventoryItem stockQuantity is zero or negative", async () => {
+      const original = {
+        id: "fg-journal-4", shopId: "shop-1", status: "POSTED", referenceType: "FINISHED_RECEIPT",
+        materialKey: "goldGrains995", reversedBy: null, replacedBy: null,
+      };
+      tx.inventoryItem = {
+        findFirst: jest.fn().mockResolvedValue({ id: "inv-item-4", status: "AVAILABLE", stockQuantity: 0 }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "fg-journal-4", {
+        reason: "Correction", idempotencyKey: "corr-fg-zero",
+      })).rejects.toThrow("already been commercially sold or reserved");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+
+    it("handles ADDITIONAL_ISSUE: safely reverses solder issue and restores to vault", async () => {
+      const original = {
+        id: "add-issue-1", entryNumber: "WMJ-ADD-001", shopId: "shop-1", status: "POSTED",
+        referenceType: "MATERIAL_ISSUE", materialKey: "solder22k", postedAt: new Date(),
+        weightGrams: new Prisma.Decimal("2.500000"), jobId: "job-1", treeId: "tree-1",
+        processRunId: "run-1", reversedBy: null, replacedBy: null,
+        metadata: { movementKind: "ADDITIONAL_ISSUE" },
+        lines: [
+          { accountId: "vault-solder", creditGrams: new Prisma.Decimal("2.500000"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "solder22k" } },
+          { accountId: "process-solder", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("2.500000"), account: { materialKey: "solder22k" } },
+        ],
+      };
+      tx.workshopProcessRun = {
+        findFirst: jest.fn().mockResolvedValue({ id: "run-1", shopId: "shop-1", status: "OPEN" }),
+      };
+      tx.workshopMetalAccount = {
+        findUnique: jest.fn().mockResolvedValue({ id: "process-solder", balanceGrams: new Prisma.Decimal("2.500000") }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+      journal.postEntry.mockResolvedValueOnce({ entry: { id: "reversal-add-1" }, idempotent: false });
+
+      const result: any = await service.correctJournal("shop-1", "owner-1", "add-issue-1", {
+        reason: "Entered wrong solder weight at scale",
+        idempotencyKey: "corr-add-1",
+      });
+
+      expect(result.status).toBe("REVERSED");
+      expect(result.voided).toBe(true);
+      expect(journal.postEntry).toHaveBeenCalledWith(tx, expect.objectContaining({
+        referenceType: "REVERSAL",
+        reversalOfId: "add-issue-1",
+        weightGrams: "2.500000",
+        lines: [
+          { accountId: "vault-solder", debitGrams: "2.500000" },
+          { accountId: "process-solder", creditGrams: "2.500000" },
+        ],
+      }));
+      expect(tx.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: "WORKSHOP_ADDITIONAL_ISSUE_CORRECT",
+        }),
+      });
+    });
+
+    it("handles ADDITIONAL_ISSUE: safely replaces solder issue with replacement weight", async () => {
+      const original = {
+        id: "add-issue-2", entryNumber: "WMJ-ADD-002", shopId: "shop-1", status: "POSTED",
+        referenceType: "MATERIAL_ISSUE", materialKey: "solder22k", postedAt: new Date(),
+        weightGrams: new Prisma.Decimal("3.000000"), jobId: "job-1", treeId: "tree-1",
+        processRunId: "run-1", reversedBy: null, replacedBy: null,
+        metadata: { movementKind: "ADDITIONAL_ISSUE" },
+        lines: [
+          { accountId: "vault-solder", creditGrams: new Prisma.Decimal("3.000000"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "solder22k" } },
+          { accountId: "process-solder", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("3.000000"), account: { materialKey: "solder22k" } },
+        ],
+      };
+      tx.workshopProcessRun = {
+        findFirst: jest.fn().mockResolvedValue({ id: "run-1", shopId: "shop-1", status: "OPEN" }),
+      };
+      tx.workshopMetalAccount = {
+        findUnique: jest.fn().mockResolvedValue({ id: "process-solder", balanceGrams: new Prisma.Decimal("3.000000") }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+      journal.postEntry
+        .mockResolvedValueOnce({ entry: { id: "reversal-add-2" }, idempotent: false })
+        .mockResolvedValueOnce({ entry: { id: "replacement-add-2" }, idempotent: false });
+
+      const result: any = await service.correctJournal("shop-1", "owner-1", "add-issue-2", {
+        reason: "Scale re-tare required",
+        replacementWeightGrams: "2.800000",
+        idempotencyKey: "corr-add-2",
+      });
+
+      expect(result.id).toBe("replacement-add-2");
+      expect(journal.postEntry).toHaveBeenCalledTimes(2);
+      expect(journal.postEntry).toHaveBeenNthCalledWith(1, tx, expect.objectContaining({
+        referenceType: "REVERSAL",
+        reversalOfId: "add-issue-2",
+        weightGrams: "3.000000",
+      }));
+      expect(journal.postEntry).toHaveBeenNthCalledWith(2, tx, expect.objectContaining({
+        referenceType: "CORRECTION_REPLACEMENT",
+        replacementForId: "add-issue-2",
+        weightGrams: "2.800000",
+        lines: [
+          { accountId: "process-solder", debitGrams: "2.800000" },
+          { accountId: "vault-solder", creditGrams: "2.800000" },
+        ],
+      }));
+    });
+
+    it("blocks ADDITIONAL_ISSUE correction if downstream consumption makes process balance insufficient", async () => {
+      const original = {
+        id: "add-issue-3", entryNumber: "WMJ-ADD-003", shopId: "shop-1", status: "POSTED",
+        referenceType: "MATERIAL_ISSUE", materialKey: "solder22k", postedAt: new Date(),
+        weightGrams: new Prisma.Decimal("3.000000"), jobId: "job-1", treeId: "tree-1",
+        processRunId: "run-1", reversedBy: null, replacedBy: null,
+        metadata: { movementKind: "ADDITIONAL_ISSUE" },
+        lines: [
+          { accountId: "vault-solder", creditGrams: new Prisma.Decimal("3.000000"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "solder22k" } },
+          { accountId: "process-solder", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("3.000000"), account: { materialKey: "solder22k" } },
+        ],
+      };
+      tx.workshopProcessRun = {
+        findFirst: jest.fn().mockResolvedValue({ id: "run-1", shopId: "shop-1", status: "OPEN" }),
+      };
+      // Process account only has 1.00g left (2.00g consumed downstream)
+      tx.workshopMetalAccount = {
+        findUnique: jest.fn().mockResolvedValue({ id: "process-solder", balanceGrams: new Prisma.Decimal("1.000000") }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "add-issue-3", {
+        reason: "Correction",
+        idempotencyKey: "corr-add-3",
+      })).rejects.toThrow("Downstream material consumption makes this correction unsafe");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+
+    it("blocks ADDITIONAL_ISSUE correction if process run is already CLOSED", async () => {
+      const original = {
+        id: "add-issue-4", entryNumber: "WMJ-ADD-004", shopId: "shop-1", status: "POSTED",
+        referenceType: "MATERIAL_ISSUE", materialKey: "solder22k", postedAt: new Date(),
+        weightGrams: new Prisma.Decimal("3.000000"), jobId: "job-1", treeId: "tree-1",
+        processRunId: "run-1", reversedBy: null, replacedBy: null,
+        metadata: { movementKind: "ADDITIONAL_ISSUE" },
+        lines: [
+          { accountId: "vault-solder", creditGrams: new Prisma.Decimal("3.000000"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "solder22k" } },
+          { accountId: "process-solder", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("3.000000"), account: { materialKey: "solder22k" } },
+        ],
+      };
+      tx.workshopProcessRun = {
+        findFirst: jest.fn().mockResolvedValue({ id: "run-1", shopId: "shop-1", status: "CLOSED" }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "add-issue-4", {
+        reason: "Correction",
+        idempotencyKey: "corr-add-4",
+      })).rejects.toThrow("Process run is already closed");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
   });
 });

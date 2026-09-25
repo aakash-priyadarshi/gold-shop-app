@@ -30,7 +30,7 @@ describe("Alloy Recipe Builder & Composition Validation", () => {
     vi.mocked(workshopApi.catalog).mockResolvedValue({
       data: {
         materials: [
-          { id: "m-1", key: "goldGrains995", name: "Fine Gold 995", kind: "GOLD_995", scalePurpose: "GOLD" },
+          { id: "m-1", key: "goldGrains995", name: "Fine Gold 995", kind: "GOLD", scalePurpose: "GOLD", theoreticalPurity: "0.995000" },
           { id: "m-2", key: "masterAlloyYellow", name: "Master Alloy 22K Yellow", kind: "ALLOY", scalePurpose: "GOLD" },
         ],
         recipes: [],

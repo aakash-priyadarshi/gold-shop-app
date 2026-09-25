@@ -142,6 +142,12 @@ export class WorkshopControlService {
       if (isStoneMovement && ["MATERIAL_ISSUE", "PROCESS_OUTPUT"].includes(original.referenceType)) {
         return this.correctStoneSettingOrReturn(tx, shopId, userId, original, dto);
       }
+      const isAdditionalIssue =
+        (original.metadata as any)?.movementKind === "ADDITIONAL_ISSUE" ||
+        (original.referenceType === WorkshopMetalJournalReferenceType.MATERIAL_ISSUE && !!original.processRunId);
+      if (isAdditionalIssue) {
+        return this.correctAdditionalIssue(tx, shopId, userId, original, dto);
+      }
 
       if (!["MATERIAL_ISSUE", "PROCESS_INPUT", "PROCESS_OUTPUT", "MANUAL_OVERRIDE"].includes(original.referenceType)) {
         throw new BadRequestException("This movement has linked workflow state and needs a dedicated correction procedure");
@@ -780,6 +786,148 @@ export class WorkshopControlService {
       },
     });
     return { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctAdditionalIssue(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    if (!original.processRunId) {
+      throw new BadRequestException("Additional issue requires an associated process run");
+    }
+
+    const run = await tx.workshopProcessRun.findFirst({
+      where: { id: original.processRunId, shopId },
+    });
+    if (!run) throw new NotFoundException("Linked workshop process run not found");
+    if (run.status === "CLOSED") {
+      throw new ConflictException("Process run is already closed; cannot correct an additional issue on a closed run");
+    }
+
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    if (!source || !dest) throw new BadRequestException("Additional issue journal lines are invalid");
+
+    const destAcct = await tx.workshopMetalAccount.findUnique({
+      where: { id: dest.accountId },
+    });
+    if (!destAcct || destAcct.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException(
+        "Downstream material consumption makes this correction unsafe: available process balance is less than the issued weight"
+      );
+    }
+
+    const downstream = await tx.workshopMetalJournal.findFirst({
+      where: {
+        shopId,
+        status: "POSTED",
+        id: { not: original.id },
+        processRunId: original.processRunId,
+        postedAt: { gte: original.postedAt },
+        lines: { some: { accountId: dest.accountId, creditGrams: { gt: 0 } } },
+      },
+      select: { id: true },
+    });
+    if (downstream && destAcct.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException(
+        "Later process movements have consumed this material; reconcile them before correcting the original issue"
+      );
+    }
+
+    const material = await tx.workshopMaterial.findUnique({
+      where: { shopId_key: { shopId, key: original.materialKey } },
+    });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    // 1. Reversal: restore material to source account, remove from process account
+    await this.journal.postEntry(tx, {
+      shopId,
+      referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id,
+      idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of additional issue ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(),
+      weightGrams: oldWeight,
+      materialKey: original.materialKey,
+      jobId: original.jobId,
+      treeId: original.treeId,
+      processRunId: original.processRunId,
+      actorUserId: userId,
+      captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id,
+      scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: {
+        reason: dto.reason.trim(),
+        originalReadingId: original.scaleReadingId,
+        originalJournalId: original.id,
+        workflow: "ADDITIONAL_ISSUE",
+        movementKind: "ADDITIONAL_ISSUE",
+      },
+      lines: [
+        { accountId: source.accountId, debitGrams: oldWeight },
+        { accountId: dest.accountId, creditGrams: oldWeight },
+      ],
+    });
+
+    // 2. Replacement (if replacement weight provided)
+    const repWeight = dto.replacementWeightGrams ? new Prisma.Decimal(dto.replacementWeightGrams) : null;
+    let replacementEntry = null;
+    if (repWeight && repWeight.gt(0)) {
+      const repGrams = repWeight.toFixed(6);
+      const posted = await this.journal.postEntry(tx, {
+        shopId,
+        referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id,
+        idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement additional issue for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(),
+        weightGrams: repGrams,
+        materialKey: original.materialKey,
+        jobId: original.jobId,
+        treeId: original.treeId,
+        processRunId: original.processRunId,
+        actorUserId: userId,
+        captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id,
+        scalePurpose: material?.scalePurpose ?? "GOLD",
+        metadata: {
+          reason: dto.reason.trim(),
+          originalReadingId: original.scaleReadingId,
+          originalJournalId: original.id,
+          workflow: "ADDITIONAL_ISSUE",
+          movementKind: "ADDITIONAL_ISSUE",
+        },
+        lines: [
+          { accountId: dest.accountId, debitGrams: repGrams },
+          { accountId: source.accountId, creditGrams: repGrams },
+        ],
+      });
+      replacementEntry = posted.entry;
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        actorType: "SHOPKEEPER",
+        action: "WORKSHOP_ADDITIONAL_ISSUE_CORRECT",
+        resourceType: "WorkshopMetalJournal",
+        resourceId: original.id,
+        newValue: {
+          shopId,
+          processRunId: original.processRunId,
+          journalId: original.id,
+          reason: dto.reason.trim(),
+          replacementWeightGrams: dto.replacementWeightGrams ?? null,
+        },
+      },
+    });
+
+    return replacementEntry
+      ? this.journal.serializeEntry(replacementEntry, false)
+      : { id: original.id, status: "REVERSED", voided: true };
   }
 }
 
