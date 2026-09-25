@@ -33,6 +33,9 @@ jobs:
           token: ${{ secrets.SUBMODULE_PAT }}
           persist-credentials: false
 
+      - name: Verify deployed core SHA matches submodule
+        run: node scripts/check-core-submodule-pin.mjs
+
       - uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
         with:
           version: ${{ env.PNPM_VERSION }}

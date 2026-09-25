@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:20-slim AS base
 
 # Prisma requires OpenSSL and we need PostgreSQL 18 client to match Railway's database
 # git is needed to clone the private gold-shop-core submodule
@@ -14,6 +14,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
+FROM base AS build
+
 # Copy workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
@@ -27,22 +29,10 @@ COPY apps/api/ ./apps/api/
 # parent gitlink, which drops new FEATURE_LABELS such as workshopManufacturing.
 ARG SUBMODULE_PAT
 COPY apps/api/core-submodule.sha /tmp/core-submodule.sha
-RUN SHA="$(tr -d '[:space:]' < /tmp/core-submodule.sha)" && \
-    if [ -z "$SHA" ]; then echo "ERROR: apps/api/core-submodule.sha is empty" && exit 1; fi && \
-    if [ -n "$SUBMODULE_PAT" ]; then \
-      rm -rf apps/api/src/modules/core && \
-      git clone https://${SUBMODULE_PAT}@github.com/aakash-priyadarshi/gold-shop-core.git apps/api/src/modules/core && \
-      git -C apps/api/src/modules/core checkout "$SHA"; \
-    elif [ ! -f apps/api/src/modules/core/subscriptions/subscription-plans.module.ts ]; then \
-      echo "ERROR: gold-shop-core submodule missing and SUBMODULE_PAT not set" && exit 1; \
-    fi && \
-    if [ ! -d apps/api/src/modules/core/.git ]; then \
-      echo "ERROR: gold-shop-core checkout has no git metadata to verify $SHA" && exit 1; \
-    fi && \
-    CURRENT="$(git -C apps/api/src/modules/core rev-parse HEAD)" && \
-    if [ "$CURRENT" != "$SHA" ]; then \
-      echo "ERROR: gold-shop-core HEAD $CURRENT does not match recorded $SHA" && exit 1; \
-    fi
+COPY apps/api/scripts/clone-core.sh /tmp/clone-core.sh
+# Keep the build arg out of the logged RUN instruction, and remove Git metadata
+# (including the temporary authenticated remote) before creating the image.
+RUN sh /tmp/clone-core.sh
 
 # Install all dependencies (dev included — needed for @nestjs/cli and prisma)
 RUN pnpm install --frozen-lockfile --ignore-scripts
@@ -65,6 +55,12 @@ RUN pnpm exec nest build
 
 # Verify dist/src/main.js was produced (must stay under apps/api/dist/src — not monorepo-root dist/)
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found! Listing dist/:" && ls -laR dist/ && exit 1)
+
+# The credential-bearing ARG is scoped to the build stage; the runtime image
+# contains only its output, never the build-stage history or Git metadata.
+FROM base AS runtime
+COPY --from=build /app /app
+WORKDIR /app/apps/api
 
 EXPOSE 3001
 
