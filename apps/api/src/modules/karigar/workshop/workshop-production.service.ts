@@ -165,14 +165,20 @@ export class WorkshopProductionService {
       if (dto.decision !== "APPROVED" && !reason) throw new BadRequestException("Rework or rejection requires a reason");
       if (dto.decision === "APPROVED") {
         const [runs, steps, transfers] = await Promise.all([
-          tx.workshopProcessRun.findMany({ where: { shopId, jobId }, select: { status: true } }),
-          tx.workshopRouteStep.findMany({ where: { shopId, jobId }, select: { status: true } }),
-          tx.workshopTransfer.findMany({ where: { shopId, jobId }, select: { status: true } }),
+          tx.workshopProcessRun.findMany({ where: { shopId, jobId }, select: { id: true, status: true, definition: { select: { name: true } } } }),
+          tx.workshopRouteStep.findMany({ where: { shopId, jobId }, select: { id: true, position: true, status: true, definition: { select: { name: true } } } }),
+          tx.workshopTransfer.findMany({ where: { shopId, jobId }, select: { id: true, fromDepartment: true, toDepartment: true, status: true } }),
         ]);
-        if (!runs.length || runs.some((run) => run.status !== "RECONCILED") ||
-            steps.some((step) => !["DONE", "SKIPPED"].includes(step.status)) ||
-            transfers.some((transfer) => !["RECONCILED", "CANCELLED"].includes(transfer.status))) {
-          throw new ConflictException("Reconcile every process, route step and transfer before TRACEABLE QC approval");
+        const openRuns = runs.filter((run) => run.status !== "RECONCILED");
+        const pendingSteps = steps.filter((step) => !["DONE", "SKIPPED"].includes(step.status));
+        const pendingTransfers = transfers.filter((transfer) => !["RECONCILED", "CANCELLED"].includes(transfer.status));
+        if (!runs.length || openRuns.length || pendingSteps.length || pendingTransfers.length) {
+          const blockers: string[] = [];
+          if (!runs.length) blockers.push("No process runs recorded for this job");
+          if (openRuns.length) blockers.push(`${openRuns.length} process run(s) not reconciled: ${openRuns.map((r) => r.definition?.name || r.id).join(", ")}`);
+          if (pendingSteps.length) blockers.push(`${pendingSteps.length} route step(s) pending: ${pendingSteps.map((s) => s.definition?.name || s.id).join(", ")}`);
+          if (pendingTransfers.length) blockers.push(`${pendingTransfers.length} transfer(s) unresolved: ${pendingTransfers.map((t) => `${t.fromDepartment} → ${t.toDepartment} (${t.status})`).join(", ")}`);
+          throw new ConflictException(`Reconcile every process, route step and transfer before TRACEABLE QC approval: ${blockers.join("; ")}`);
         }
       }
       const now = new Date();
@@ -198,11 +204,36 @@ export class WorkshopProductionService {
     if (!run) throw new NotFoundException("Process run not found");
     const accounts = await db.workshopMetalAccount.findMany({ where: { shopId, bucket: WorkshopAccountBucket.PROCESS, scopeId: runId } });
     const journals = await db.workshopMetalJournal.findMany({ where: { shopId, processRunId: runId, status: "POSTED" }, include: { lines: { include: { account: true } } }, orderBy: { postedAt: "asc" } });
+    const toleranceRules = await db.workshopToleranceRule.findMany({
+      where: { shopId, movementKind: "PROCESS", isActive: true },
+    });
     const byMaterial = accounts.map((account) => {
       const relevant = journals.flatMap((j) => j.lines.filter((line) => line.accountId === account.id));
       const input = relevant.reduce((sum, line) => sum.plus(line.debitGrams), new Prisma.Decimal(0));
       const output = relevant.reduce((sum, line) => sum.plus(line.creditGrams), new Prisma.Decimal(0));
-      return { materialKey: account.materialKey, inputGrams: input.toFixed(6), outputGrams: output.toFixed(6), unclassifiedGrams: account.balanceGrams.toFixed(6) };
+      const unclassified = account.balanceGrams;
+
+      const rule = toleranceRules.find((r) => r.definitionId === run.definitionId && r.materialKey === account.materialKey)
+        ?? toleranceRules.find((r) => r.definitionId === run.definitionId && (!r.materialKey || r.materialKey === ""))
+        ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && r.materialKey === account.materialKey)
+        ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && (!r.materialKey || r.materialKey === ""));
+
+      const maxDiff = rule?.maxDifferenceGrams ?? null;
+      const policy = rule?.policy ?? "REQUIRE_CLASSIFICATION";
+      const isWithinTolerance = maxDiff ? unclassified.abs().lte(maxDiff) : false;
+
+      return {
+        materialKey: account.materialKey,
+        inputGrams: input.toFixed(6),
+        outputGrams: output.toFixed(6),
+        unclassifiedGrams: unclassified.toFixed(6),
+        tolerance: rule ? {
+          ruleId: rule.id,
+          maxDifferenceGrams: rule.maxDifferenceGrams.toFixed(6),
+          policy,
+          isWithinTolerance,
+        } : null,
+      };
     });
     return {
       run: { ...run, targetWeightGrams: run.targetWeightGrams?.toFixed(6) ?? null },
@@ -226,6 +257,18 @@ export class WorkshopProductionService {
       const dest = await this.journal.ensureAccount(tx, shopId, materialKey, WorkshopAccountBucket.PROCESS_VARIANCE);
       const grams = source.balanceGrams.toFixed(6);
       const ref = randomUUID();
+
+      const tolerance = await tx.workshopToleranceRule.findFirst({
+        where: { shopId, movementKind: "PROCESS", definitionId: run.definitionId, materialKey, isActive: true },
+      }) ?? await tx.workshopToleranceRule.findFirst({
+        where: { shopId, movementKind: "PROCESS", definitionId: run.definitionId, materialKey: "", isActive: true },
+      }) ?? await tx.workshopToleranceRule.findFirst({
+        where: { shopId, movementKind: "PROCESS", definitionId: "", materialKey, isActive: true },
+      }) ?? await tx.workshopToleranceRule.findFirst({
+        where: { shopId, movementKind: "PROCESS", definitionId: "", materialKey: "", isActive: true },
+      });
+      const withinTolerance = tolerance ? source.balanceGrams.lte(tolerance.maxDifferenceGrams) : false;
+
       const entry = await this.journal.postEntry(tx, {
         shopId, referenceType: WorkshopMetalJournalReferenceType.PROCESS_OUTPUT,
         referenceId: ref, idempotencyKey: `classify:${runId}:${materialKey}:${ref}`,
@@ -233,7 +276,16 @@ export class WorkshopProductionService {
         transactionDate: new Date(), weightGrams: grams, materialKey,
         jobId: run.jobId, treeId: run.treeId, processRunId: run.id,
         actorUserId: userId, derivedClassification: true,
-        metadata: { classification: "PROCESS_VARIANCE", reason: reason.trim(), derivedFromAccountId: source.id, approverUserId: userId },
+        metadata: {
+          classification: "PROCESS_VARIANCE",
+          reason: reason.trim(),
+          derivedFromAccountId: source.id,
+          approverUserId: userId,
+          toleranceRuleId: tolerance?.id ?? null,
+          withinTolerance,
+          limitGrams: tolerance?.maxDifferenceGrams.toFixed(6) ?? null,
+          actualDifferenceGrams: grams,
+        },
         lines: [{ accountId: dest.id, debitGrams: grams }, { accountId: source.id, creditGrams: grams }],
       });
       await tx.workshopProcessRun.update({ where: { id: runId }, data: { approvalUserId: userId, approvalAt: new Date(), approvalReason: reason.trim() } });
@@ -242,13 +294,61 @@ export class WorkshopProductionService {
     });
   }
 
-  async closeRun(shopId: string, runId: string, notes?: string) {
+  async closeRun(shopId: string, runId: string, notes?: string, actorUserId?: string) {
     return this.prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "WorkshopProcessRun" WHERE "id" = ${runId} AND "shopId" = ${shopId} FOR UPDATE`;
       if (!locked.length) throw new NotFoundException("Process run not found");
+      const runRec = await tx.workshopProcessRun.findFirst({ where: { id: runId, shopId } });
+      if (!runRec) throw new NotFoundException("Process run not found");
+      if (!["OPEN", "RECONCILIATION_PENDING"].includes(runRec.status)) throw new ConflictException("Process run is already closed");
+
+      // Auto-accept unclassified remainder within tolerance if configured policy is ACCEPT_WITHIN_TOLERANCE
+      const accounts = await tx.workshopMetalAccount.findMany({
+        where: { shopId, bucket: WorkshopAccountBucket.PROCESS, scopeId: runId },
+      });
+      const toleranceRules = await tx.workshopToleranceRule.findMany({
+        where: { shopId, movementKind: "PROCESS", isActive: true },
+      });
+
+      for (const account of accounts) {
+        if (account.balanceGrams.lte(0)) continue;
+        const rule = toleranceRules.find((r) => r.definitionId === runRec.definitionId && r.materialKey === account.materialKey)
+          ?? toleranceRules.find((r) => r.definitionId === runRec.definitionId && (!r.materialKey || r.materialKey === ""))
+          ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && r.materialKey === account.materialKey)
+          ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && (!r.materialKey || r.materialKey === ""));
+
+        if (rule && rule.policy === "ACCEPT_WITHIN_TOLERANCE" && account.balanceGrams.lte(rule.maxDifferenceGrams)) {
+          const dest = await this.journal.ensureAccount(tx, shopId, account.materialKey, WorkshopAccountBucket.PROCESS_VARIANCE);
+          const grams = account.balanceGrams.toFixed(6);
+          const ref = randomUUID();
+          await this.journal.postEntry(tx, {
+            shopId, referenceType: WorkshopMetalJournalReferenceType.PROCESS_OUTPUT,
+            referenceId: ref, idempotencyKey: `auto-accept:${runId}:${account.materialKey}:${ref}`,
+            description: `Auto-accepted process variance within tolerance (${rule.id}): max ${rule.maxDifferenceGrams.toFixed(6)}g`,
+            transactionDate: new Date(), weightGrams: grams, materialKey: account.materialKey,
+            jobId: runRec.jobId, treeId: runRec.treeId, processRunId: runRec.id,
+            actorUserId: actorUserId || runRec.operatorUserId, derivedClassification: true,
+            metadata: {
+              classification: "PROCESS_VARIANCE",
+              autoAccepted: true,
+              ruleId: rule.id,
+              limitGrams: rule.maxDifferenceGrams.toFixed(6),
+              actualDifferenceGrams: grams,
+              policy: rule.policy,
+              timestamp: new Date().toISOString(),
+            },
+            lines: [{ accountId: dest.id, debitGrams: grams }, { accountId: account.id, creditGrams: grams }],
+          });
+        }
+      }
+
       const report = await this.reconciliation(tx, shopId, runId);
-      if (!["OPEN", "RECONCILIATION_PENDING"].includes(report.run.status)) throw new ConflictException("Process run is already closed");
-      if (report.reconciliationState !== "RECONCILED") throw new ConflictException("Classify or resolve all physical process remainder before closing");
+      if (report.reconciliationState !== "RECONCILED") {
+        const unclassified = report.materials.filter((m) => m.unclassifiedGrams !== "0.000000");
+        throw new ConflictException(
+          `Classify or resolve all physical process remainder before closing. Remaining unclassified: ${unclassified.map((m) => `${m.materialKey} (${m.unclassifiedGrams}g)`).join(", ")} requires supervisor classification.`
+        );
+      }
       const run = await tx.workshopProcessRun.update({ where: { id: runId }, data: { status: "RECONCILED", endedAt: new Date(), ...(notes ? { notes } : {}) } });
       if (run.routeStepId) await tx.workshopRouteStep.update({ where: { id: run.routeStepId }, data: { status: "DONE" } });
       return run;

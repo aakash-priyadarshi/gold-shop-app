@@ -19,7 +19,7 @@ export class WorkshopManualMovementDto {
 }
 
 export class CorrectWorkshopJournalDto {
-  @IsString() @Matches(GRAMS) replacementWeightGrams: string;
+  @IsOptional() @IsString() @Matches(GRAMS) replacementWeightGrams?: string;
   @IsString() @IsNotEmpty() @MaxLength(1000) reason: string;
   @IsString() @IsNotEmpty() @MaxLength(191) idempotencyKey: string;
 }

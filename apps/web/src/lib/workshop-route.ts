@@ -1,32 +1,52 @@
 export const SUPPLY_CHAIN_PATH = "/dashboard/shop/supply-chain";
 
 export type WorkshopView =
-  | "tower"
+  | "overview"
   | "jobs"
   | "job"
-  | "floor"
+  | "production"
   | "metal"
+  | "transfers"
+  | "recovery"
   | "qc"
   | "reports"
+  | "book"
+  | "settings"
+  // Legacy aliases
+  | "tower"
+  | "floor"
   | "karigars"
   | "procurement";
 
-const WORKSHOP_VIEWS = new Set<WorkshopView>([
-  "tower",
+const WORKSHOP_VIEWS = new Set<string>([
+  "overview",
   "jobs",
   "job",
-  "floor",
+  "production",
   "metal",
+  "transfers",
+  "recovery",
   "qc",
   "reports",
+  "book",
+  "settings",
+  "tower",
+  "floor",
   "karigars",
   "procurement",
 ]);
 
 export function parseWorkshopView(value: string | null): WorkshopView {
-  return WORKSHOP_VIEWS.has(value as WorkshopView)
-    ? (value as WorkshopView)
-    : "tower";
+  if (!value) return "overview";
+  const normalized = value.toLowerCase().trim();
+  // Map legacy aliases
+  if (normalized === "tower") return "overview";
+  if (normalized === "floor") return "production";
+  if (normalized === "ledger") return "metal";
+  if (normalized === "karigars") return "book";
+  if (normalized === "procurement") return "metal";
+
+  return WORKSHOP_VIEWS.has(normalized) ? (normalized as WorkshopView) : "overview";
 }
 
 export function supplyChainHref(
@@ -34,7 +54,18 @@ export function supplyChainHref(
   params: Record<string, string | null | undefined> = {},
 ): string {
   const query = new URLSearchParams();
-  if (view) query.set("view", view);
+  if (view) {
+    // Canonicalize legacy aliases in links
+    const canonical =
+      view === "tower"
+        ? "overview"
+        : view === "floor"
+        ? "production"
+        : view === "karigars"
+        ? "book"
+        : view;
+    query.set("view", canonical);
+  }
   for (const [key, value] of Object.entries(params)) {
     if (value) query.set(key, value);
   }
@@ -50,7 +81,7 @@ export function legacyWorkshopDestination(
     .replace(/^\/dashboard\/shop\/workshop\/?/, "")
     .replace(/\/$/, "");
   const current = new URLSearchParams(currentSearch);
-  if (!suffix) return supplyChainHref("tower");
+  if (!suffix) return supplyChainHref("overview");
   if (suffix === "jobs") return supplyChainHref("jobs");
   if (suffix.startsWith("jobs/")) {
     return supplyChainHref("job", {
@@ -58,12 +89,15 @@ export function legacyWorkshopDestination(
     });
   }
   if (suffix === "floor") {
-    return supplyChainHref("floor", { dept: current.get("dept") });
+    return supplyChainHref("production", { dept: current.get("dept") });
   }
   if (suffix === "ledger") return supplyChainHref("metal");
   if (suffix === "qc") return supplyChainHref("qc");
   if (suffix === "reports") return supplyChainHref("reports");
-  if (suffix === "karigars") return supplyChainHref("karigars");
-  if (suffix === "procurement") return supplyChainHref("procurement");
-  return supplyChainHref("tower");
+  if (suffix === "settings") return supplyChainHref("settings");
+  if (suffix === "transfers") return supplyChainHref("transfers");
+  if (suffix === "recovery") return supplyChainHref("recovery");
+  if (suffix === "karigars") return supplyChainHref("book");
+  if (suffix === "procurement") return supplyChainHref("metal");
+  return supplyChainHref("overview");
 }

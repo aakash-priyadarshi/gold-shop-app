@@ -1,5 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, WorkshopAccountBucket, WorkshopMetalJournalReferenceType, WorkshopScaleCaptureMethod } from "@prisma/client";
+import {
+  InventoryStatus,
+  InventoryVisibility,
+  Prisma,
+  WorkshopAccountBucket,
+  WorkshopMetalJournalReferenceType,
+  WorkshopScaleCaptureMethod,
+} from "@prisma/client";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { WorkshopMetalJournalService } from "./workshop-metal-journal.service";
 import { WorkshopScaleService } from "./workshop-scale.service";
@@ -99,14 +106,48 @@ export class WorkshopControlService {
       });
       if (!original) throw new NotFoundException("Posted workshop journal not found");
       if (original.reversedBy || original.replacedBy) {
-        if (original.replacedBy?.idempotencyKey === `correction:${dto.idempotencyKey}` &&
+        if (dto.replacementWeightGrams && original.replacedBy?.idempotencyKey === `correction:${dto.idempotencyKey}` &&
             original.replacedBy.weightGrams.eq(new Prisma.Decimal(dto.replacementWeightGrams))) {
           return this.journal.serializeEntry(original.replacedBy, true);
         }
         throw new ConflictException("This journal has already been corrected");
       }
+
+      // Route to dedicated workflow correction procedures
+      if (original.referenceType === WorkshopMetalJournalReferenceType.TRANSFER_DISPATCH) {
+        return this.correctTransferDispatch(tx, shopId, userId, original, dto);
+      }
+      if (original.referenceType === WorkshopMetalJournalReferenceType.TRANSFER_RECEIPT) {
+        return this.correctTransferReceipt(tx, shopId, userId, original, dto);
+      }
+      if (original.referenceType === WorkshopMetalJournalReferenceType.RECOVERY_DEPOSIT) {
+        return this.correctRecoveryDeposit(tx, shopId, userId, original, dto);
+      }
+      if (original.referenceType === WorkshopMetalJournalReferenceType.RECOVERY_SEND) {
+        return this.correctRecoverySend(tx, shopId, userId, original, dto);
+      }
+      if (original.referenceType === WorkshopMetalJournalReferenceType.RECOVERY_RESULT) {
+        return this.correctRecoveryResult(tx, shopId, userId, original, dto);
+      }
+      if (original.referenceType === WorkshopMetalJournalReferenceType.FINISHED_RECEIPT) {
+        return this.correctFinishedReceipt(tx, shopId, userId, original, dto);
+      }
+      if (original.referenceType === WorkshopMetalJournalReferenceType.MIXED_OUTPUT) {
+        return this.correctMixedOutput(tx, shopId, userId, original, dto);
+      }
+      const isStoneMovement =
+        (original.metadata as any)?.movementKind === "STONE_SETTING" ||
+        (original.metadata as any)?.movementKind === "STONE_RETURN" ||
+        (original.metadata as any)?.sourceReadingKind === "STONE_SETTING";
+      if (isStoneMovement && ["MATERIAL_ISSUE", "PROCESS_OUTPUT"].includes(original.referenceType)) {
+        return this.correctStoneSettingOrReturn(tx, shopId, userId, original, dto);
+      }
+
       if (!["MATERIAL_ISSUE", "PROCESS_INPUT", "PROCESS_OUTPUT", "MANUAL_OVERRIDE"].includes(original.referenceType)) {
         throw new BadRequestException("This movement has linked workflow state and needs a dedicated correction procedure");
+      }
+      if (!dto.replacementWeightGrams) {
+        throw new BadRequestException("Replacement weight is required for standard two-account movement correction");
       }
       if (original.lines.length !== 2 || original.lines.some((line) => line.account.materialKey !== original.materialKey)) {
         throw new BadRequestException("Only a two-account, single-material movement can use this correction procedure");
@@ -160,4 +201,585 @@ export class WorkshopControlService {
       return this.journal.serializeEntry(posted.entry, posted.idempotent);
     });
   }
+
+  private async correctTransferDispatch(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    const transfer = await tx.workshopTransfer.findFirst({
+      where: { shopId, OR: [{ id: original.transferId ?? "" }, { dispatchReadingId: original.scaleReadingId ?? "" }] },
+      include: { receiveReading: true },
+    });
+    if (!transfer) throw new NotFoundException("Linked transfer not found");
+    if (["RECEIVED", "RECONCILED", "EXCEPTION"].includes(transfer.status) || transfer.receiveReadingId) {
+      throw new ConflictException("Transfer has already been received downstream. Correct or reverse the transfer receipt first.");
+    }
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    if (!source || !dest) throw new BadRequestException("Transfer dispatch lines are invalid");
+    const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of dispatch ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      jobId: original.jobId, treeId: original.treeId, transferId: transfer.id,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "TRANSFER_DISPATCH" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    const repWeight = dto.replacementWeightGrams ? new Prisma.Decimal(dto.replacementWeightGrams) : null;
+    let replacementEntry = null;
+    if (repWeight && repWeight.gt(0)) {
+      const repGrams = repWeight.toFixed(6);
+      const posted = await this.journal.postEntry(tx, {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id, idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement dispatch for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(), weightGrams: repGrams, materialKey: original.materialKey,
+        jobId: original.jobId, treeId: original.treeId, transferId: transfer.id,
+        actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+        metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "TRANSFER_DISPATCH" },
+        lines: [{ accountId: dest.accountId, debitGrams: repGrams }, { accountId: source.accountId, creditGrams: repGrams }],
+      });
+      replacementEntry = posted.entry;
+    } else {
+      await tx.workshopTransfer.update({
+        where: { id: transfer.id },
+        data: { status: "PREPARED", dispatchReadingId: null, dispatchUserId: null, dispatchedAt: null },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_TRANSFER_DISPATCH_CORRECT",
+        resourceType: "WorkshopTransfer", resourceId: transfer.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), replacementWeightGrams: dto.replacementWeightGrams ?? null },
+      },
+    });
+    return replacementEntry ? this.journal.serializeEntry(replacementEntry, false) : { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctTransferReceipt(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    const transfer = await tx.workshopTransfer.findFirst({
+      where: { shopId, OR: [{ id: original.transferId ?? "" }, { receiveReadingId: original.scaleReadingId ?? "" }] },
+      include: { dispatchReading: true },
+    });
+    if (!transfer) throw new NotFoundException("Linked transfer not found");
+    if (!transfer.dispatchReading) throw new BadRequestException("Transfer dispatch reading is missing");
+
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    if (!dest || !source) throw new BadRequestException("Transfer receipt lines are invalid");
+
+    const destAccount = await tx.workshopMetalAccount.findUnique({ where: { id: dest.accountId } });
+    if (!destAccount || destAccount.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException("Downstream operations have consumed received material from this account; reconcile downstream operations before correcting transfer receipt");
+    }
+
+    const varianceJournal = await tx.workshopMetalJournal.findFirst({
+      where: { shopId, transferId: transfer.id, status: "POSTED", metadata: { path: ["classification"], equals: "TRANSFER_VARIANCE" } },
+    });
+    if (varianceJournal) {
+      throw new ConflictException("Transfer variance has already been classified; correct or reverse the variance classification first");
+    }
+
+    const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of receive ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      jobId: original.jobId, treeId: original.treeId, transferId: transfer.id,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "TRANSFER_RECEIPT" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    const repWeight = dto.replacementWeightGrams ? new Prisma.Decimal(dto.replacementWeightGrams) : null;
+    let replacementEntry = null;
+    if (repWeight && repWeight.gt(0)) {
+      const repGrams = repWeight.toFixed(6);
+      const posted = await this.journal.postEntry(tx, {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id, idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement receive for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(), weightGrams: repGrams, materialKey: original.materialKey,
+        jobId: original.jobId, treeId: original.treeId, transferId: transfer.id,
+        actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+        metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "TRANSFER_RECEIPT" },
+        lines: [{ accountId: dest.accountId, debitGrams: repGrams }, { accountId: source.accountId, creditGrams: repGrams }],
+      });
+      replacementEntry = posted.entry;
+
+      const diff = transfer.dispatchReading.weightGrams.minus(repWeight);
+      const tolerance = await tx.workshopToleranceRule.findFirst({
+        where: { shopId, movementKind: "TRANSFER", materialKey: original.materialKey, isActive: true },
+      }) ?? await tx.workshopToleranceRule.findFirst({
+        where: { shopId, movementKind: "TRANSFER", materialKey: "", isActive: true },
+      });
+      const maxTol = tolerance?.maxDifferenceGrams ?? new Prisma.Decimal(0);
+      const status = diff.abs().gt(maxTol) || diff.lt(0) ? "EXCEPTION" : diff.isZero() ? "RECONCILED" : "RECEIVED";
+      await tx.workshopTransfer.update({
+        where: { id: transfer.id },
+        data: { status, differenceGrams: diff, toleranceRuleId: tolerance?.id ?? null },
+      });
+    } else {
+      await tx.workshopTransfer.update({
+        where: { id: transfer.id },
+        data: { status: "DISPATCHED", receiveReadingId: null, receiveUserId: null, receivedAt: null, differenceGrams: null },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_TRANSFER_RECEIPT_CORRECT",
+        resourceType: "WorkshopTransfer", resourceId: transfer.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), replacementWeightGrams: dto.replacementWeightGrams ?? null },
+      },
+    });
+    return replacementEntry ? this.journal.serializeEntry(replacementEntry, false) : { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctRecoveryDeposit(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    const bag = await tx.workshopRecoveryContainer.findFirst({
+      where: { id: original.recoveryContainerId, shopId },
+      include: { events: true },
+    });
+    if (!bag) throw new NotFoundException("Recovery bag not found");
+    if (bag.status !== "OPEN" || bag.events.some((e: any) => e.status !== "CANCELLED")) {
+      throw new ConflictException("Recovery bag has already been closed or sent to refinery; dependent recovery events must be addressed first");
+    }
+    const bagAccount = await tx.workshopMetalAccount.findUnique({
+      where: { shopId_materialKey_bucket_scopeId: { shopId, materialKey: original.materialKey, bucket: WorkshopAccountBucket.RECOVERY_PENDING, scopeId: bag.id } },
+    });
+    if (!bagAccount || bagAccount.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException("Recovery bag balance is insufficient to reverse this deposit");
+    }
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    if (!source || !dest) throw new BadRequestException("Recovery deposit lines are invalid");
+
+    const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of recovery deposit ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      jobId: original.jobId, treeId: original.treeId, processRunId: original.processRunId,
+      recoveryContainerId: bag.id, actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "RECOVERY_DEPOSIT" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    let replacementEntry = null;
+    if (dto.replacementWeightGrams && new Prisma.Decimal(dto.replacementWeightGrams).gt(0)) {
+      const posted = await this.journal.postEntry(tx, {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id, idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement recovery deposit for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(), weightGrams: dto.replacementWeightGrams, materialKey: original.materialKey,
+        jobId: original.jobId, treeId: original.treeId, processRunId: original.processRunId,
+        recoveryContainerId: bag.id, actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+        metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "RECOVERY_DEPOSIT" },
+        lines: [{ accountId: dest.accountId, debitGrams: dto.replacementWeightGrams }, { accountId: source.accountId, creditGrams: dto.replacementWeightGrams }],
+      });
+      replacementEntry = posted.entry;
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_RECOVERY_DEPOSIT_CORRECT",
+        resourceType: "WorkshopRecoveryContainer", resourceId: bag.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), replacementWeightGrams: dto.replacementWeightGrams ?? null },
+      },
+    });
+    return replacementEntry ? this.journal.serializeEntry(replacementEntry, false) : { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctRecoverySend(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    const event = await tx.workshopRecoveryEvent.findFirst({
+      where: { id: original.recoveryEventId, shopId },
+      include: { container: true },
+    });
+    if (!event) throw new NotFoundException("Recovery event not found");
+    if (event.status === "RECONCILED" || event.varianceGrams != null) {
+      throw new ConflictException("Recovery event has already been reconciled; reverse reconciliation first");
+    }
+    const hasResults = await tx.workshopMetalJournal.count({
+      where: { shopId, recoveryEventId: event.id, referenceType: WorkshopMetalJournalReferenceType.RECOVERY_RESULT, status: "POSTED" },
+    });
+    if (hasResults > 0) {
+      throw new ConflictException("Recovery event has already produced recovery results; correct or reverse recovery results first");
+    }
+    const refineryAccount = await tx.workshopMetalAccount.findUnique({
+      where: { shopId_materialKey_bucket_scopeId: { shopId, materialKey: original.materialKey, bucket: WorkshopAccountBucket.REFINERY, scopeId: event.id } },
+    });
+    if (!refineryAccount || refineryAccount.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException("Refinery balance is insufficient to reverse this recovery send");
+    }
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+
+    const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of recovery send ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      recoveryContainerId: event.containerId, recoveryEventId: event.id,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "RECOVERY_SEND" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    let replacementEntry = null;
+    if (dto.replacementWeightGrams && new Prisma.Decimal(dto.replacementWeightGrams).gt(0)) {
+      const posted = await this.journal.postEntry(tx, {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id, idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement recovery send for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(), weightGrams: dto.replacementWeightGrams, materialKey: original.materialKey,
+        recoveryContainerId: event.containerId, recoveryEventId: event.id,
+        actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+        metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "RECOVERY_SEND" },
+        lines: [{ accountId: dest.accountId, debitGrams: dto.replacementWeightGrams }, { accountId: source.accountId, creditGrams: dto.replacementWeightGrams }],
+      });
+      replacementEntry = posted.entry;
+    } else {
+      await tx.workshopRecoveryEvent.update({ where: { id: event.id }, data: { status: "OPEN", sendReadingId: null, sendAt: null } });
+      await tx.workshopRecoveryContainer.update({ where: { id: event.containerId }, data: { status: "OPEN", closedAt: null, destination: null } });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_RECOVERY_SEND_CORRECT",
+        resourceType: "WorkshopRecoveryEvent", resourceId: event.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), replacementWeightGrams: dto.replacementWeightGrams ?? null },
+      },
+    });
+    return replacementEntry ? this.journal.serializeEntry(replacementEntry, false) : { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctRecoveryResult(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    const event = await tx.workshopRecoveryEvent.findFirst({
+      where: { id: original.recoveryEventId, shopId },
+      include: { container: true },
+    });
+    if (!event) throw new NotFoundException("Recovery event not found");
+
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    if (!dest || !source) throw new BadRequestException("Recovery result lines are invalid");
+
+    const destAccount = await tx.workshopMetalAccount.findUnique({ where: { id: dest.accountId } });
+    if (!destAccount || destAccount.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException("Recovered material has already been consumed from the destination account; reconcile downstream usage before correcting this result");
+    }
+
+    const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of recovery result ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      recoveryContainerId: event.containerId, recoveryEventId: event.id,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "RECOVERY_RESULT" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    let replacementEntry = null;
+    if (dto.replacementWeightGrams && new Prisma.Decimal(dto.replacementWeightGrams).gt(0)) {
+      const posted = await this.journal.postEntry(tx, {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id, idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement recovery result for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(), weightGrams: dto.replacementWeightGrams, materialKey: original.materialKey,
+        recoveryContainerId: event.containerId, recoveryEventId: event.id,
+        actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+        metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "RECOVERY_RESULT" },
+        lines: [{ accountId: dest.accountId, debitGrams: dto.replacementWeightGrams }, { accountId: source.accountId, creditGrams: dto.replacementWeightGrams }],
+      });
+      replacementEntry = posted.entry;
+    }
+
+    if (event.status === "RECONCILED") {
+      await tx.workshopRecoveryEvent.update({ where: { id: event.id }, data: { status: "SENT", varianceGrams: null, approvedAt: null, approvedByUserId: null } });
+      await tx.workshopRecoveryContainer.update({ where: { id: event.containerId }, data: { status: "CLOSED" } });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_RECOVERY_RESULT_CORRECT",
+        resourceType: "WorkshopRecoveryEvent", resourceId: event.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), replacementWeightGrams: dto.replacementWeightGrams ?? null },
+      },
+    });
+    return replacementEntry ? this.journal.serializeEntry(replacementEntry, false) : { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctFinishedReceipt(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    if ((original.metadata as any)?.parentReceiptJournalId) {
+      throw new BadRequestException("This is a child stone classification journal; correct the main finished jewellery receipt journal instead");
+    }
+
+    const item = await tx.inventoryItem.findFirst({
+      where: { workshopReceiptJournalId: original.id, shopId },
+    });
+    if (item) {
+      if (item.status === "SOLD" || item.status === "RESERVED" || item.stockQuantity <= 0) {
+        throw new ConflictException(`This inventory item has already been commercially sold or reserved (status: ${item.status}, quantity: ${item.stockQuantity}). Downstream commercial use must be resolved before this workshop receipt can be corrected.`);
+      }
+      const order = await tx.order.findFirst({
+        where: { inventoryItemId: item.id, status: { notIn: ["CANCELLED", "REFUNDED"] } },
+      });
+      if (order) {
+        throw new ConflictException(`This inventory item is referenced on active order ${order.orderNumber}; cancel or refund the order before correcting the workshop receipt.`);
+      }
+    }
+
+    const stoneReceipts = await tx.workshopMetalJournal.findMany({
+      where: {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED",
+        metadata: { path: ["parentReceiptJournalId"], equals: original.id },
+      },
+      include: { lines: true },
+    });
+
+    const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    for (const stoneReceipt of stoneReceipts) {
+      const stoneDest = stoneReceipt.lines.find((l) => l.debitGrams.gt(0));
+      const stoneSources = stoneReceipt.lines.filter((l) => l.creditGrams.gt(0));
+      if (stoneDest && stoneSources.length) {
+        await this.journal.postEntry(tx, {
+          shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+          referenceId: stoneReceipt.id, idempotencyKey: `reversal:${dto.idempotencyKey}:stone:${stoneReceipt.id}`,
+          description: `Reversal of stone classification ${stoneReceipt.entryNumber}: ${dto.reason.trim()}`,
+          transactionDate: new Date(), weightGrams: stoneReceipt.weightGrams.toFixed(6),
+          materialKey: stoneReceipt.materialKey, jobId: original.jobId, treeId: original.treeId,
+          actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+          reversalOfId: stoneReceipt.id, scalePurpose: "STONE",
+          metadata: { reason: dto.reason.trim(), parentReceiptJournalId: original.id, workflow: "FINISHED_RECEIPT_STONE" },
+          lines: [
+            ...stoneSources.map((s) => ({ accountId: s.accountId, debitGrams: s.creditGrams.toFixed(6) })),
+            { accountId: stoneDest.accountId, creditGrams: stoneReceipt.weightGrams.toFixed(6) },
+          ],
+        });
+      }
+    }
+
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    if (!dest || !source) throw new BadRequestException("Finished receipt lines are invalid");
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of finished receipt ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      jobId: original.jobId, treeId: original.treeId, processRunId: original.processRunId,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: material?.scalePurpose ?? "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "FINISHED_RECEIPT" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    if (item) {
+      await tx.inventoryItem.update({
+        where: { id: item.id },
+        data: {
+          status: InventoryStatus.DISCONTINUED,
+          visibility: InventoryVisibility.HIDDEN,
+          stockQuantity: 0,
+        },
+      });
+    }
+
+    if (original.jobId) {
+      await tx.karigarJob.update({
+        where: { id: original.jobId },
+        data: { inventoryItemId: null, status: "In Progress" },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_FINISHED_RECEIPT_CORRECT",
+        resourceType: "WorkshopMetalJournal", resourceId: original.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), voidedItemId: item?.id ?? null },
+      },
+    });
+
+    return { id: original.id, status: "REVERSED", voided: true, voidedInventoryItemId: item?.id ?? null };
+  }
+
+  private async correctStoneSettingOrReturn(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    if (original.jobId) {
+      const job = await tx.karigarJob.findFirst({ where: { id: original.jobId, shopId }, select: { inventoryItemId: true } });
+      if (job?.inventoryItemId) {
+        throw new ConflictException("Finished goods receipt has already consumed/classified stone settings for this job. Correct finished receipt first.");
+      }
+    }
+    const hasFinished = await tx.workshopMetalJournal.count({
+      where: { shopId, treeId: original.treeId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED" },
+    });
+    if (hasFinished > 0) {
+      throw new ConflictException("Finished goods receipt has already consumed stone settings for this tree. Correct finished receipt first.");
+    }
+
+    const source = original.lines.find((l: any) => l.creditGrams.gt(0));
+    const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    if (!source || !dest) throw new BadRequestException("Stone journal lines are invalid");
+
+    const destAccount = await tx.workshopMetalAccount.findUnique({ where: { id: dest.accountId } });
+    if (!destAccount || destAccount.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException("Stone balance is insufficient to reverse this movement; later stone operations depend on this account");
+    }
+
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of stone movement ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      jobId: original.jobId, treeId: original.treeId, processRunId: original.processRunId,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: "STONE",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "STONE_MOVEMENT" },
+      lines: [{ accountId: source.accountId, debitGrams: oldWeight }, { accountId: dest.accountId, creditGrams: oldWeight }],
+    });
+
+    let replacementEntry = null;
+    if (dto.replacementWeightGrams && new Prisma.Decimal(dto.replacementWeightGrams).gt(0)) {
+      const posted = await this.journal.postEntry(tx, {
+        shopId, referenceType: WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT,
+        referenceId: original.id, idempotencyKey: `correction:${dto.idempotencyKey}`,
+        description: `Replacement stone movement for ${original.entryNumber}: ${dto.reason.trim()}`,
+        transactionDate: new Date(), weightGrams: dto.replacementWeightGrams, materialKey: original.materialKey,
+        jobId: original.jobId, treeId: original.treeId, processRunId: original.processRunId,
+        actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+        replacementForId: original.id, scalePurpose: "STONE",
+        metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "STONE_MOVEMENT" },
+        lines: [{ accountId: dest.accountId, debitGrams: dto.replacementWeightGrams }, { accountId: source.accountId, creditGrams: dto.replacementWeightGrams }],
+      });
+      replacementEntry = posted.entry;
+    }
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_STONE_MOVEMENT_CORRECT",
+        resourceType: "WorkshopMetalJournal", resourceId: original.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim(), replacementWeightGrams: dto.replacementWeightGrams ?? null },
+      },
+    });
+    return replacementEntry ? this.journal.serializeEntry(replacementEntry, false) : { id: original.id, status: "REVERSED", voided: true };
+  }
+
+  private async correctMixedOutput(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    userId: string,
+    original: any,
+    dto: CorrectWorkshopJournalDto,
+  ) {
+    const mixedWipLine = original.lines.find((l: any) => l.debitGrams.gt(0));
+    const inputLines = original.lines.filter((l: any) => l.creditGrams.gt(0));
+    if (!mixedWipLine || !inputLines.length) throw new BadRequestException("Mixed output lines are invalid");
+
+    const mixedAccount = await tx.workshopMetalAccount.findUnique({ where: { id: mixedWipLine.accountId } });
+    if (!mixedAccount || mixedAccount.balanceGrams.lt(original.weightGrams)) {
+      throw new ConflictException("Downstream processes have already consumed this mixed material. Reconcile or reverse downstream operations before correcting mixed output.");
+    }
+
+    const oldWeight = original.weightGrams.toFixed(6);
+
+    await this.journal.postEntry(tx, {
+      shopId, referenceType: WorkshopMetalJournalReferenceType.REVERSAL,
+      referenceId: original.id, idempotencyKey: `reversal:${dto.idempotencyKey}`,
+      description: `Reversal of mixed output ${original.entryNumber}: ${dto.reason.trim()}`,
+      transactionDate: new Date(), weightGrams: oldWeight, materialKey: original.materialKey,
+      jobId: original.jobId, treeId: original.treeId, processRunId: original.processRunId,
+      actorUserId: userId, captureMethod: WorkshopScaleCaptureMethod.MANUAL_OVERRIDE,
+      reversalOfId: original.id, scalePurpose: "GOLD",
+      metadata: { reason: dto.reason.trim(), originalReadingId: original.scaleReadingId, originalJournalId: original.id, workflow: "MIXED_OUTPUT" },
+      lines: [
+        ...inputLines.map((inp: any) => ({ accountId: inp.accountId, debitGrams: inp.creditGrams.toFixed(6) })),
+        { accountId: mixedWipLine.accountId, creditGrams: oldWeight },
+      ],
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId, actorType: "SHOPKEEPER", action: "WORKSHOP_MIXED_OUTPUT_CORRECT",
+        resourceType: "WorkshopMetalJournal", resourceId: original.id,
+        newValue: { shopId, journalId: original.id, reason: dto.reason.trim() },
+      },
+    });
+    return { id: original.id, status: "REVERSED", voided: true };
+  }
 }
+

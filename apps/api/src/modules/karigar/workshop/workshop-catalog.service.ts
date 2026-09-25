@@ -208,13 +208,19 @@ export class WorkshopCatalogService {
       const material = await this.prisma.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: dto.materialKey } } });
       if (!material || material.scalePurpose !== dto.scalePurpose) throw new BadRequestException("Tolerance material/scale mismatch");
     }
+    const defId = dto.definitionId?.trim() ?? "";
+    if (defId) {
+      const def = await this.prisma.workshopProcessDefinition.findFirst({ where: { id: defId, shopId, isActive: true } });
+      if (!def) throw new BadRequestException("Active process definition not found for tolerance");
+    }
+    const policy = dto.policy ?? "REQUIRE_CLASSIFICATION";
     return this.prisma.$transaction(async (tx) => {
       const rule = await tx.workshopToleranceRule.upsert({
-        where: { shopId_movementKind_materialKey_scalePurpose: { shopId, movementKind: dto.movementKind, materialKey: dto.materialKey ?? "", scalePurpose: dto.scalePurpose } },
-        update: { maxDifferenceGrams: value, isActive: dto.isActive ?? true },
-        create: { shopId, movementKind: dto.movementKind, materialKey: dto.materialKey ?? "", scalePurpose: dto.scalePurpose, maxDifferenceGrams: value, isActive: dto.isActive ?? true, createdByUserId: userId },
+        where: { shopId_movementKind_materialKey_scalePurpose_definitionId: { shopId, movementKind: dto.movementKind, materialKey: dto.materialKey ?? "", scalePurpose: dto.scalePurpose, definitionId: defId } },
+        update: { maxDifferenceGrams: value, policy, isActive: dto.isActive ?? true },
+        create: { shopId, movementKind: dto.movementKind, materialKey: dto.materialKey ?? "", definitionId: defId, policy, scalePurpose: dto.scalePurpose, maxDifferenceGrams: value, isActive: dto.isActive ?? true, createdByUserId: userId },
       });
-      await tx.auditLog.create({ data: { userId, actorType: "SHOPKEEPER", action: "WORKSHOP_TOLERANCE_CONFIGURE", resourceType: "WorkshopToleranceRule", resourceId: rule.id, newValue: { shopId, movementKind: rule.movementKind, maxDifferenceGrams: rule.maxDifferenceGrams.toFixed(6) } } });
+      await tx.auditLog.create({ data: { userId, actorType: "SHOPKEEPER", action: "WORKSHOP_TOLERANCE_CONFIGURE", resourceType: "WorkshopToleranceRule", resourceId: rule.id, newValue: { shopId, movementKind: rule.movementKind, maxDifferenceGrams: rule.maxDifferenceGrams.toFixed(6), policy: rule.policy, definitionId: rule.definitionId } } });
       return { ...rule, maxDifferenceGrams: rule.maxDifferenceGrams.toFixed(6) };
     });
   }

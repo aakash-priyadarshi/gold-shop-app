@@ -61,6 +61,8 @@ export class CreateWorkshopWorkstationDto {
 export class CreateWorkshopToleranceDto {
   @IsString() @IsNotEmpty() @MaxLength(40) movementKind: string;
   @IsOptional() @IsString() @MaxLength(80) materialKey?: string;
+  @IsOptional() @IsString() @MaxLength(80) definitionId?: string;
+  @IsOptional() @IsIn(["REQUIRE_CLASSIFICATION", "ACCEPT_WITHIN_TOLERANCE"]) policy?: "REQUIRE_CLASSIFICATION" | "ACCEPT_WITHIN_TOLERANCE";
   @IsIn(["GOLD", "STONE"]) scalePurpose: "GOLD" | "STONE";
   @IsString() @Matches(GRAMS) maxDifferenceGrams: string;
   @IsOptional() @IsBoolean() isActive?: boolean;

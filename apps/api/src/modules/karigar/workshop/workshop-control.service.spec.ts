@@ -134,4 +134,132 @@ describe("WorkshopControlService authoritative exceptions", () => {
     }));
     expect(journal.postEntry).not.toHaveBeenCalled();
   });
+
+  describe("Dedicated workflow-aware corrections", () => {
+    it("handles TRANSFER_DISPATCH: reverses transit metal and resets transfer to PREPARED when voided", async () => {
+      const transfer = { id: "transfer-1", shopId: "shop-1", status: "DISPATCHED", materialKey: "goldGrains995", dispatchReadingId: "read-1" };
+      const original = {
+        id: "dispatch-journal-1", shopId: "shop-1", status: "POSTED", referenceType: "TRANSFER_DISPATCH",
+        materialKey: "goldGrains995", postedAt: new Date(), weightGrams: new Prisma.Decimal("100.00"),
+        transferId: "transfer-1", reversedBy: null, replacedBy: null,
+        lines: [
+          { accountId: "dept-a", creditGrams: new Prisma.Decimal("100.00"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "goldGrains995" } },
+          { accountId: "transit", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("100.00"), account: { materialKey: "goldGrains995" } },
+        ],
+      };
+      tx.workshopTransfer = {
+        findFirst: jest.fn().mockResolvedValue(transfer),
+        update: jest.fn().mockResolvedValue({ ...transfer, status: "PREPARED" }),
+      };
+      tx.workshopMetalAccount = {
+        findUnique: jest.fn().mockResolvedValue({ id: "transit", balanceGrams: new Prisma.Decimal("100.00") }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+      journal.postEntry.mockResolvedValueOnce({ entry: { id: "reversal-dispatch" }, idempotent: false });
+
+      const result: any = await service.correctJournal("shop-1", "owner-1", "dispatch-journal-1", {
+        reason: "Cancelled dispatch before transit pickup", idempotencyKey: "corr-disp-1",
+      });
+
+      expect(result.status).toBe("REVERSED");
+      expect(result.voided).toBe(true);
+      expect(tx.workshopTransfer.update).toHaveBeenCalledWith({
+        where: { id: "transfer-1" },
+        data: expect.objectContaining({ status: "PREPARED", dispatchReadingId: null }),
+      });
+    });
+
+    it("blocks TRANSFER_DISPATCH correction if the transfer was already received downstream", async () => {
+      const original = {
+        id: "dispatch-journal-1", shopId: "shop-1", status: "POSTED", referenceType: "TRANSFER_DISPATCH",
+        transferId: "transfer-1", reversedBy: null, replacedBy: null,
+      };
+      tx.workshopTransfer = {
+        findFirst: jest.fn().mockResolvedValue({ id: "transfer-1", status: "RECEIVED" }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "dispatch-journal-1", {
+        reason: "Attempted late rollback", idempotencyKey: "corr-disp-2",
+      })).rejects.toThrow("Transfer has already been received downstream");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+
+    it("blocks RECOVERY_DEPOSIT correction if the bag is already closed", async () => {
+      const original = {
+        id: "deposit-journal-1", shopId: "shop-1", status: "POSTED", referenceType: "RECOVERY_DEPOSIT",
+        recoveryContainerId: "bag-1", reversedBy: null, replacedBy: null,
+      };
+      tx.workshopRecoveryContainer = {
+        findFirst: jest.fn().mockResolvedValue({ id: "bag-1", status: "CLOSED" }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "deposit-journal-1", {
+        reason: "Deposit correction", idempotencyKey: "corr-rec-1",
+      })).rejects.toThrow("closed or sent to refinery");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+
+    it("reverses FINISHED_RECEIPT, voids InventoryItem, and unlinks job when not yet sold", async () => {
+      const original = {
+        id: "fg-journal-1", shopId: "shop-1", status: "POSTED", referenceType: "FINISHED_RECEIPT",
+        materialKey: "goldGrains995", postedAt: new Date(), weightGrams: new Prisma.Decimal("15.50"),
+        jobId: "job-1", reversedBy: null, replacedBy: null,
+        metadata: {},
+        lines: [
+          { accountId: "wip", creditGrams: new Prisma.Decimal("15.50"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "goldGrains995" } },
+          { accountId: "finished", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("15.50"), account: { materialKey: "goldGrains995" } },
+        ],
+      };
+      tx.inventoryItem = {
+        findFirst: jest.fn().mockResolvedValue({ id: "inv-item-1", status: "ACTIVE", stockQuantity: 1 }),
+        update: jest.fn().mockResolvedValue({ id: "inv-item-1", status: "DISCONTINUED" }),
+      };
+      tx.order = { findFirst: jest.fn().mockResolvedValue(null) };
+      tx.karigarJob = {
+        update: jest.fn().mockResolvedValue({ id: "job-1" }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findFirst: jest.fn().mockResolvedValue({ id: "job-1", inventoryItemId: null }),
+      };
+      tx.workshopMetalAccount = {
+        findUnique: jest.fn().mockResolvedValue({ id: "finished", balanceGrams: new Prisma.Decimal("15.50") }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+      tx.workshopMetalJournal.findMany = jest.fn().mockResolvedValue([]);
+      journal.postEntry.mockResolvedValueOnce({ entry: { id: "reversal-fg" }, idempotent: false });
+
+      const result: any = await service.correctJournal("shop-1", "owner-1", "fg-journal-1", {
+        reason: "Stone weight miscalculated during final receipt", idempotencyKey: "corr-fg-1",
+      });
+
+      expect(result.status).toBe("REVERSED");
+      expect(result.voided).toBe(true);
+      expect(result.voidedInventoryItemId).toBe("inv-item-1");
+      expect(tx.inventoryItem.update).toHaveBeenCalledWith({
+        where: { id: "inv-item-1" },
+        data: expect.objectContaining({ status: "DISCONTINUED", stockQuantity: 0 }),
+      });
+      expect(tx.karigarJob.update).toHaveBeenCalledWith({
+        where: { id: "job-1" },
+        data: expect.objectContaining({ inventoryItemId: null, status: "In Progress" }),
+      });
+    });
+
+    it("blocks FINISHED_RECEIPT correction if InventoryItem has already been sold", async () => {
+      const original = {
+        id: "fg-journal-1", shopId: "shop-1", status: "POSTED", referenceType: "FINISHED_RECEIPT",
+        materialKey: "goldGrains995", reversedBy: null, replacedBy: null,
+      };
+      tx.inventoryItem = {
+        findFirst: jest.fn().mockResolvedValue({ id: "inv-item-1", status: "SOLD", stockQuantity: 0 }),
+      };
+      tx.workshopMetalJournal.findFirst.mockResolvedValueOnce(original);
+
+      await expect(service.correctJournal("shop-1", "owner-1", "fg-journal-1", {
+        reason: "Correction", idempotencyKey: "corr-fg-2",
+      })).rejects.toThrow("already been commercially sold or reserved");
+      expect(journal.postEntry).not.toHaveBeenCalled();
+    });
+  });
 });
