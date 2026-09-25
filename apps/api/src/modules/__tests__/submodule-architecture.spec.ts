@@ -206,6 +206,8 @@ describe("gold-shop-core submodule architecture", () => {
       expect(dockerfile).toMatch(/FROM base AS runtime/);
       expect(script).toContain("gold-shop-core.git");
       expect(script).toContain("${SUBMODULE_PAT}");
+      expect(script).toContain('current=$(git -C "$core_dir" rev-parse HEAD)');
+      expect(script).toContain('if [ "$current" != "$sha" ]');
       expect(script).toContain('rm -rf "$core_dir/.git"');
     });
 
