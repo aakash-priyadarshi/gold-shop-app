@@ -26,14 +26,14 @@ export class CreateWorkshopMovementSessionDto {
   disposition?: "VAULT" | "WIP" | "REUSABLE" | "SCRAP" | "RECOVERY_PENDING" | "REFINERY" | "FINISHED";
 }
 
-export class ConfirmWorkshopMovementDto extends ConfirmWeighingSessionDto {
-  @IsOptional() @IsString() @MaxLength(1000) exceptionReason?: string;
-  @IsOptional() @ValidateNested() @Type(() => WorkshopFinishedGoodsDto)
-  finishedGoods?: WorkshopFinishedGoodsDto;
-}
-
 export class WorkshopFinishedGoodsDto {
   @IsString() @IsNotEmpty() @MaxLength(200) nameEn: string;
   @IsEnum(JewelleryType) jewelleryType: JewelleryType;
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(80) sku?: string;
+}
+
+export class ConfirmWorkshopMovementDto extends ConfirmWeighingSessionDto {
+  @IsOptional() @ValidateNested() @Type(() => WorkshopFinishedGoodsDto)
+  finishedGoods?: WorkshopFinishedGoodsDto;
+  @IsOptional() @IsString() @MaxLength(1000) exceptionReason?: string;
 }
