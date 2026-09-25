@@ -48,6 +48,7 @@ export class WorkshopTransferService {
       if (!rows.length) throw new NotFoundException("Transfer not found");
       const transfer = await tx.workshopTransfer.findFirst({ where: { id, shopId } });
       if (!transfer || transfer.status !== "EXCEPTION" || !transfer.differenceGrams) throw new ConflictException("Transfer has no pending exception");
+      if (transfer.approvedAt || transfer.approvedByUserId) throw new ConflictException("Transfer exception is already approved");
       if (transfer.dispatchUserId === userId || transfer.receiveUserId === userId) throw new BadRequestException("A dispatching or receiving operator cannot approve their own exception");
       const approved = await tx.workshopTransfer.update({ where: { id }, data: { approvedByUserId: userId, approvedAt: new Date(), approvalReason: reason.trim() } });
       await tx.auditLog.create({ data: { userId, actorType: "SHOPKEEPER", action: "WORKSHOP_TRANSFER_EXCEPTION_APPROVE", resourceType: "WorkshopTransfer", resourceId: id, newValue: { shopId, differenceGrams: transfer.differenceGrams.toFixed(6), reason: reason.trim() } } });

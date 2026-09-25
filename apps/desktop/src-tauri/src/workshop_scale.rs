@@ -62,6 +62,8 @@ fn collect_frames(
     let mut frames = Vec::with_capacity(max_frames);
     let mut last_sample_at: Option<Instant> = None;
     let mut pending = Vec::<u8>::new();
+    // A continuously streaming scale can already be mid-frame on connect.
+    let mut synced = false;
     let mut chunk = [0_u8; 256];
     while frames.len() < max_frames && Instant::now() < deadline {
         match reader.read(&mut chunk) {
@@ -69,6 +71,11 @@ fn collect_frames(
             Ok(size) => {
                 for byte in &chunk[..size] {
                     if *byte == b'\n' {
+                        if !synced {
+                            synced = true;
+                            pending.clear();
+                            continue;
+                        }
                         let line = String::from_utf8(pending.clone())
                             .map_err(|_| "Scale sent a non-ASCII frame")?;
                         let line = line.trim_end_matches('\r').trim().to_string();
@@ -218,7 +225,7 @@ mod tests {
 
     #[test]
     fn serial_or_tcp_stream_returns_bounded_complete_raw_frames() {
-        let mut stream = Cursor::new(b"ST NET 100.25 g\r\nUS NET 100.24 g\n".to_vec());
+        let mut stream = Cursor::new(b"25 g\nST NET 100.25 g\r\nUS NET 100.24 g\n".to_vec());
         let frames = collect_frames(&mut stream, 3, Duration::ZERO).unwrap();
         assert_eq!(frames.len(), 2);
         assert_eq!(frames[0].raw_frame, "ST NET 100.25 g");
@@ -235,13 +242,17 @@ mod tests {
         }
         impl Read for TimedStream {
             fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-                if self.index >= 3 {
+                if self.index >= 4 {
                     return Ok(0);
                 }
                 if self.index > 0 {
                     sleep(Duration::from_millis(60));
                 }
-                let frame = b"ST NET 100.25 g\n";
+                let frame: &[u8] = if self.index == 0 {
+                    b"25 g\n"
+                } else {
+                    b"ST NET 100.25 g\n"
+                };
                 buf[..frame.len()].copy_from_slice(frame);
                 self.index += 1;
                 Ok(frame.len())
@@ -256,7 +267,7 @@ mod tests {
         assert!((last - first).num_milliseconds() >= 100);
 
         let mut burst =
-            Cursor::new(b"ST NET 100.25 g\nST NET 100.25 g\nST NET 100.25 g\n".to_vec());
+            Cursor::new(b"25 g\nST NET 100.25 g\nST NET 100.25 g\nST NET 100.25 g\n".to_vec());
         assert_eq!(
             collect_frames(&mut burst, 3, Duration::from_millis(60))
                 .unwrap()

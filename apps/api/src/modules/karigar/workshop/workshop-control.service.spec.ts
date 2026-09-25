@@ -112,7 +112,26 @@ describe("WorkshopControlService authoritative exceptions", () => {
 
     await expect(service.correctJournal("shop-1", "owner-1", "journal-1", {
       replacementWeightGrams: "4.80", reason: "Correction", idempotencyKey: "correction-3",
-    })).rejects.toThrow("Later material movements depend on this destination");
+    })).rejects.toThrow("Later material movements depend on this account");
+    expect(journal.postEntry).not.toHaveBeenCalled();
+  });
+
+  it("blocks correction when a later classification used the scoped process source", async () => {
+    tx.workshopMetalJournal.findFirst.mockResolvedValueOnce({
+      id: "journal-1", status: "POSTED", referenceType: "PROCESS_OUTPUT",
+      materialKey: "masterAlloy", postedAt: new Date(), reversedBy: null, replacedBy: null,
+      lines: [
+        { accountId: "process", creditGrams: new Prisma.Decimal("5.00"), debitGrams: new Prisma.Decimal(0), account: { materialKey: "masterAlloy", scopeId: "run-1" } },
+        { accountId: "wip", creditGrams: new Prisma.Decimal(0), debitGrams: new Prisma.Decimal("5.00"), account: { materialKey: "masterAlloy", scopeId: "tree-1" } },
+      ],
+    }).mockResolvedValueOnce({ id: "classification-1" });
+
+    await expect(service.correctJournal("shop-1", "owner-1", "journal-1", {
+      replacementWeightGrams: "4.80", reason: "Correction", idempotencyKey: "correction-4",
+    })).rejects.toThrow("Later material movements depend on this account");
+    expect(tx.workshopMetalJournal.findFirst).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ lines: { some: { accountId: { in: ["process", "wip"] } } } }),
+    }));
     expect(journal.postEntry).not.toHaveBeenCalled();
   });
 });

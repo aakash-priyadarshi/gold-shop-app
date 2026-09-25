@@ -630,11 +630,11 @@ describe("KarigarService workshop safeguards", () => {
     });
   });
 
-  it("still allows physical metal return reconciliation after cancellation", async () => {
+  it.each(["LEGACY", "TRACEABLE"])("allows existing non-995 metal returns after cancellation in %s mode", async (version) => {
     prisma.karigarJob.findFirst.mockResolvedValue(cancelledJob);
-    prisma.shop.findUnique.mockResolvedValue({ currency: "NPR" });
+    prisma.shop.findUnique.mockResolvedValue({ currency: "NPR", workshopLedgerVersion: version });
     const tx = {
-      shop: { findUnique: jest.fn().mockResolvedValue({ currency: "NPR" }) },
+      shop: { findUnique: jest.fn().mockResolvedValue({ currency: "NPR", workshopLedgerVersion: version }) },
       karigarVaultReserve: {
         findUnique: jest.fn().mockResolvedValue({ quantity: 0 }),
         upsert: jest.fn(),
@@ -653,7 +653,7 @@ describe("KarigarService workshop safeguards", () => {
         create: jest.fn().mockResolvedValue({ id: "fin-entry-1" }),
         findMany: jest.fn().mockResolvedValue([]),
       },
-      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1" }]),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: "ws-1", workshopLedgerVersion: version }]),
       $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
     prisma.$transaction.mockImplementation(async (callback: any) => callback(tx));
@@ -747,6 +747,18 @@ describe("KarigarService workshop safeguards", () => {
       }),
     ).rejects.toThrow(/captured Gold Scale reading/);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a typed issue if cutover completed after request preflight", async () => {
+    prisma.shop.findUnique.mockResolvedValue({ workshopLedgerVersion: "LEGACY" });
+    prisma.karigarJob.findFirst.mockResolvedValue(activeJob);
+    jest.spyOn(service as any, "ensureStages").mockResolvedValue(undefined);
+    prisma.$queryRaw.mockResolvedValue([{ workshopLedgerVersion: "TRACEABLE" }]);
+
+    await expect(service.addMovement("shop-1", "job-1", "user-1", {
+      type: "ISSUE", weightGrams: 1, workshopId: "ws-1", metalKey: "goldGrains24k",
+    })).rejects.toThrow("typed KarigarMetalMovement is disabled");
+    expect(prisma.karigarMetalMovement.create).not.toHaveBeenCalled();
   });
 
   it("freezes job metal identity after a TRACEABLE journal is posted", async () => {

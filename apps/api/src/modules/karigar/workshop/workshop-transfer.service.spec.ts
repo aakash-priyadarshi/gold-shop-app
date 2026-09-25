@@ -55,4 +55,11 @@ describe("WorkshopTransferService difference classification", () => {
     }));
     expect(tx.workshopTransfer.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "RECONCILED" }) }));
   });
+
+  it("does not replace an existing transfer exception approver", async () => {
+    tx.workshopTransfer.findFirst.mockResolvedValue({ ...transfer, status: "EXCEPTION", approvedAt: new Date(), approvedByUserId: "supervisor-1" });
+    await expect(service.approve("shop-1", "supervisor-2", transfer.id, "Second approval"))
+      .rejects.toThrow("already approved");
+    expect(tx.workshopTransfer.update).not.toHaveBeenCalled();
+  });
 });

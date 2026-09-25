@@ -77,6 +77,8 @@ export class WorkshopCatalogService {
   }
 
   async createRecipe(shopId: string, userId: string, dto: CreateWorkshopRecipeDto) {
+    const name = dto.name.trim();
+    if (!name) throw new BadRequestException("Recipe name is required");
     const target = new Prisma.Decimal(dto.targetFineGoldFraction);
     const alloy = new Prisma.Decimal(dto.alloyFineGoldFraction);
     if (target.lte(0) || target.gte(GOLD_995) || alloy.lt(0) || alloy.gte(target)) {
@@ -91,10 +93,10 @@ export class WorkshopCatalogService {
       throw new BadRequestException("Every alloy component must be an active Gold Scale material in this shop");
     }
     return this.prisma.$transaction(async (tx) => {
-      const previous = await tx.workshopAlloyRecipe.findFirst({ where: { shopId, name: dto.name }, orderBy: { version: "desc" } });
-      if (previous) await tx.workshopAlloyRecipe.updateMany({ where: { shopId, name: dto.name, isActive: true }, data: { isActive: false } });
+      const previous = await tx.workshopAlloyRecipe.findFirst({ where: { shopId, name }, orderBy: { version: "desc" } });
+      if (previous) await tx.workshopAlloyRecipe.updateMany({ where: { shopId, name, isActive: true }, data: { isActive: false } });
       const recipe = await tx.workshopAlloyRecipe.create({ data: {
-        shopId, name: dto.name.trim(), version: (previous?.version ?? 0) + 1,
+        shopId, name, version: (previous?.version ?? 0) + 1,
         targetFineGoldFraction: target, alloyFineGoldFraction: alloy,
         components: dto.components as unknown as Prisma.InputJsonValue,
         createdByUserId: userId,

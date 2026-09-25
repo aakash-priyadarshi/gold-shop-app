@@ -29,4 +29,27 @@ describe("WorkshopCatalogService alloy recommendations", () => {
     expect(recommendation.recommendedGold995Grams).toBe("465.360000");
     expect(recommendation.recommendedMasterAlloyGrams).toBe("44.640000");
   });
+
+  it("versions and deactivates a recipe using its trimmed name", async () => {
+    const tx = {
+      workshopAlloyRecipe: {
+        findFirst: jest.fn().mockResolvedValue({ version: 2 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest.fn().mockResolvedValue({ id: "recipe-3", name: "22K", version: 3 }),
+      },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const setupPrisma = {
+      workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: "masterAlloy", scalePurpose: "GOLD" }]) },
+      $transaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    } as any;
+    const setup = new WorkshopCatalogService(setupPrisma);
+    await setup.createRecipe("shop-1", "owner-1", {
+      name: " 22K ", targetFineGoldFraction: "0.916667", alloyFineGoldFraction: "0",
+      components: [{ materialKey: "masterAlloy", fraction: "1" }],
+    } as any);
+    expect(tx.workshopAlloyRecipe.findFirst).toHaveBeenCalledWith({ where: { shopId: "shop-1", name: "22K" }, orderBy: { version: "desc" } });
+    expect(tx.workshopAlloyRecipe.updateMany).toHaveBeenCalledWith({ where: { shopId: "shop-1", name: "22K", isActive: true }, data: { isActive: false } });
+    expect(tx.workshopAlloyRecipe.create).toHaveBeenCalledWith({ data: expect.objectContaining({ name: "22K", version: 3 }) });
+  });
 });

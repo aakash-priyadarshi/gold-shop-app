@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import { workshopApi } from "@/lib/workshop-api";
+import { workshopRetryKey, type WorkshopRetryKey } from "@/lib/workshop-retry-key";
 
 type Material = { id: string; key: string; name: string; scalePurpose: "GOLD" | "STONE" };
 type Definition = { id: string; name: string };
@@ -55,15 +56,32 @@ export function FactoryManagerControls({ materials, definitions, routes, account
   const [correctionReason, setCorrectionReason] = useState("");
   const [staffEmail, setStaffEmail] = useState("");
   const [staffCanApprove, setStaffCanApprove] = useState(false);
+  const manualRetry = useRef<WorkshopRetryKey | null>(null);
+  const correctionRetry = useRef<WorkshopRetryKey | null>(null);
 
   const act = async (action: () => Promise<unknown>, success: string) => {
     setError(""); setNotice(""); setBusy(true);
-    try { await action(); await onRefresh(); setNotice(success); }
-    catch (error) { setError(errorMessage(error)); }
+    try { await action(); await onRefresh(); setNotice(success); return true; }
+    catch (error) { setError(errorMessage(error)); return false; }
     finally { setBusy(false); }
   };
   const source = accounts.find((account) => account.id === sourceAccountId);
   const destinationScopeId = destinationBucket === "WIP" ? treeId : destinationBucket === "PROCESS" ? runId : "";
+  const postManual = async () => {
+    const payload = { materialKey: source?.materialKey, sourceBucket: source?.bucket, sourceScopeId: source?.scopeId,
+      destinationBucket, destinationScopeId, weightGrams: manualGrams, reason: manualReason.trim(),
+      ...(treeId ? { treeId, jobId } : {}), ...(runId ? { processRunId: runId } : {}) };
+    manualRetry.current = workshopRetryKey(manualRetry.current, payload, () => crypto.randomUUID());
+    const key = manualRetry.current.key;
+    if (await act(() => workshopApi.manualMovement({ ...payload, idempotencyKey: key }), "Manual movement posted")) manualRetry.current = null;
+  };
+  const postCorrection = async () => {
+    const id = correctionJournalId.trim();
+    const payload = { replacementWeightGrams: replacementGrams, reason: correctionReason.trim() };
+    correctionRetry.current = workshopRetryKey(correctionRetry.current, { id, ...payload }, () => crypto.randomUUID());
+    const key = correctionRetry.current.key;
+    if (await act(() => workshopApi.correctJournal(id, { ...payload, idempotencyKey: key }), "Reversal and replacement posted")) correctionRetry.current = null;
+  };
 
   return <Card><CardHeader><CardTitle><T>Factory manager controls</T></CardTitle></CardHeader><CardContent className="space-y-5 text-sm">
     <section className="space-y-2"><h3 className="font-semibold"><T>Workshop staff</T></h3>
@@ -119,11 +137,11 @@ export function FactoryManagerControls({ materials, definitions, routes, account
         <label><T>Destination</T><select className={field} value={destinationBucket} onChange={(event) => setDestinationBucket(event.target.value)}>{["VAULT", "WIP", "PROCESS", "REUSABLE", "SCRAP", "RECOVERY_PENDING", "REFINERY", "FINISHED"].map((bucket) => <option key={bucket}>{bucket}</option>)}</select></label>
         <label><T>Manual override grams</T><Input inputMode="decimal" value={manualGrams} onChange={(event) => setManualGrams(event.target.value)} /></label>
         <label><T>Reason</T><Input value={manualReason} onChange={(event) => setManualReason(event.target.value)} /></label>
-        <Button disabled={busy || !source || !manualGrams || !manualReason.trim() || ((destinationBucket === "WIP" || destinationBucket === "PROCESS") && !destinationScopeId)} onClick={() => act(() => workshopApi.manualMovement({ materialKey: source?.materialKey, sourceBucket: source?.bucket, sourceScopeId: source?.scopeId, destinationBucket, destinationScopeId, weightGrams: manualGrams, reason: manualReason.trim(), idempotencyKey: crypto.randomUUID(), ...(treeId ? { treeId, jobId } : {}), ...(runId ? { processRunId: runId } : {}) }), "Manual movement posted") }><T>Post owner manual override</T></Button>
+        <Button disabled={busy || !source || !manualGrams || !manualReason.trim() || ((destinationBucket === "WIP" || destinationBucket === "PROCESS") && !destinationScopeId)} onClick={postManual}><T>Post owner manual override</T></Button>
         <label><T>Original journal ID</T><Input value={correctionJournalId} onChange={(event) => setCorrectionJournalId(event.target.value)} /></label>
         <label><T>Replacement grams</T><Input inputMode="decimal" value={replacementGrams} onChange={(event) => setReplacementGrams(event.target.value)} /></label>
         <label><T>Correction reason</T><Input value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} /></label>
-        <Button disabled={busy || !correctionJournalId || !replacementGrams || !correctionReason.trim()} onClick={() => act(() => workshopApi.correctJournal(correctionJournalId.trim(), { replacementWeightGrams: replacementGrams, reason: correctionReason.trim(), idempotencyKey: crypto.randomUUID() }), "Reversal and replacement posted")}><T>Reverse and replace journal</T></Button>
+        <Button disabled={busy || !correctionJournalId || !replacementGrams || !correctionReason.trim()} onClick={postCorrection}><T>Reverse and replace journal</T></Button>
       </div>
     </section>
     {notice && <p className="text-emerald-700">{t(notice)}</p>}

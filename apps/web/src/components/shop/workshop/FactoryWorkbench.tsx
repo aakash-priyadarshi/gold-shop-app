@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GoldScaleSimulator, StoneScaleSimulator, assertPositiveQuantumGrams } from "@gold-shop/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import { workshopApi } from "@/lib/workshop-api";
+import { workshopRetryKey, type WorkshopRetryKey } from "@/lib/workshop-retry-key";
 import { listWorkshopSerialPorts, readPhysicalWorkshopScale, type RawScaleFrame, type WorkshopDevice } from "@/lib/workshop-hardware";
 import { FactoryManagerControls } from "./FactoryManagerControls";
 import { WorkshopReportView } from "./WorkshopReportView";
@@ -98,6 +99,7 @@ export function FactoryWorkbench({ staffMode = false, canApprove = true }: { sta
   const [openingMaterialKey, setOpeningMaterialKey] = useState("masterAlloy");
   const [openingSource, setOpeningSource] = useState("");
   const [openingReason, setOpeningReason] = useState("");
+  const openingRetry = useRef<WorkshopRetryKey | null>(null);
   const [supervisorReason, setSupervisorReason] = useState("");
   const [excessSourceAccountId, setExcessSourceAccountId] = useState("");
   const [report, setReport] = useState<any>(null);
@@ -147,9 +149,21 @@ export function FactoryWorkbench({ staffMode = false, canApprove = true }: { sta
 
   const act = async (action: () => Promise<unknown>, after = true) => {
     setError(""); setBusy(true);
-    try { await action(); if (after) await refresh(); }
-    catch (err) { setError(message(err)); }
+    try { await action(); if (after) await refresh(); return true; }
+    catch (err) { setError(message(err)); return false; }
     finally { setBusy(false); }
+  };
+
+  const postMaterialOpening = async () => {
+    const payload = { materialKey: openingMaterialKey, weightGrams: openingWeight,
+      source: openingSource.trim(), reason: openingReason.trim() };
+    openingRetry.current = workshopRetryKey(openingRetry.current, payload, () => crypto.randomUUID());
+    const key = openingRetry.current.key;
+    if (await act(() => workshopApi.materialOpening({ ...payload, idempotencyKey: key }))) {
+      openingRetry.current = null;
+      setOpeningWeight("");
+      setOpeningReason("");
+    }
   };
 
   const newSession = () => act(async () => {
@@ -248,7 +262,7 @@ export function FactoryWorkbench({ staffMode = false, canApprove = true }: { sta
       <Card><CardHeader><CardTitle><T>Material balances</T></CardTitle></CardHeader><CardContent className="space-y-1 text-sm">{accountRows.length === 0 ? <T>No posted material balance yet</T> : accountRows.map((account) => <div key={account.id} className="flex justify-between gap-3 border-b py-1"><span>{account.materialKey} · {account.bucket}{account.scopeId && ` · ${account.scopeId.slice(0, 8)}`}</span><bdi>{account.balanceGrams} g</bdi></div>)}</CardContent></Card>
 
       {!staffMode && <Card><CardHeader><CardTitle><T>Factory setup and controls</T></CardTitle></CardHeader><CardContent className="space-y-5">
-        <div className="grid gap-3 md:grid-cols-3"><label className="space-y-1 text-sm"><T>Material to open</T><select className={fieldClass} value={openingMaterialKey} onChange={(event) => setOpeningMaterialKey(event.target.value)}>{materials.filter((material) => material.key !== "goldGrains995").map((material) => <option key={material.key} value={material.key}>{material.name}</option>)}</select></label><label className="space-y-1 text-sm"><T>Verified physical opening grams</T><Input value={openingWeight} onChange={(event) => setOpeningWeight(event.target.value)} inputMode="decimal" /></label><label className="space-y-1 text-sm"><T>Stock source</T><Input value={openingSource} onChange={(event) => setOpeningSource(event.target.value)} /></label><label className="space-y-1 text-sm md:col-span-2"><T>Opening reason</T><Input value={openingReason} onChange={(event) => setOpeningReason(event.target.value)} /></label><Button disabled={busy || !openingWeight || !openingSource.trim() || !openingReason.trim() || !materials.some((material) => material.key === openingMaterialKey)} onClick={() => act(async () => { await workshopApi.materialOpening({ materialKey: openingMaterialKey, weightGrams: openingWeight, source: openingSource.trim(), reason: openingReason.trim(), idempotencyKey: crypto.randomUUID() }); setOpeningWeight(""); setOpeningReason(""); })}><T>Post audited material opening</T></Button></div>
+        <div className="grid gap-3 md:grid-cols-3"><label className="space-y-1 text-sm"><T>Material to open</T><select className={fieldClass} value={openingMaterialKey} onChange={(event) => setOpeningMaterialKey(event.target.value)}>{materials.filter((material) => material.key !== "goldGrains995").map((material) => <option key={material.key} value={material.key}>{material.name}</option>)}</select></label><label className="space-y-1 text-sm"><T>Verified physical opening grams</T><Input value={openingWeight} onChange={(event) => setOpeningWeight(event.target.value)} inputMode="decimal" /></label><label className="space-y-1 text-sm"><T>Stock source</T><Input value={openingSource} onChange={(event) => setOpeningSource(event.target.value)} /></label><label className="space-y-1 text-sm md:col-span-2"><T>Opening reason</T><Input value={openingReason} onChange={(event) => setOpeningReason(event.target.value)} /></label><Button disabled={busy || !openingWeight || !openingSource.trim() || !openingReason.trim() || !materials.some((material) => material.key === openingMaterialKey)} onClick={postMaterialOpening}><T>Post audited material opening</T></Button></div>
         <div className="border-t pt-4"><h3 className="mb-2 font-semibold"><T>Register physical scale</T></h3><div className="grid gap-2 md:grid-cols-4"><label className="space-y-1 text-sm"><T>Name</T><Input value={deviceName} onChange={(event) => setDeviceName(event.target.value)} /></label><label className="space-y-1 text-sm"><T>Purpose</T><select className={fieldClass} value={devicePurpose} onChange={(event) => setDevicePurpose(event.target.value as "GOLD" | "STONE")}><option value="GOLD"><T>Gold</T></option><option value="STONE"><T>Stone</T></option></select></label><label className="space-y-1 text-sm"><T>Connection</T><select className={fieldClass} value={deviceKind} onChange={(event) => setDeviceKind(event.target.value as "SERIAL" | "TCP")}><option value="SERIAL"><T>Serial</T></option><option value="TCP"><T>TCP</T></option></select></label><label className="space-y-1 text-sm"><T>{deviceKind === "SERIAL" ? "Serial port" : "Private LAN IP"}</T><Input value={portOrHost} onChange={(event) => setPortOrHost(event.target.value)} /></label>{deviceKind === "TCP" ? <label className="space-y-1 text-sm"><T>TCP port</T><Input value={tcpPort} onChange={(event) => setTcpPort(event.target.value)} inputMode="numeric" /></label> : <><label className="space-y-1 text-sm"><T>Baud rate</T><Input value={baudRate} onChange={(event) => setBaudRate(event.target.value)} inputMode="numeric" /></label><label className="space-y-1 text-sm"><T>Data bits</T><select className={fieldClass} value={dataBits} onChange={(event) => setDataBits(event.target.value)}><option>7</option><option>8</option></select></label><label className="space-y-1 text-sm"><T>Stop bits</T><select className={fieldClass} value={stopBits} onChange={(event) => setStopBits(event.target.value)}><option>1</option><option>2</option></select></label><label className="space-y-1 text-sm"><T>Parity</T><select className={fieldClass} value={parity} onChange={(event) => setParity(event.target.value)}><option value="none"><T>None</T></option><option value="even"><T>Even</T></option><option value="odd"><T>Odd</T></option></select></label></>}<label className="space-y-1 text-sm"><T>Stable token</T><Input value={stableToken} onChange={(event) => setStableToken(event.target.value)} /></label><label className="space-y-1 text-sm"><T>Unstable token</T><Input value={unstableToken} onChange={(event) => setUnstableToken(event.target.value)} /></label></div><div className="mt-2 flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => act(async () => setSerialPorts(await listWorkshopSerialPorts()), false)}><T>List Desktop serial ports</T></Button><Button disabled={busy || !deviceName.trim() || !portOrHost.trim()} onClick={() => act(async () => { await workshopApi.registerDevice({ name: deviceName.trim(), purpose: devicePurpose, adapterKind: deviceKind, profile: { parser: { kind: "ASCII_LINE", stableToken, unstableToken }, transport: deviceKind === "SERIAL" ? { port: portOrHost.trim(), baudRate: Number(baudRate), dataBits: Number(dataBits), stopBits: Number(stopBits), parity } : { host: portOrHost.trim(), port: Number(tcpPort) } } }); setDeviceName(""); })}><T>Register scale</T></Button>{simulatorAllowed && <Button variant="outline" disabled={busy} onClick={() => act(async () => { await workshopApi.simulatorDevice(devicePurpose); })}><T>Provision demo scale</T></Button>}</div>{serialPorts.length > 0 && <p className="mt-2 text-xs"><T>Available serial ports</T>: {serialPorts.join(", ")}</p>}<p className="mt-2 text-xs text-muted-foreground"><T>Generic ASCII protocol expects explicit stable/unstable token, NET, number and g in each line. Ask the scale vendor for three stable and three unstable sample frames before configuring a new device.</T></p></div>
         <div className="border-t pt-4"><h3 className="mb-2 font-semibold"><T>Transfer and recovery setup</T></h3><div className="grid gap-2 md:grid-cols-3"><label className="space-y-1 text-sm"><T>From department</T><Input value={fromDepartment} onChange={(event) => setFromDepartment(event.target.value)} /></label><label className="space-y-1 text-sm"><T>To department</T><Input value={toDepartment} onChange={(event) => setToDepartment(event.target.value)} /></label><Button disabled={busy || !treeId || !fromDepartment.trim() || !toDepartment.trim()} onClick={() => act(async () => { await workshopApi.prepareTransfer({ treeId, materialKey: currentMaterialKey, fromDepartment: fromDepartment.trim(), toDepartment: toDepartment.trim() }); })}><T>Prepare transfer</T></Button><label className="space-y-1 text-sm"><T>New recovery bag code</T><Input value={bagCode} onChange={(event) => setBagCode(event.target.value)} /></label><Button disabled={busy || !bagCode.trim() || !runId} onClick={() => act(async () => { await workshopApi.createRecoveryBag({ code: bagCode.trim(), materialKey: currentMaterialKey, sourceProcessRunId: runId }); setBagCode(""); })}><T>Open recovery bag</T></Button><Button variant="outline" disabled={busy || !bagId} onClick={() => act(async () => { const event = body(await workshopApi.createRecoveryEvent(bagId)); setEventId(event.id); })}><T>Close bag and create refinery event</T></Button></div></div>
       </CardContent></Card>}
@@ -287,7 +301,7 @@ export function FactoryWorkbench({ staffMode = false, canApprove = true }: { sta
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={busy || !runId} onClick={() => act(async () => setReport(body(await workshopApi.runReport(runId))), false)}><T>View process reconciliation</T></Button>
           <Button variant="outline" disabled={busy || !treeId} onClick={() => act(async () => setReport(body(await workshopApi.batchReport(treeId))), false)}><T>View batch reconciliation</T></Button>
-          <Button variant="outline" disabled={busy} onClick={() => act(async () => setReport(body(await workshopApi.reports())), false)}><T>View management reports and scale audit</T></Button>
+          {canApprove && <Button variant="outline" disabled={busy} onClick={() => act(async () => setReport(body(await workshopApi.reports())), false)}><T>View management reports and scale audit</T></Button>}
           {canApprove && <Button variant="outline" disabled={busy || !runId} onClick={() => act(async () => { await workshopApi.closeRun(runId); })}><T>Close reconciled run</T></Button>}
         </div>
         {canApprove && <>

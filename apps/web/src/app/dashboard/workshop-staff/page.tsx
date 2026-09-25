@@ -16,6 +16,7 @@ export default function WorkshopStaffPage() {
   const [invitations, setInvitations] = useState<Array<{ id: string; shopName: string }>>([]);
   const [shopId, setShopId] = useState("");
   const [error, setError] = useState("");
+  const selected = assignments.find((assignment) => assignment.shopId === shopId);
 
   useEffect(() => {
     workshopApi.myAssignments().then((response) => setAssignments(response.data ?? []))
@@ -46,8 +47,8 @@ export default function WorkshopStaffPage() {
         </select>
       </label>
       {assignments.length === 0 && invitations.length === 0 && !error && <p className="text-sm"><T>No active Workshop assignment or invitation was found for this account.</T></p>}
-      {shopId && assignments.find((assignment) => assignment.shopId === shopId)?.workshopMode === true && <FactoryWorkbench key={shopId} staffMode canApprove={assignments.find((assignment) => assignment.shopId === shopId)?.permissions?.workshopApprove === true} />}
-      {shopId && assignments.find((assignment) => assignment.shopId === shopId)?.workshopMode !== true && <p className="text-sm text-amber-700"><T>The shop owner must enable Workshop Mode first.</T></p>}
+      {shopId && selected?.workshopMode === true && selected.workshopLedgerVersion === "TRACEABLE" && <FactoryWorkbench key={shopId} staffMode canApprove={selected.permissions?.workshopApprove === true} />}
+      {shopId && selected && (!selected.workshopMode || selected.workshopLedgerVersion !== "TRACEABLE") && <p className="text-sm text-amber-700"><T>The shop owner must enable TRACEABLE Workshop Mode first.</T></p>}
       {error && <p role="alert" className="text-sm text-red-700">{t(error)}</p>}
     </main>
   </RouteGuard>;

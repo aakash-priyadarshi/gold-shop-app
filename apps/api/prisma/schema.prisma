@@ -4954,7 +4954,7 @@ model WorkshopScaleReading {
   actorUserId    String?
   createdAt      DateTime                   @default(now())
 
-  shop    Shop                    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop    Shop                    @relation(fields: [shopId], references: [id], onDelete: Restrict)
   device  WorkshopScaleDevice     @relation(fields: [deviceId], references: [id], onDelete: Restrict)
   session WorkshopWeighingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
   journal WorkshopMetalJournal?

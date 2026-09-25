@@ -9,7 +9,7 @@ export class WorkshopReportService {
 
   async dashboard(shopId: string) {
     const [accounts, runs, transfers, bags, readings, corrections, finished, varianceEntries] = await Promise.all([
-      this.prisma.workshopMetalAccount.findMany({ where: { shopId, isActive: true }, orderBy: [{ materialKey: "asc" }, { bucket: "asc" }, { scopeId: "asc" }] }),
+      this.prisma.workshopMetalAccount.findMany({ where: { shopId, isActive: true, balanceGrams: { not: 0 } }, orderBy: [{ materialKey: "asc" }, { bucket: "asc" }, { scopeId: "asc" }] }),
       this.prisma.workshopProcessRun.findMany({ where: { shopId }, select: { id: true, treeId: true, jobId: true, batchChildId: true, operatorUserId: true, status: true, department: true, workstation: { select: { name: true } }, definition: { select: { name: true } }, job: { select: { product: true } }, batchChild: { select: { label: true } }, approvalUserId: true, approvalAt: true, approvalReason: true }, orderBy: { startedAt: "desc" }, take: 100 }),
       this.prisma.workshopTransfer.findMany({ where: { shopId }, include: { dispatchReading: true, receiveReading: true, toleranceRule: true }, orderBy: { createdAt: "desc" }, take: 100 }),
       this.prisma.workshopRecoveryContainer.findMany({ where: { shopId }, include: { events: { include: { assays: true } } }, orderBy: { openedAt: "desc" }, take: 100 }),
@@ -23,8 +23,15 @@ export class WorkshopReportService {
       scopeId: account.scopeId, balanceGrams: account.balanceGrams.toFixed(6),
       purity: account.purity?.toFixed(6) ?? null,
     }));
+    const byScope = new Map<string, typeof stock>();
+    for (const account of stock) {
+      const key = JSON.stringify([account.bucket, account.scopeId]);
+      const scoped = byScope.get(key) ?? [];
+      scoped.push(account);
+      byScope.set(key, scoped);
+    }
     const process = runs.map((run) => ({
-      ...run, unclassified: stock.filter((account) => account.bucket === WorkshopAccountBucket.PROCESS && account.scopeId === run.id),
+      ...run, unclassified: byScope.get(JSON.stringify([WorkshopAccountBucket.PROCESS, run.id])) ?? [],
     }));
     const runsById = new Map(runs.map((run) => [run.id, run]));
     return {
@@ -49,7 +56,7 @@ export class WorkshopReportService {
       })),
       recovery: bags.map((bag) => ({
         id: bag.id, code: bag.code, materialKey: bag.materialKey, status: bag.status,
-        expectedBalanceGrams: stock.find((account) => account.bucket === WorkshopAccountBucket.RECOVERY_PENDING && account.scopeId === bag.id)?.balanceGrams ?? "0.000000",
+        expectedBalanceGrams: byScope.get(JSON.stringify([WorkshopAccountBucket.RECOVERY_PENDING, bag.id]))?.[0]?.balanceGrams ?? "0.000000",
         events: bag.events.map((event) => ({ id: event.id, status: event.status, varianceGrams: event.varianceGrams?.toFixed(6) ?? null, assayedFractions: event.assays.map((assay) => assay.fineGoldFraction.toFixed(6)) })),
       })),
       scaleAudit: readings.map((reading) => ({

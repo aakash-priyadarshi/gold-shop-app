@@ -32,6 +32,22 @@ describe("WorkshopAssignmentsController", () => {
     expect(result).toEqual({ id: "membership-1", accepted: false, permissions: { workshopCapture: true, workshopApprove: false } });
   });
 
+  it("requires renewed acceptance and drops stale privileges on an inactive membership", async () => {
+    prisma.tx.staffAccount.findUnique.mockResolvedValue({
+      isActive: false, acceptedAt: new Date(), permissions: { workshopApprove: true, inventoryWrite: true },
+    });
+    prisma.tx.staffAccount.upsert.mockResolvedValue({ id: "membership-1", acceptedAt: null });
+    const result = await controller.invite("shop-1", "owner-1", { email: "staff@example.com", canCapture: true, canApprove: false });
+
+    expect(prisma.tx.staffAccount.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({
+        isActive: true, acceptedAt: null, invitedByUserId: "owner-1", staffRole: "INVENTORY",
+        permissions: { workshopCapture: true, workshopApprove: false },
+      }),
+    }));
+    expect(result.accepted).toBe(false);
+  });
+
   it("accepts only an active pending invitation belonging to the signed-in user", async () => {
     await controller.accept("staff-1", "membership-1");
     expect(prisma.staffAccount.updateMany).toHaveBeenCalledWith({

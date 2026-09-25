@@ -127,6 +127,7 @@ describe("WorkshopMetalJournalService", () => {
         data: { balanceGrams: new Prisma.Decimal("100.250000") },
       }),
     );
+    expect(queryRaw.mock.calls[0][0].join("?")).toContain('AND "id" IN (?)');
   });
 
   it("rejects Gold Scale weights that are not 0.01 g multiples", async () => {

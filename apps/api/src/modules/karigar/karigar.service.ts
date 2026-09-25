@@ -742,11 +742,14 @@ export class KarigarService {
   ) {
     const weight = dto.weightGrams;
     const metalKey = dto.metalKey ?? "goldGrains24k";
+    // Existing non-995 issues remain in the legacy Float book after cutover.
+    // Only their returns may settle there; new issues still require the scale journal.
+    const legacyReturn = isReturnMovementType(dto.type) && metalKey !== WORKSHOP_GOLD_995_MATERIAL_KEY;
     const shopLedger = await this.prisma.shop.findUnique({
       where: { id: shopId },
       select: { workshopLedgerVersion: true },
     });
-    if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE) {
+    if (shopLedger?.workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE && !legacyReturn) {
       throw new BadRequestException(
         "TRACEABLE Workshop physical movements require a captured Gold Scale reading (or Stone Scale for stones); typed KarigarMetalMovement is disabled.",
       );
@@ -818,6 +821,15 @@ export class KarigarService {
           monetaryPreflight,
           (lockedShop.currency ?? CurrencyCode.NPR) as CurrencyCode,
         );
+      }
+
+      // Serialize typed legacy work with the LEGACY -> TRACEABLE shop update.
+      // A request preflighted before cutover must not issue typed stock afterward.
+      const lockedLedgerShop = await tx.$queryRaw<{ workshopLedgerVersion: WorkshopLedgerVersion }[]>`
+        SELECT "workshopLedgerVersion" FROM "Shop" WHERE "id" = ${shopId} FOR SHARE`;
+      if (!lockedLedgerShop.length) throw new NotFoundException("Shop not found");
+      if (lockedLedgerShop[0].workshopLedgerVersion === WorkshopLedgerVersion.TRACEABLE && !legacyReturn) {
+        throw new BadRequestException("TRACEABLE Workshop physical movements require a captured Gold Scale reading (or Stone Scale for stones); typed KarigarMetalMovement is disabled.");
       }
 
       // Row lock on workshop to serialize metal float and financial mutation

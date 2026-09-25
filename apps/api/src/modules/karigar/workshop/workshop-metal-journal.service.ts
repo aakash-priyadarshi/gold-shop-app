@@ -349,11 +349,12 @@ export class WorkshopMetalJournalService {
       );
     }
 
+    const lockIds = [...new Set(lines.map((line) => line.accountId))].sort();
     const locked = await tx.$queryRaw<
       { id: string; systemKey: WorkshopMetalAccountKey | null; balanceGrams: Prisma.Decimal }[]
     >`SELECT "id", "systemKey", "balanceGrams"
       FROM "WorkshopMetalAccount"
-      WHERE "shopId" = ${input.shopId}
+      WHERE "shopId" = ${input.shopId} AND "id" IN (${Prisma.join(lockIds)})
       ORDER BY "id"
       FOR UPDATE`;
     const lockedById = new Map(locked.map((row) => [row.id, row]));

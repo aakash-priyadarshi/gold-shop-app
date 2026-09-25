@@ -26,6 +26,9 @@ export function parseAsciiNetScaleFrame(rawFrame: string, profile: AsciiLineScal
     throw new Error("Invalid ASCII scale frame");
   }
   const tokens = rawFrame.trim().split(/[,;\s]+/).filter(Boolean);
+  if (tokens.some((token) => token === "-" || /^-\d/.test(token))) {
+    throw new Error("Scale frame reports a negative or signed-ambiguous weight");
+  }
   const stable = tokens.includes(profile.stableToken);
   const unstable = tokens.includes(profile.unstableToken);
   if (stable === unstable) throw new Error("Scale frame must contain exactly one explicit stability token");

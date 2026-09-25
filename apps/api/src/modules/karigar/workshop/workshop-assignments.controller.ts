@@ -33,11 +33,11 @@ export class WorkshopAssignmentsController {
     const permissions = { workshopCapture: dto.canCapture || dto.canApprove === true, workshopApprove: dto.canApprove === true };
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.staffAccount.findUnique({ where: { shopId_userId: { shopId, userId: user.id } } });
-      const merged = existing?.permissions && typeof existing.permissions === "object" && !Array.isArray(existing.permissions)
+      const merged = existing?.isActive && existing.permissions && typeof existing.permissions === "object" && !Array.isArray(existing.permissions)
         ? { ...(existing.permissions as Record<string, unknown>), ...permissions } : permissions;
       const membership = await tx.staffAccount.upsert({
         where: { shopId_userId: { shopId, userId: user.id } },
-        update: { permissions: merged, isActive: true },
+        update: { permissions: merged, isActive: true, ...(!existing?.isActive ? { acceptedAt: null, invitedByUserId: actorUserId, staffRole: permissions.workshopApprove ? "MANAGER" : "INVENTORY" } : {}) },
         create: { shopId, userId: user.id, invitedByUserId: actorUserId, staffRole: permissions.workshopApprove ? "MANAGER" : "INVENTORY", permissions: merged },
       });
       await tx.auditLog.create({ data: { userId: actorUserId, actorType: "SHOPKEEPER", action: "WORKSHOP_STAFF_INVITE", resourceType: "StaffAccount", resourceId: membership.id, newValue: { shopId, invitedUserId: user.id, permissions } } });

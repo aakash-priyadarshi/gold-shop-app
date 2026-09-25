@@ -116,15 +116,17 @@ export class WorkshopControlService {
       if (!source || !destination) throw new BadRequestException("Original journal is not a simple source-to-destination movement");
       // A later posting against the destination can have consumed or
       // reallocated these grams. Never correct that history in isolation.
-      await tx.$queryRaw`SELECT "id" FROM "WorkshopMetalAccount" WHERE "shopId" = ${shopId} ORDER BY "id" FOR UPDATE`;
+      const guardedAccountIds = [source.accountId, destination.accountId].sort();
+      await tx.$queryRaw`SELECT "id" FROM "WorkshopMetalAccount" WHERE "shopId" = ${shopId} AND "id" IN (${Prisma.join(guardedAccountIds)}) ORDER BY "id" FOR UPDATE`;
+      const downstreamAccountIds = source.account.scopeId ? guardedAccountIds : [destination.accountId];
       const downstream = await tx.workshopMetalJournal.findFirst({
         where: {
           shopId, status: "POSTED", id: { not: original.id }, postedAt: { gte: original.postedAt },
-          lines: { some: { accountId: destination.accountId } },
+          lines: { some: { accountId: { in: downstreamAccountIds } } },
         },
         select: { id: true },
       });
-      if (downstream) throw new ConflictException("Later material movements depend on this destination; reconcile them before correcting the original");
+      if (downstream) throw new ConflictException("Later material movements depend on this account; reconcile them before correcting the original");
       const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
       if (!material) throw new BadRequestException("Original material is unavailable");
       const oldWeight = original.weightGrams.toFixed(6);

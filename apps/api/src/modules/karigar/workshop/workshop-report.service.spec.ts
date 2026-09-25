@@ -1,7 +1,11 @@
 import { Prisma, WorkshopAccountBucket } from "@prisma/client";
 import { WorkshopReportService } from "./workshop-report.service";
+import { WorkshopReportController } from "./workshop-report.controller";
 
 describe("WorkshopReportService", () => {
+  it("requires supervisor permission for balances and raw scale audit", () => {
+    expect(Reflect.getMetadata("workshopAbility", WorkshopReportController.prototype.dashboard)).toBe("workshopApprove");
+  });
   it("attributes classified process variance to the measured run, machine, operator and product", async () => {
     const run = {
       id: "run-1", treeId: "tree-1", jobId: "job-1", batchChildId: "piece-1",
@@ -31,6 +35,9 @@ describe("WorkshopReportService", () => {
     const report = await new WorkshopReportService(prisma, {} as any).dashboard("shop-1");
 
     expect(report.materialStock).toEqual([expect.objectContaining({ materialKey: "mixed-22k", balanceGrams: "0.130000" })]);
+    expect(prisma.workshopMetalAccount.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { shopId: "shop-1", isActive: true, balanceGrams: { not: 0 } },
+    }));
     expect(report.processVariance).toEqual([expect.objectContaining({
       processRunId: "run-1", weightGrams: "0.130000", approverUserId: "supervisor-1",
       process: expect.objectContaining({ operatorUserId: "operator-1", job: { product: "Ring" },

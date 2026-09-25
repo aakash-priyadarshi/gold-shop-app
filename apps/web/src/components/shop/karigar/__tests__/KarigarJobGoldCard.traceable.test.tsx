@@ -97,7 +97,7 @@ describe("KarigarJobGoldCard casting tree creation", () => {
     );
   });
 
-  it("keeps typed 24K tree creation for a TRACEABLE job whose metal is 24K", async () => {
+  it("does not offer typed 24K tree creation after TRACEABLE cutover", () => {
     render(
       <KarigarJobGoldCard
         job={{ ...job, metalKey: "goldGrains24k" }}
@@ -107,19 +107,12 @@ describe("KarigarJobGoldCard casting tree creation", () => {
         onDelete={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add casting tree" }));
-    expect(screen.getByText("New casting tree")).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "Issued g" }), {
-      target: { value: "12.5" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save tree" }));
-    await waitFor(() => expect(karigarApi.createTree).toHaveBeenCalledWith("job-1", {
-      issuedGrams: 12.5,
-      allowedWastagePercent: 1,
-    }));
+    expect(screen.queryByRole("button", { name: "Add casting tree" })).not.toBeInTheDocument();
+    expect(screen.getByText("New TRACEABLE casting trees require a Gold 995 work order.")).toBeInTheDocument();
+    expect(karigarApi.createTree).not.toHaveBeenCalled();
   });
 
-  it("uses an existing tree's metal ahead of the job's metal", () => {
+  it("does not expose typed physical fields on an existing 24K tree after cutover", () => {
     render(
       <KarigarJobGoldCard
         job={{
@@ -136,6 +129,9 @@ describe("KarigarJobGoldCard casting tree creation", () => {
         onDelete={vi.fn()}
       />,
     );
-    expect(screen.getByRole("textbox", { name: "Issued g" })).toHaveValue("12.5");
+    expect(screen.getByText("24K tree")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Issued g" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Finished g" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Allowed %" })).toHaveValue("1");
   });
 });
