@@ -5,6 +5,8 @@ import {
   WorkshopMetalJournalReferenceType,
   WorkshopMetalJournalStatus,
   WorkshopScaleCaptureMethod,
+  WorkshopScalePurpose,
+  WorkshopAccountBucket,
 } from "@prisma/client";
 import { createHash, randomUUID } from "crypto";
 import {
@@ -21,7 +23,8 @@ import { DEFAULT_WORKSHOP_METAL_ACCOUNTS } from "./workshop-metal.types";
 type DbClient = Prisma.TransactionClient | PrismaService;
 
 export type WorkshopMetalLineInput = {
-  accountKey: WorkshopMetalAccountKey;
+  accountKey?: WorkshopMetalAccountKey;
+  accountId?: string;
   debitGrams?: string;
   creditGrams?: string;
   description?: string;
@@ -44,6 +47,15 @@ export type PostWorkshopMetalJournalInput = {
   captureMethod?: WorkshopScaleCaptureMethod | null;
   metadata?: Prisma.InputJsonValue;
   reversalOfId?: string;
+  replacementForId?: string;
+  processRunId?: string | null;
+  transferId?: string | null;
+  recoveryContainerId?: string | null;
+  recoveryEventId?: string | null;
+  batchChildId?: string | null;
+  scalePurpose?: WorkshopScalePurpose;
+  /** Only for a supervisor classification derived from already-posted account balance. */
+  derivedClassification?: boolean;
   lines: WorkshopMetalLineInput[];
 };
 
@@ -56,6 +68,9 @@ export class WorkshopMetalJournalService {
       const amount = new Prisma.Decimal(value);
       if (!amount.isFinite()) {
         throw new BadRequestException("Metal journal grams must be finite");
+      }
+      if (amount.abs().gte("100000000000000")) {
+        throw new BadRequestException("Metal journal grams exceed Decimal(20,6) capacity");
       }
       return new Prisma.Decimal(
         microgramsToGrams(gramsToMicrograms(amount.toFixed(6))),
@@ -77,6 +92,31 @@ export class WorkshopMetalJournalService {
     return this.grams(value).toFixed(6);
   }
 
+  private matchesReplay(entry: any, input: PostWorkshopMetalJournalInput): boolean {
+    const signature = (line: WorkshopMetalLineInput) =>
+      `${line.accountId ?? line.accountKey}:${this.serializeGrams(line.debitGrams || 0)}:${this.serializeGrams(line.creditGrams || 0)}`;
+    const persisted = (entry.lines ?? []).map((line: any) => signature({
+      accountId: line.account?.systemKey ? undefined : line.accountId,
+      accountKey: line.account?.systemKey ?? undefined,
+      debitGrams: line.debitGrams,
+      creditGrams: line.creditGrams,
+    })).sort();
+    return entry.status === WorkshopMetalJournalStatus.POSTED &&
+      entry.shopId === input.shopId &&
+      entry.referenceType === input.referenceType &&
+      entry.referenceId === input.referenceId &&
+      entry.idempotencyKey === input.idempotencyKey &&
+      entry.materialKey === (input.materialKey ?? WORKSHOP_GOLD_995_MATERIAL_KEY) &&
+      entry.weightGrams.toFixed(6) === this.serializeGrams(input.weightGrams) &&
+      entry.scaleReadingId === (input.scaleReadingId ?? null) &&
+      entry.treeId === (input.treeId ?? null) &&
+      entry.processRunId === (input.processRunId ?? null) &&
+      entry.transferId === (input.transferId ?? null) &&
+      entry.reversalOfId === (input.reversalOfId ?? null) &&
+      entry.replacementForId === (input.replacementForId ?? null) &&
+      JSON.stringify(persisted) === JSON.stringify(input.lines.map(signature).sort());
+  }
+
   async ensureDefaultAccounts(
     client: DbClient,
     shopId: string,
@@ -90,7 +130,7 @@ export class WorkshopMetalJournalService {
     });
     const byKey = new Map<WorkshopMetalAccountKey, string>();
     for (const account of existing) {
-      byKey.set(account.systemKey, account.id);
+      if (account.systemKey) byKey.set(account.systemKey, account.id);
     }
     const missing = DEFAULT_WORKSHOP_METAL_ACCOUNTS.filter(
       (account) => !byKey.has(account.systemKey),
@@ -109,6 +149,11 @@ export class WorkshopMetalJournalService {
             name: account.name,
             materialKey: account.materialKey,
             purity: new Prisma.Decimal(account.purity),
+            bucket: account.systemKey === WorkshopMetalAccountKey.GOLD995_VAULT
+              ? WorkshopAccountBucket.VAULT
+              : account.systemKey === WorkshopMetalAccountKey.OPENING_EQUITY
+                ? WorkshopAccountBucket.OPENING_EQUITY
+                : WorkshopAccountBucket.WIP,
             isSystem: true,
             isActive: true,
           },
@@ -120,6 +165,12 @@ export class WorkshopMetalJournalService {
             systemKey: account.systemKey,
             materialKey: account.materialKey,
             purity: new Prisma.Decimal(account.purity),
+            bucket: account.systemKey === WorkshopMetalAccountKey.GOLD995_VAULT
+              ? WorkshopAccountBucket.VAULT
+              : account.systemKey === WorkshopMetalAccountKey.OPENING_EQUITY
+                ? WorkshopAccountBucket.OPENING_EQUITY
+                : WorkshopAccountBucket.WIP,
+            scopeId: "",
             balanceGrams: new Prisma.Decimal(0),
             isSystem: true,
             isActive: true,
@@ -128,9 +179,50 @@ export class WorkshopMetalJournalService {
       ),
     );
     for (const account of created) {
-      byKey.set(account.systemKey, account.id);
+      if (account.systemKey) byKey.set(account.systemKey, account.id);
     }
     return byKey;
+  }
+
+  async ensureAccount(
+    tx: Prisma.TransactionClient,
+    shopId: string,
+    materialKey: string,
+    bucket: WorkshopAccountBucket,
+    scopeId = "",
+  ) {
+    if (!materialKey.trim() || scopeId.length > 100) {
+      throw new BadRequestException("Invalid workshop account identity");
+    }
+    const material = await tx.workshopMaterial.findUnique({
+      where: { shopId_key: { shopId, key: materialKey } },
+    });
+    const resolvedMaterial = material ?? (materialKey === WORKSHOP_GOLD_995_MATERIAL_KEY
+      ? await tx.workshopMaterial.upsert({
+        where: { shopId_key: { shopId, key: materialKey } }, update: {},
+        create: { shopId, key: materialKey, name: "Gold 995", kind: "GOLD", scalePurpose: "GOLD", theoreticalPurity: new Prisma.Decimal(WORKSHOP_GOLD_995_PURITY) },
+      })
+      : null);
+    if (!resolvedMaterial?.isActive) throw new BadRequestException("Workshop material is not active");
+    const hash = createHash("sha256")
+      .update(`${shopId}:${materialKey}:${bucket}:${scopeId}`)
+      .digest("hex");
+    return tx.workshopMetalAccount.upsert({
+      where: { shopId_materialKey_bucket_scopeId: { shopId, materialKey, bucket, scopeId } },
+      update: {},
+      create: {
+        id: `wmacct_${hash.slice(0, 24)}`,
+        shopId,
+        code: `W${hash.slice(0, 23)}`,
+        name: `${resolvedMaterial.name} · ${bucket}${scopeId ? ` · ${scopeId}` : ""}`,
+        materialKey,
+        purity: resolvedMaterial.theoreticalPurity,
+        bucket,
+        scopeId,
+        balanceGrams: new Prisma.Decimal(0),
+        isSystem: true,
+      },
+    });
   }
 
   async postEntry(
@@ -157,11 +249,7 @@ export class WorkshopMetalJournalService {
       include: { lines: { include: { account: true } } },
     });
     if (existingByReference) {
-      if (existingByReference.status !== WorkshopMetalJournalStatus.POSTED) {
-        throw new BadRequestException(
-          "A draft metal journal already exists for this source event",
-        );
-      }
+      if (!this.matchesReplay(existingByReference, input)) throw new BadRequestException("Source reference was already posted with different movement details");
       return { entry: existingByReference, idempotent: true };
     }
 
@@ -175,19 +263,7 @@ export class WorkshopMetalJournalService {
       include: { lines: { include: { account: true } } },
     });
     if (existingByKey) {
-      if (
-        existingByKey.referenceType !== input.referenceType ||
-        existingByKey.referenceId !== input.referenceId
-      ) {
-        throw new BadRequestException(
-          "Metal journal idempotency key is associated with another reference",
-        );
-      }
-      if (existingByKey.status !== WorkshopMetalJournalStatus.POSTED) {
-        throw new BadRequestException(
-          "A draft metal journal already exists for this idempotency key",
-        );
-      }
+      if (!this.matchesReplay(existingByKey, input)) throw new BadRequestException("Metal journal idempotency key is associated with different movement details");
       return { entry: existingByKey, idempotent: true };
     }
 
@@ -197,22 +273,34 @@ export class WorkshopMetalJournalService {
         include: { lines: { include: { account: true } } },
       });
       if (existingByReading) {
-        return { entry: existingByReading, idempotent: true };
+        if (this.matchesReplay(existingByReading, input)) {
+          return { entry: existingByReading, idempotent: true };
+        }
+        throw new BadRequestException("Scale reading has already been used for another movement");
       }
     }
 
-    const accounts = await this.ensureDefaultAccounts(tx, input.shopId);
+    const accounts = input.lines.some((line) => line.accountKey)
+      ? await this.ensureDefaultAccounts(tx, input.shopId)
+      : new Map<WorkshopMetalAccountKey, string>();
+    const dynamicIds = input.lines.flatMap((line) => line.accountId ? [line.accountId] : []);
+    const dynamicAccounts = dynamicIds.length
+      ? await tx.workshopMetalAccount.findMany({ where: { shopId: input.shopId, id: { in: dynamicIds }, isActive: true } })
+      : [];
+    const dynamicById = new Map(dynamicAccounts.map((account) => [account.id, account]));
     const materialKey = input.materialKey ?? WORKSHOP_GOLD_995_MATERIAL_KEY;
     const headerGrams = this.grams(input.weightGrams);
     if (headerGrams.lte(0)) {
       throw new BadRequestException("Metal journal weight must be positive");
     }
-    try {
-      assertPositiveQuantumGrams(headerGrams.toFixed(6), "GOLD");
-    } catch (err) {
-      throw new BadRequestException(
-        err instanceof Error ? err.message : "Invalid Gold Scale weight",
-      );
+    if (!input.derivedClassification) {
+      try {
+        assertPositiveQuantumGrams(headerGrams.toFixed(6), input.scalePurpose ?? "GOLD");
+      } catch (err) {
+        throw new BadRequestException(
+          err instanceof Error ? err.message : "Invalid scale weight",
+        );
+      }
     }
 
     let debitTotal = new Prisma.Decimal(0);
@@ -226,9 +314,12 @@ export class WorkshopMetalJournalService {
           "Every metal journal line must contain one positive debit or credit",
         );
       }
-      const accountId = accounts.get(line.accountKey);
+      const accountId = line.accountKey ? accounts.get(line.accountKey) : line.accountId;
       if (!accountId) {
-        throw new BadRequestException(`Missing metal account ${line.accountKey}`);
+        throw new BadRequestException("Missing workshop material account");
+      }
+      if (line.accountId && !dynamicById.has(line.accountId)) {
+        throw new BadRequestException("Workshop material account is not active in this shop");
       }
       debitTotal = debitTotal.plus(debit);
       creditTotal = creditTotal.plus(credit);
@@ -236,6 +327,9 @@ export class WorkshopMetalJournalService {
       return {
         accountId,
         accountKey: line.accountKey,
+        bucket: line.accountKey === WorkshopMetalAccountKey.OPENING_EQUITY
+          ? WorkshopAccountBucket.OPENING_EQUITY
+          : dynamicById.get(accountId)?.bucket,
         description: line.description || null,
         debitGrams: debit,
         creditGrams: credit,
@@ -256,30 +350,36 @@ export class WorkshopMetalJournalService {
     }
 
     const locked = await tx.$queryRaw<
-      { id: string; systemKey: WorkshopMetalAccountKey; balanceGrams: Prisma.Decimal }[]
+      { id: string; systemKey: WorkshopMetalAccountKey | null; balanceGrams: Prisma.Decimal }[]
     >`SELECT "id", "systemKey", "balanceGrams"
       FROM "WorkshopMetalAccount"
       WHERE "shopId" = ${input.shopId}
+      ORDER BY "id"
       FOR UPDATE`;
-    const lockedByKey = new Map(locked.map((row) => [row.systemKey, row]));
+    const lockedById = new Map(locked.map((row) => [row.id, row]));
 
-    const nextBalances = new Map<WorkshopMetalAccountKey, Prisma.Decimal>();
+    const nextBalances = new Map<string, Prisma.Decimal>();
     for (const line of lines) {
-      const row = lockedByKey.get(line.accountKey);
+      const row = lockedById.get(line.accountId);
       if (!row) {
-        throw new BadRequestException(`Metal account ${line.accountKey} is not locked`);
+        throw new BadRequestException("Workshop material account is not locked");
       }
-      const current = nextBalances.get(line.accountKey) ?? this.grams(row.balanceGrams);
-      const equity = line.accountKey === WorkshopMetalAccountKey.OPENING_EQUITY;
+      const current = nextBalances.get(line.accountId) ?? this.grams(row.balanceGrams);
+      const equity = line.bucket === WorkshopAccountBucket.OPENING_EQUITY;
       const next = equity
         ? current.plus(line.creditGrams).minus(line.debitGrams)
         : current.plus(line.debitGrams).minus(line.creditGrams);
-      if (next.lt(0)) {
+      // An over-weight transfer receipt records its unresolved source as a
+      // negative, transfer-scoped variance. No stock is silently created.
+      const unresolvedTransferExcess = input.referenceType === WorkshopMetalJournalReferenceType.TRANSFER_RECEIPT &&
+        !!input.transferId && !!input.scaleReadingId && line.bucket === WorkshopAccountBucket.TRANSFER_VARIANCE &&
+        line.creditGrams.gt(0);
+      if (next.lt(0) && !unresolvedTransferExcess) {
         throw new BadRequestException(
-          `Insufficient ${line.accountKey} balance for this metal movement`,
+          `Insufficient ${line.accountKey ?? line.accountId} balance for this material movement`,
         );
       }
-      nextBalances.set(line.accountKey, next);
+      nextBalances.set(line.accountId, next);
     }
 
     const id = randomUUID();
@@ -303,6 +403,12 @@ export class WorkshopMetalJournalService {
         actorUserId: input.actorUserId ?? null,
         captureMethod: input.captureMethod ?? null,
         reversalOfId: input.reversalOfId,
+        replacementForId: input.replacementForId,
+        processRunId: input.processRunId ?? null,
+        transferId: input.transferId ?? null,
+        recoveryContainerId: input.recoveryContainerId ?? null,
+        recoveryEventId: input.recoveryEventId ?? null,
+        batchChildId: input.batchChildId ?? null,
         metadata: input.metadata,
         lines: {
           create: lines.map((line) => ({
@@ -315,9 +421,12 @@ export class WorkshopMetalJournalService {
       },
     });
 
-    for (const [key, balance] of nextBalances) {
+    for (const [accountId, balance] of nextBalances) {
+      const key = lines.find((line) => line.accountId === accountId)?.accountKey;
       await tx.workshopMetalAccount.update({
-        where: { shopId_systemKey: { shopId: input.shopId, systemKey: key } },
+        where: key
+          ? { shopId_systemKey: { shopId: input.shopId, systemKey: key } }
+          : { id: accountId },
         data: { balanceGrams: balance },
       });
     }
@@ -341,7 +450,7 @@ export class WorkshopMetalJournalService {
       description: entry.description,
       weightGrams: this.serializeGrams(entry.weightGrams),
       materialKey: entry.materialKey,
-      purity: WORKSHOP_GOLD_995_PURITY,
+      purity: entry.materialKey === WORKSHOP_GOLD_995_MATERIAL_KEY ? WORKSHOP_GOLD_995_PURITY : null,
       jobId: entry.jobId,
       treeId: entry.treeId,
       weighingSessionId: entry.weighingSessionId,
@@ -349,12 +458,21 @@ export class WorkshopMetalJournalService {
       actorUserId: entry.actorUserId,
       captureMethod: entry.captureMethod,
       reversalOfId: entry.reversalOfId,
+      replacementForId: entry.replacementForId,
+      processRunId: entry.processRunId,
+      transferId: entry.transferId,
+      recoveryContainerId: entry.recoveryContainerId,
+      recoveryEventId: entry.recoveryEventId,
+      batchChildId: entry.batchChildId,
       idempotent,
       postedAt: entry.postedAt,
       lines: (entry.lines ?? []).map((line: any) => ({
         id: line.id,
         accountId: line.accountId,
         accountKey: line.account?.systemKey,
+        bucket: line.account?.bucket,
+        materialKey: line.account?.materialKey,
+        scopeId: line.account?.scopeId,
         debitGrams: this.serializeGrams(line.debitGrams),
         creditGrams: this.serializeGrams(line.creditGrams),
         description: line.description,

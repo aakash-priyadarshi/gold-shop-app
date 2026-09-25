@@ -10,31 +10,32 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { UserRole, WorkshopLedgerVersion } from "@prisma/client";
+import { WorkshopLedgerVersion } from "@prisma/client";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { Roles } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { RolesGuard } from "../../auth/guards/roles.guard";
 import { FeatureGateGuard } from "../../core/subscriptions/feature-gate.guard";
 import { RequireFeature } from "../../core/subscriptions/require-feature.decorator";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { WorkshopScaleService } from "./workshop-scale.service";
+import { WorkshopCutoverService } from "./workshop-cutover.service";
+import { RequireWorkshopAbility, WorkshopPermissionGuard } from "./workshop-permission.guard";
 import {
   CaptureWeighingSessionDto,
   ConfirmWeighingSessionDto,
   CreateWeighingSessionDto,
   UpdateWorkshopLedgerVersionDto,
+  WorkshopOpeningBalanceDto,
 } from "./dto/workshop-weighing.dto";
 
 @ApiTags("karigar-workshop-traceable")
 @Controller("karigar/workshop")
-@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
-@Roles(UserRole.SHOPKEEPER, UserRole.ADMIN)
+@UseGuards(JwtAuthGuard, WorkshopPermissionGuard, FeatureGateGuard)
 @ApiBearerAuth()
 export class WorkshopTraceableController {
   constructor(
     private readonly scale: WorkshopScaleService,
     private readonly prisma: PrismaService,
+    private readonly cutover: WorkshopCutoverService,
   ) {}
 
   private requireShop(shopId: string | undefined): string {
@@ -46,6 +47,7 @@ export class WorkshopTraceableController {
 
   @Patch("ledger-version")
   @RequireFeature("workshopManufacturing")
+  @RequireWorkshopAbility("workshopConfigure")
   @ApiOperation({ summary: "Set LEGACY vs TRACEABLE workshop metal ledger" })
   async setLedgerVersion(
     @CurrentUser("shopId") shopId: string,
@@ -86,6 +88,24 @@ export class WorkshopTraceableController {
     return updated;
   }
 
+  @Get("cutover")
+  @RequireFeature("workshopManufacturing")
+  async cutoverStatus(@CurrentUser("shopId") shopId: string) {
+    return this.cutover.status(this.requireShop(shopId));
+  }
+
+  @Post("cutover/manual-opening")
+  @RequireFeature("workshopManufacturing")
+  @RequireWorkshopAbility("workshopManualOverride")
+  @ApiOperation({ summary: "Audited physical Gold 995 opening stock for TRACEABLE cutover" })
+  async manualOpening(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: WorkshopOpeningBalanceDto,
+  ) {
+    return this.cutover.postManualOpening(this.requireShop(shopId), userId, dto);
+  }
+
   @Get("metal/accounts")
   @RequireFeature("workshopManufacturing")
   @ApiOperation({ summary: "TRACEABLE Gold 995 metal account balances" })
@@ -95,9 +115,17 @@ export class WorkshopTraceableController {
 
   @Post("simulator/device")
   @RequireFeature("workshopManufacturing")
+  @RequireWorkshopAbility("workshopConfigure")
   @ApiOperation({ summary: "Ensure the shop Gold Scale simulator device" })
   async simulatorDevice(@CurrentUser("shopId") shopId: string) {
     return this.scale.ensureGoldSimulatorDevice(this.requireShop(shopId));
+  }
+
+  @Post("simulator/stone-device")
+  @RequireFeature("workshopManufacturing")
+  @RequireWorkshopAbility("workshopConfigure")
+  async stoneSimulatorDevice(@CurrentUser("shopId") shopId: string) {
+    return this.scale.ensureStoneSimulatorDevice(this.requireShop(shopId));
   }
 
   @Post("weighing-sessions")

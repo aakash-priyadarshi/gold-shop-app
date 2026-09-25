@@ -102,6 +102,27 @@ describe("InventoryService - SET price update regression tests", () => {
     expect(result.totalPriceNpr).toBe(160000);
   });
 
+  it("keeps a scale-received item's physical weights and stones immutable while allowing price updates", async () => {
+    mockPrisma.inventoryItem.findUnique.mockResolvedValue({
+      id: "workshop-item", shopId: "shop-1", workshopReceiptJournalId: "journal-1",
+      jewelleryType: "RING", metalValueNpr: 0, makingChargeNpr: 0,
+      gemstoneValueNpr: 0, taxNpr: 0, totalPriceNpr: 0,
+    });
+    mockPrisma.shop.findFirst.mockResolvedValue({ id: "shop-1", userId: "user-1" });
+    mockPrisma.inventoryItem.update.mockImplementation(({ data }: any) => Promise.resolve({ id: "workshop-item", ...data }));
+
+    await expect(service.update("workshop-item", "user-1", { totalWeightGrams: 8.5 } as any))
+      .rejects.toThrow("Scale-received jewellery materials and physical weights cannot be edited");
+    await expect(service.update("workshop-item", "user-1", { gemstones: [] } as any))
+      .rejects.toThrow("Scale-received jewellery materials and physical weights cannot be edited");
+    expect(mockPrisma.inventoryItem.update).not.toHaveBeenCalled();
+
+    await service.update("workshop-item", "user-1", { metalValueNpr: 2000 } as any);
+    expect(mockPrisma.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ metalValueNpr: 2000 }),
+    }));
+  });
+
   it("updates totalPriceNpr on discountValue-only update for SET", async () => {
     mockPrisma.inventoryItem.findUnique.mockResolvedValue({
       id: "item-set-3",

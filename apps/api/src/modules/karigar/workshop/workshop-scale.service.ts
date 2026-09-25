@@ -20,6 +20,7 @@ import {
   WORKSHOP_GOLD_995_MATERIAL_KEY,
   WORKSHOP_GOLD_995_PURITY,
   assertPositiveQuantumGrams,
+  parseAsciiNetScaleFrame,
   type NormalizedScaleReading,
 } from "@gold-shop/shared";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -51,7 +52,7 @@ export class WorkshopScaleService {
     );
   }
 
-  private requireSimulatorAllowed(shopId: string): void {
+  requireSimulatorAllowed(shopId: string): void {
     if (!this.simulatorAllowed(shopId)) {
       throw new ForbiddenException("Gold Scale simulator is not enabled for this shop");
     }
@@ -98,6 +99,7 @@ export class WorkshopScaleService {
       stable: reading.stable,
       sequence: reading.sequence,
       rawFrame: reading.rawFrame,
+      samples: reading.sampleFrames,
       readingAt: reading.readingAt,
       capturedAt: reading.capturedAt,
       captureMethod: reading.captureMethod,
@@ -115,16 +117,17 @@ export class WorkshopScaleService {
       requiredPurpose: session.requiredPurpose,
       captureMethod: session.captureMethod,
       deviceId: session.deviceId,
+      assignedSequence: session.assignedSequence,
       actorUserId: session.actorUserId,
       expiresAt: session.expiresAt,
       reading: session.reading ? this.serializeReading(session.reading) : null,
     };
   }
 
-  async requireTraceableShop(shopId: string) {
+  async requireTraceableShop(shopId: string, requireInitialized = false) {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
-      select: { id: true, workshopMode: true, workshopLedgerVersion: true },
+      select: { id: true, workshopMode: true, workshopLedgerVersion: true, workshopInitializedAt: true },
     });
     if (!shop) throw new NotFoundException("Shop not found");
     if (!shop.workshopMode) {
@@ -136,6 +139,9 @@ export class WorkshopScaleService {
       throw new BadRequestException(
         "Gold 995 scale posting requires TRACEABLE workshop ledger mode",
       );
+    }
+    if (requireInitialized && !shop.workshopInitializedAt) {
+      throw new BadRequestException("Post an audited physical Gold 995 opening balance before TRACEABLE production");
     }
     return shop;
   }
@@ -160,7 +166,9 @@ export class WorkshopScaleService {
         name: account.name,
         systemKey: account.systemKey,
         materialKey: account.materialKey,
-        purity: this.metalJournal.serializeGrams(account.purity),
+        bucket: account.bucket,
+        scopeId: account.scopeId,
+        purity: account.purity ? this.metalJournal.serializeGrams(account.purity) : null,
         balanceGrams: this.metalJournal.serializeGrams(account.balanceGrams),
       })),
     };
@@ -195,13 +203,40 @@ export class WorkshopScaleService {
     };
   }
 
+  async ensureStoneSimulatorDevice(shopId: string) {
+    await this.requireTraceableShop(shopId);
+    this.requireSimulatorAllowed(shopId);
+    const name = "Stone Scale simulator";
+    const device = await this.prisma.workshopScaleDevice.upsert({
+      where: { shopId_name: { shopId, name } },
+      update: {
+        purpose: WorkshopScalePurpose.STONE,
+        adapterKind: "SIMULATOR",
+        precisionGrams: new Prisma.Decimal(SCALE_PRECISION_GRAMS.STONE),
+        isActive: true,
+      },
+      create: {
+        shopId, name, purpose: WorkshopScalePurpose.STONE,
+        adapterKind: "SIMULATOR",
+        precisionGrams: new Prisma.Decimal(SCALE_PRECISION_GRAMS.STONE),
+      },
+    });
+    return { id: device.id, name: device.name, purpose: device.purpose, adapterKind: device.adapterKind, precisionGrams: SCALE_PRECISION_GRAMS.STONE };
+  }
+
   async createSession(
     shopId: string,
     userId: string | undefined,
     dto: CreateWeighingSessionDto,
   ) {
-    await this.requireTraceableShop(shopId);
+    await this.requireTraceableShop(shopId, true);
     return this.prisma.$transaction(async (tx) => {
+      // Keep job -> tree -> material-account lock order consistent with confirm.
+      const owner = await tx.karigarCastingTree.findFirst({
+        where: { id: dto.treeId, shopId }, select: { jobId: true },
+      });
+      if (!owner) throw new NotFoundException("Casting tree not found");
+      await tx.$queryRaw`SELECT "id" FROM "KarigarJob" WHERE "id" = ${owner.jobId} AND "shopId" = ${shopId} FOR UPDATE`;
       // Serialize first use of a legacy tree with legacy metal movements.
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT "id" FROM "KarigarCastingTree"
@@ -220,9 +255,11 @@ export class WorkshopScaleService {
       if (dto.jobId && dto.jobId !== tree.jobId) {
         throw new BadRequestException("Job does not own this casting tree");
       }
-      if (tree.job.status === "CANCELLED") {
+      if (tree.jobId !== owner.jobId) throw new ConflictException("Casting tree ownership changed during weighing setup");
+      const currentJob = await tx.karigarJob.findFirst({ where: { id: tree.jobId, shopId }, select: { status: true } });
+      if (!currentJob || ["CANCELLED", "REJECTED", "Completed"].includes(currentJob.status)) {
         throw new BadRequestException(
-          "Cancelled jobs are archived and cannot resume production",
+          "Finished or archived jobs cannot start a Gold 995 issue",
         );
       }
       const hasLegacyHistory =
@@ -269,10 +306,12 @@ export class WorkshopScaleService {
           data: { metalKey: WORKSHOP_GOLD_995_MATERIAL_KEY, purity: "995" },
         });
       }
+      const sequenceDevice = await tx.workshopScaleDevice.update({ where: { id: device.id }, data: { nextSequence: { increment: 1 } } });
       const session = await tx.workshopWeighingSession.create({
         data: {
           shopId,
           deviceId: device.id,
+          assignedSequence: sequenceDevice.nextSequence - 1,
           jobId: tree.jobId,
           treeId: tree.id,
           materialKey: WORKSHOP_GOLD_995_MATERIAL_KEY,
@@ -353,17 +392,60 @@ export class WorkshopScaleService {
           `Scale purpose ${device.purpose} does not match required ${session.requiredPurpose}`,
         );
       }
-      if (device.purpose !== WorkshopScalePurpose.GOLD) {
-        throw new BadRequestException("This slice only accepts Gold Scale readings");
+      if (session.assignedSequence != null && dto.reading.sequence !== session.assignedSequence) {
+        throw new BadRequestException("Scale sequence does not match this server-assigned session sequence");
       }
+      const quantum = SCALE_PRECISION_GRAMS[session.requiredPurpose];
       if (
         !new Prisma.Decimal(device.precisionGrams).eq(
-          new Prisma.Decimal(GOLD_SCALE_QUANTUM_GRAMS),
+          new Prisma.Decimal(quantum),
         )
       ) {
         throw new BadRequestException(
-          "Gold Scale device must be configured with 0.01 g precision",
+          `${session.requiredPurpose} Scale device must be configured with ${quantum} g precision`,
         );
+      }
+
+      let verifiedSamples: { rawFrame: string; readingAt: string }[] | undefined;
+      if (device.adapterKind !== "SIMULATOR") {
+        if (!["SERIAL", "TCP"].includes(device.adapterKind)) throw new BadRequestException("Unsupported physical scale adapter");
+        const profile = device.profile as { parser?: { kind?: string; stableToken?: string; unstableToken?: string } } | null;
+        const parser = profile?.parser;
+        if (parser?.kind !== "ASCII_LINE" || !parser.stableToken || !parser.unstableToken || parser.stableToken === parser.unstableToken) {
+          throw new BadRequestException("Registered device has no valid explicit-stability parser");
+        }
+        const samples = dto.reading.samples;
+        if (!Array.isArray(samples) || samples.length < 3 || samples.length > 8 || !dto.reading.readingAt) {
+          throw new BadRequestException("Physical capture needs three to eight timed raw scale frames");
+        }
+        const times = samples.map((sample) => Date.parse(sample.readingAt));
+        if (times.some((time) => !Number.isFinite(time)) || times.some((time, i) => i > 0 && time <= times[i - 1]) ||
+            times.at(-1)! - times[0] < 100 || times.at(-1)! - times[0] > 5000 ||
+            Math.abs(times.at(-1)! - readingAt.getTime()) > 1000 ||
+            readingAt.getTime() - times[0] > 5000) {
+          throw new BadRequestException("Physical scale samples are not a fresh consecutive stability window");
+        }
+        let finalWeight: Prisma.Decimal | undefined;
+        for (const sample of samples) {
+          let parsed: { weightGrams: string; stable: boolean };
+          try {
+            parsed = parseAsciiNetScaleFrame(sample.rawFrame, {
+              kind: "ASCII_LINE", stableToken: parser.stableToken, unstableToken: parser.unstableToken,
+            });
+          } catch (error) {
+            throw new BadRequestException(error instanceof Error ? error.message : "Invalid physical scale frame");
+          }
+          if (!parsed.stable) throw new BadRequestException("Physical scale reported an unstable sample");
+          try { assertPositiveQuantumGrams(parsed.weightGrams, session.requiredPurpose); }
+          catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "Invalid physical scale quantum"); }
+          const amount = new Prisma.Decimal(parsed.weightGrams);
+          if (finalWeight && !amount.eq(finalWeight)) throw new BadRequestException("Physical scale weight changed during the stability window");
+          finalWeight = amount;
+        }
+        if (!finalWeight?.eq(new Prisma.Decimal(dto.reading.weightGrams)) || dto.reading.rawFrame !== samples.at(-1)?.rawFrame) {
+          throw new BadRequestException("Normalized reading does not match its raw device frames");
+        }
+        verifiedSamples = samples;
       }
 
       const sessionCreatedAt =
@@ -386,18 +468,18 @@ export class WorkshopScaleService {
         throw new BadRequestException("Workshop scale readings must be in grams");
       }
       try {
-        assertPositiveQuantumGrams(dto.reading.weightGrams, "GOLD");
+        assertPositiveQuantumGrams(dto.reading.weightGrams, session.requiredPurpose);
       } catch (err) {
         throw new BadRequestException(
-          err instanceof Error ? err.message : "Invalid Gold Scale weight",
+          err instanceof Error ? err.message : "Invalid scale weight",
         );
       }
 
       const normalized: NormalizedScaleReading = {
-        purpose: "GOLD",
+        purpose: session.requiredPurpose,
         weightGrams: dto.reading.weightGrams,
         unit: "g",
-        precisionGrams: SCALE_PRECISION_GRAMS.GOLD,
+        precisionGrams: quantum,
         stable: true,
         sequence: dto.reading.sequence,
         rawFrame: dto.reading.rawFrame ?? "",
@@ -421,7 +503,7 @@ export class WorkshopScaleService {
           sequence: session.reading.sequence,
           rawFrame: session.reading.rawFrame,
         });
-        if (existingFp === fp) {
+        if (existingFp === fp && JSON.stringify(session.reading.sampleFrames ?? null) === JSON.stringify(verifiedSamples ?? null)) {
           return {
             session: this.serializeSession({ ...session, reading: session.reading }),
             reading: this.serializeReading(session.reading),
@@ -444,13 +526,14 @@ export class WorkshopScaleService {
             shopId,
             deviceId: device.id,
             sessionId: session.id,
-            purpose: WorkshopScalePurpose.GOLD,
+            purpose: session.requiredPurpose,
             weightGrams: this.metalJournal.grams(normalized.weightGrams),
             unit: "g",
-            precisionGrams: this.metalJournal.grams(GOLD_SCALE_QUANTUM_GRAMS),
+            precisionGrams: this.metalJournal.grams(quantum),
             stable: true,
             sequence: normalized.sequence,
             rawFrame: normalized.rawFrame || null,
+            sampleFrames: verifiedSamples as Prisma.InputJsonValue | undefined,
             readingAt,
             captureMethod,
             actorUserId: userId ?? null,
@@ -492,7 +575,7 @@ export class WorkshopScaleService {
     sessionId: string,
     dto: ConfirmWeighingSessionDto,
   ) {
-    await this.requireTraceableShop(shopId);
+    await this.requireTraceableShop(shopId, true);
     if ("weightGrams" in (dto as object)) {
       throw new BadRequestException("Confirm must not include a weight field");
     }
@@ -512,6 +595,9 @@ export class WorkshopScaleService {
         include: { reading: true, tree: true, journal: { include: { lines: { include: { account: true } } } } },
       });
       if (!session) throw new NotFoundException("Weighing session not found");
+      if (!session.tree || !session.treeId) {
+        throw new BadRequestException("Gold 995 issue requires a casting tree");
+      }
       if (session.status === WorkshopWeighingSessionStatus.CANCELLED) {
         throw new BadRequestException("Weighing session is cancelled");
       }
@@ -581,6 +667,16 @@ export class WorkshopScaleService {
           idempotent: true,
           treeIssuedGrams: session.tree.issuedGrams,
         };
+      }
+
+      if (session.jobId) {
+        const lockedJob = await tx.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "KarigarJob" WHERE "id" = ${session.jobId} AND "shopId" = ${shopId} FOR UPDATE`;
+        if (!lockedJob.length) throw new NotFoundException("Workshop job not found");
+        const job = await tx.karigarJob.findFirst({ where: { id: session.jobId, shopId }, select: { status: true } });
+        if (!job || ["CANCELLED", "REJECTED", "Completed"].includes(job.status)) {
+          throw new ConflictException("Job changed state after the Gold 995 weighing session was opened");
+        }
       }
 
       if (

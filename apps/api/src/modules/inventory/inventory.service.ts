@@ -202,6 +202,12 @@ export class InventoryService {
       throw new ForbiddenException("You do not own this shop");
     }
 
+    if (item.workshopReceiptJournalId && [
+      dto.jewelleryType, dto.buildMethod, dto.composition, dto.totalWeightGrams, dto.gemstones,
+    ].some((value) => value !== undefined)) {
+      throw new BadRequestException("Scale-received jewellery materials and physical weights cannot be edited in the catalog");
+    }
+
     // Prepare update data
     const updateData: any = {};
 

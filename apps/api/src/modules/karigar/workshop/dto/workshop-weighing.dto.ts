@@ -4,6 +4,8 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  ArrayMaxSize,
+  ArrayMinSize,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -20,6 +22,7 @@ export class WorkshopScaleReadingInputDto {
   @Matches(GRAM_STRING, {
     message: "weightGrams must be a positive decimal gram string",
   })
+  @MaxLength(32)
   weightGrams: string;
 
   @Equals("g")
@@ -39,7 +42,21 @@ export class WorkshopScaleReadingInputDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(64)
   readingAt?: string;
+
+  /** Required for real devices: three or more recent, consistent native frames. */
+  @IsOptional()
+  @ArrayMinSize(3)
+  @ArrayMaxSize(8)
+  @ValidateNested({ each: true })
+  @Type(() => WorkshopScaleSampleDto)
+  samples?: WorkshopScaleSampleDto[];
+}
+
+export class WorkshopScaleSampleDto {
+  @IsString() @IsNotEmpty() @MaxLength(500) rawFrame: string;
+  @IsString() @MaxLength(64) readingAt: string;
 }
 
 export class CreateWeighingSessionDto {
@@ -86,4 +103,32 @@ export class ConfirmWeighingSessionDto {
 export class UpdateWorkshopLedgerVersionDto {
   @IsIn(["LEGACY", "TRACEABLE"])
   workshopLedgerVersion: "LEGACY" | "TRACEABLE";
+}
+
+export class WorkshopOpeningBalanceDto {
+  @Equals("goldGrains995")
+  materialKey: "goldGrains995";
+
+  @IsString()
+  @Matches(GRAM_STRING)
+  @MaxLength(32)
+  weightGrams: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  reason: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  source: string;
+
+  @Equals(true)
+  confirmedPhysicalGold995: true;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(191)
+  idempotencyKey: string;
 }

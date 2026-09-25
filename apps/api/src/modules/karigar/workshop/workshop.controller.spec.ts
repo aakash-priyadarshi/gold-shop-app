@@ -13,7 +13,7 @@ describe("WorkshopTraceableController ledger mode", () => {
       update: jest.fn(),
     },
   };
-  const controller = new WorkshopTraceableController({} as never, prisma as never);
+  const controller = new WorkshopTraceableController({} as never, prisma as never, {} as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
