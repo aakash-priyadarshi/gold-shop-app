@@ -1,6 +1,7 @@
 "use client";
 
 import { CaptureWeightDialog } from "@/components/shop/workshop/CaptureWeightDialog";
+import { FactoryWorkbench } from "@/components/shop/workshop/FactoryWorkbench";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,10 +113,9 @@ export default function WorkshopLedgerPage() {
           <T>Metal ledger</T>
         </h1>
         <p className="text-sm text-muted-foreground">
-          <T>
-            Issue, return, scrap, and adjust vault metal. Same movements as
-            Supply Chain — unexplained loss never returns to the vault.
-          </T>
+          {ledgerVersion === "TRACEABLE"
+            ? <T>Measured material balances and movements are shown in the Factory workstation below. Legacy 24K vault figures are separate from physical Gold 995 stock.</T>
+            : <T>Issue, return, scrap, and adjust vault metal. Same movements as Supply Chain — unexplained loss never returns to the vault.</T>}
         </p>
       </div>
       {ledgerVersion !== "TRACEABLE" && (
@@ -141,8 +141,8 @@ export default function WorkshopLedgerPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-      {ledgerVersion === "TRACEABLE" && <CaptureWeightDialog />}
-      <Card data-tour="workshop-metal-vault">
+      {ledgerVersion === "TRACEABLE" && <><CaptureWeightDialog /><FactoryWorkbench /></>}
+      {ledgerVersion !== "TRACEABLE" && <Card data-tour="workshop-metal-vault">
         <CardHeader>
           <CardTitle>
             <T>Vault</T>
@@ -156,8 +156,8 @@ export default function WorkshopLedgerPage() {
             </div>
           ))}
         </CardContent>
-      </Card>
-      <Card data-tour="workshop-metal-form">
+      </Card>}
+      {ledgerVersion !== "TRACEABLE" && <Card data-tour="workshop-metal-form">
         <CardHeader>
           <CardTitle>
             <T>Record 24K / legacy movement</T>
@@ -258,7 +258,7 @@ export default function WorkshopLedgerPage() {
             <T>Post movement</T>
           </Button>
         </CardContent>
-      </Card>
+      </Card>}
       {error && <p className="text-sm text-rose-600">{t(error)}</p>}
     </div>
   );

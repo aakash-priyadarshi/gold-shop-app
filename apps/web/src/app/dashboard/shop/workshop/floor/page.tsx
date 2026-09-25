@@ -39,6 +39,7 @@ function FloorInner() {
     ...KARIGAR_STAGES,
   ]);
   const [weights, setWeights] = useState<Record<string, string>>({});
+  const [traceable, setTraceable] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -47,6 +48,7 @@ function FloorInner() {
       .then((res) => {
         const data = res.data ?? res;
         setJobs(data.jobs ?? []);
+        setTraceable(data.ledgerVersion === "TRACEABLE");
         if (Array.isArray(data.departments) && data.departments.length) {
           setDepartments(data.departments);
         }
@@ -79,13 +81,11 @@ function FloorInner() {
           <T>Floor</T>
         </h1>
         <p className="text-sm text-muted-foreground">
-          <T>
-            Department queues. Same page, different filter — not a route per
-            bench.
-          </T>
+          {traceable ? <T>TRACEABLE production moves physical material through measured process runs and two-sided transfers.</T> : <T>Department queues. Same page, different filter — not a route per bench.</T>}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2" data-tour="workshop-floor-depts">
+      {traceable && <Button variant="outline" asChild><Link href={supplyChainHref("metal")}><T>Open measured factory workstation</T></Link></Button>}
+      {!traceable && <div className="flex flex-wrap gap-2" data-tour="workshop-floor-depts">
         <Button variant={!dept ? "default" : "outline"} asChild>
           <Link href={supplyChainHref("floor")}>
             <T>All</T>
@@ -102,7 +102,7 @@ function FloorInner() {
             </Link>
           </Button>
         ))}
-      </div>
+      </div>}
       {error && <p className="text-sm text-rose-600">{t(error)}</p>}
       <div className="grid gap-3" data-tour="workshop-floor-queue">
         {jobs.map((job) => {
@@ -125,20 +125,20 @@ function FloorInner() {
                   <span dir="auto">{job.artisan}</span> ·{" "}
                   <T>{KARIGAR_STAGE_LABELS[stage]}</T>
                 </span>
-                <span>
+                {!traceable && <span>
                   <T>In</T> <bdi>{(row?.goldInGrams ?? 0).toFixed(3)} g</bdi>
-                </span>
-                <Input
+                </span>}
+                {!traceable && <Input
                   className="w-28"
                   placeholder={t("Gold out")}
                   value={weights[job.id] ?? String(row?.goldOutGrams || "")}
                   onChange={(e) =>
                     setWeights((p) => ({ ...p, [job.id]: e.target.value }))
                   }
-                />
-                <Button size="sm" onClick={() => advance(job.id)}>
+                />}
+                {!traceable && <Button size="sm" onClick={() => advance(job.id)}>
                   <T>Advance</T>
-                </Button>
+                </Button>}
               </CardContent>
             </Card>
           );

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { T } from "@/components/ui/T";
 import { karigarApi } from "@/lib/api";
+import { workshopApi } from "@/lib/workshop-api";
 import { useT } from "@/providers/translation-provider";
 import {
   GoldScaleSimulator,
@@ -73,6 +75,12 @@ export function CaptureWeightDialog() {
   const [vaultGrams, setVaultGrams] = useState("0.000000");
   const [wipGrams, setWipGrams] = useState("0.000000");
   const [simulatorAllowed, setSimulatorAllowed] = useState(false);
+  const [cutoverReady, setCutoverReady] = useState<boolean | null>(null);
+  const [openingGrams, setOpeningGrams] = useState("");
+  const [openingSource, setOpeningSource] = useState("");
+  const [openingReason, setOpeningReason] = useState("");
+  const [openingConfirmed, setOpeningConfirmed] = useState(false);
+  const openingKey = useRef<string | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [live, setLive] = useState<LiveReading | null>(null);
@@ -92,9 +100,8 @@ export function CaptureWeightDialog() {
   const settleTicks = useRef(0);
 
   const load = useCallback(async () => {
-    const snapRes = await karigarApi.getSnapshot();
-    const snap = snapRes.data ?? snapRes;
-    const jobs = snap.jobs ?? [];
+    const jobsRes = await workshopApi.jobs();
+    const jobs = jobsRes.data ?? [];
     const nextTrees: TreeOption[] = [];
     for (const job of jobs) {
       for (const tree of job.trees ?? []) {
@@ -103,7 +110,8 @@ export function CaptureWeightDialog() {
         // that check so the browser is never the enforcement boundary.
         if (
           tree.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY ||
-          Number(tree.issuedGrams ?? 0) === 0
+          (job.metalKey === WORKSHOP_GOLD_995_MATERIAL_KEY &&
+            Number(tree.issuedGrams ?? 0) === 0)
         ) {
           nextTrees.push({
             id: tree.id,
@@ -122,12 +130,15 @@ export function CaptureWeightDialog() {
     setTrees(nextTrees);
     if (!treeId && nextTrees[0]) setTreeId(nextTrees[0].id);
     try {
+      const cutoverRes = await karigarApi.workshopCutoverStatus();
+      const cutover = cutoverRes.data ?? cutoverRes;
+      setCutoverReady(cutover.ready === true);
       const accRes = await karigarApi.workshopMetalAccounts();
       const acc = accRes.data ?? accRes;
       const vault = acc.accounts?.find((a: { systemKey: string }) => a.systemKey === "GOLD995_VAULT");
-      const wip = acc.accounts?.find((a: { systemKey: string }) => a.systemKey === "CASTING_TREE_WIP");
+      const wip = (acc.accounts ?? []).filter((a: { materialKey: string; bucket: string }) => a.materialKey === WORKSHOP_GOLD_995_MATERIAL_KEY && a.bucket === "WIP");
       setVaultGrams(vault?.balanceGrams ?? "0.000000");
-      setWipGrams(wip?.balanceGrams ?? "0.000000");
+      setWipGrams(wip.reduce((sum: number, account: { balanceGrams: string }) => sum + Number(account.balanceGrams), 0).toFixed(6));
       setSimulatorAllowed(acc.simulatorAllowed === true);
     } catch {
       // accounts endpoint requires TRACEABLE; ignore until enabled
@@ -189,6 +200,33 @@ export function CaptureWeightDialog() {
     }
   };
 
+  const postOpening = async () => {
+    if (!openingConfirmed || !openingGrams || !openingSource.trim() || !openingReason.trim()) return;
+    setError(null);
+    setBusy(true);
+    try {
+      openingKey.current ??= window.crypto.randomUUID();
+      await karigarApi.workshopManualOpening({
+        materialKey: WORKSHOP_GOLD_995_MATERIAL_KEY,
+        weightGrams: openingGrams,
+        source: openingSource.trim(),
+        reason: openingReason.trim(),
+        confirmedPhysicalGold995: true,
+        idempotencyKey: openingKey.current,
+      });
+      openingKey.current = null;
+      setOpeningGrams("");
+      setOpeningSource("");
+      setOpeningReason("");
+      setOpeningConfirmed(false);
+      await load();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Could not post opening balance");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const capture = async () => {
     if (!live || live.stable !== true || !deviceId || !treeId) return;
     setError(null);
@@ -212,7 +250,7 @@ export function CaptureWeightDialog() {
           weightGrams: live.weightGrams,
           unit: "g",
           stable: live.stable,
-          sequence: live.sequence,
+          sequence: session.assignedSequence ?? live.sequence,
           rawFrame: live.rawFrame,
           readingAt: live.readingAt,
         },
@@ -320,16 +358,28 @@ export function CaptureWeightDialog() {
             </p>
           ) : null;
         })()}
-        {vaultGrams === "0.000000" && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            <T>
-              Gold 995 has no traceable opening balance. An authorised opening-balance migration is required before a production issue can post.
-            </T>
-          </p>
+        {cutoverReady === false && (
+          <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:bg-amber-950/30" data-testid="workshop-cutover">
+            <p className="text-sm font-semibold"><T>TRACEABLE setup — physical Gold 995 opening stock</T></p>
+            <p className="text-sm"><T>Only the owner or admin may enter a controlled opening balance. Physically verify the stock first. Gold 995 is not 24K / 999 gold; this manual entry is permanently flagged in the journal and audit log.</T></p>
+            <Label htmlFor="workshop-opening-grams"><T>Physical Gold 995 net grams (0.01 g)</T></Label>
+            <Input id="workshop-opening-grams" inputMode="decimal" value={openingGrams} onChange={(event) => { setOpeningGrams(event.target.value); openingKey.current = null; }} />
+            <Label htmlFor="workshop-opening-source"><T>Stock source / reference</T></Label>
+            <Input id="workshop-opening-source" value={openingSource} onChange={(event) => { setOpeningSource(event.target.value); openingKey.current = null; }} />
+            <Label htmlFor="workshop-opening-reason"><T>Migration reason</T></Label>
+            <Input id="workshop-opening-reason" value={openingReason} onChange={(event) => { setOpeningReason(event.target.value); openingKey.current = null; }} />
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" checked={openingConfirmed} onChange={(event) => setOpeningConfirmed(event.target.checked)} />
+              <T>I confirm this was physically checked as Gold 995, not existing 24K / 999 vault stock.</T>
+            </label>
+            <Button type="button" onClick={postOpening} disabled={busy || !openingConfirmed || !openingGrams || !openingSource.trim() || !openingReason.trim()}>
+              <T>Post audited opening balance</T>
+            </Button>
+          </div>
         )}
         {simulatorAllowed && (
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={connectSimulator} disabled={busy || (!!captured && !journalId)}>
+            <Button type="button" onClick={connectSimulator} disabled={busy || cutoverReady !== true || (!!captured && !journalId)}>
               {connected ? <T>Simulator connected</T> : <T>Connect Gold Scale simulator</T>}
             </Button>
           </div>
@@ -360,7 +410,7 @@ export function CaptureWeightDialog() {
         <Button
           type="button"
           onClick={capture}
-          disabled={busy || !connected || !treeId || !!captured || !!journalId || live?.stable !== true}
+          disabled={busy || cutoverReady !== true || !connected || !treeId || !!captured || !!journalId || live?.stable !== true}
         >
           <T>Capture Weight</T>
         </Button>

@@ -724,6 +724,15 @@ export const karigarApi = {
   setWorkshopLedgerVersion: (workshopLedgerVersion: "LEGACY" | "TRACEABLE") =>
     api.patch("/karigar/workshop/ledger-version", { workshopLedgerVersion }),
   workshopMetalAccounts: () => api.get("/karigar/workshop/metal/accounts"),
+  workshopCutoverStatus: () => api.get("/karigar/workshop/cutover"),
+  workshopManualOpening: (data: {
+    materialKey: "goldGrains995";
+    weightGrams: string;
+    reason: string;
+    source: string;
+    confirmedPhysicalGold995: true;
+    idempotencyKey: string;
+  }) => api.post("/karigar/workshop/cutover/manual-opening", data),
   workshopSimulatorDevice: () => api.post("/karigar/workshop/simulator/device"),
   createWeighingSession: (data: {
     treeId: string;

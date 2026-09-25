@@ -285,8 +285,8 @@ export const getDashboardRoute = (role: UserRole): string => {
 // Routes allowed per role
 const roleRoutes: Record<UserRole, string[]> = {
   ADMIN: ["/dashboard/admin", "/admin", "/api/admin"],
-  SHOPKEEPER: ["/dashboard/shop", "/shop", "/inventory"],
-  CUSTOMER: ["/dashboard/customer", "/browse", "/cart", "/orders", "/rfq"],
+  SHOPKEEPER: ["/dashboard/shop", "/dashboard/workshop-staff", "/shop", "/inventory"],
+  CUSTOMER: ["/dashboard/customer", "/dashboard/workshop-staff", "/browse", "/cart", "/orders", "/rfq"],
   SALES: ["/dashboard/sales", "/dashboard/admin"],
   SUPPORT: ["/dashboard/support", "/dashboard/admin"],
 };

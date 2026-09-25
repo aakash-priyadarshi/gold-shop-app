@@ -34,12 +34,12 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [sku, setSku] = useState("");
   const [busy, setBusy] = useState(false);
+  const [traceable, setTraceable] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
-    return karigarApi
-      .getJob(jobId)
-      .then((res) => setJob((res.data ?? res) as Job))
+    return Promise.all([karigarApi.getJob(jobId), karigarApi.workshopCutoverStatus()])
+      .then(([res, cutover]) => { setJob((res.data ?? res) as Job); setTraceable((cutover.data ?? cutover).workshopLedgerVersion === "TRACEABLE"); })
       .catch((err) =>
         setError(err?.response?.data?.message || "Job not found"),
       );
@@ -134,6 +134,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
       </Card>
       <KarigarJobGoldCard
         job={job}
+        traceableLedger={traceable}
         onChanged={load}
         onEdit={() => {
           /* work-order fields live on this view */
@@ -154,6 +155,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
+          {traceable ? <><p className="w-full text-sm"><T>TRACEABLE finished goods require QC approval and a final physical Gold Scale reading. The legacy typed-weight receipt is disabled.</T></p><Button variant="outline" asChild><Link href={supplyChainHref("metal")}><T>Open measured factory workstation</T></Link></Button></> : <>
           <div className="space-y-1">
             <Label>
               <T>SKU (optional)</T>
@@ -171,6 +173,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
               <T>Create inventory item</T>
             )}
           </Button>
+          </>}
           {job.inventoryItemId && (
             <Link
               className="text-sm underline"

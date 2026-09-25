@@ -304,15 +304,13 @@ export function KarigarJobGoldCard({
         />
       )}
 
-      <LossGrid loss={job.goldLoss} />
+      {!traceableLedger && <LossGrid loss={job.goldLoss} />}
 
       <div data-tour="supply-casting-tree" className="space-y-2">
         <p className="text-[11px] font-semibold uppercase text-amber-700">
           <T>Casting trees</T>
         </p>
-        <p className="text-[11px] text-gray-500">
-          <T>Issued gold vs finished pieces, sprue/button, and recoverable scrap. Loss is calculated — it is not billing wastage.</T>
-        </p>
+        <p className="text-[11px] text-gray-500">{traceableLedger ? <T>CAD tree lines are theoretical. Measured issues, outputs and loss live in the Workshop material journal and batch reconciliation report.</T> : <T>Issued gold vs finished pieces, sprue/button, and recoverable scrap. Loss is calculated — it is not billing wastage.</T>}</p>
         {trees.map((tree) => (
           <CastingTreeEditor
             key={tree.id}
@@ -351,7 +349,7 @@ export function KarigarJobGoldCard({
         )}
       </div>
 
-      <div className="space-y-2">
+      {traceableLedger ? <p className="rounded border p-2 text-xs text-muted-foreground"><T>Department stage gram fields are disabled in TRACEABLE mode. Use measured process runs, transfers and QC in the Factory workstation.</T></p> : <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase text-gray-400">
           <T>Department stages</T>
         </p>
@@ -405,7 +403,7 @@ export function KarigarJobGoldCard({
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

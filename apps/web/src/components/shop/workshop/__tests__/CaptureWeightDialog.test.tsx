@@ -6,11 +6,15 @@ import {
   confirmIssuePayload,
 } from "../CaptureWeightDialog";
 import { karigarApi } from "@/lib/api";
+import { workshopApi } from "@/lib/workshop-api";
+
+vi.mock("@/lib/workshop-api", () => ({ workshopApi: { jobs: vi.fn() } }));
 
 vi.mock("@/lib/api", () => ({
   karigarApi: {
-    getSnapshot: vi.fn(),
     workshopMetalAccounts: vi.fn(),
+    workshopCutoverStatus: vi.fn(),
+    workshopManualOpening: vi.fn(),
     workshopSimulatorDevice: vi.fn(),
     createWeighingSession: vi.fn(),
     captureWeighingSession: vi.fn(),
@@ -32,24 +36,22 @@ vi.mock("@/providers/translation-provider", () => ({
 describe("CaptureWeightDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(karigarApi.getSnapshot).mockResolvedValue({
-      data: {
-        workshopLedgerVersion: "TRACEABLE",
-        jobs: [
+    vi.mocked(karigarApi.workshopCutoverStatus).mockResolvedValue({ data: { ready: true } } as never);
+    vi.mocked(workshopApi.jobs).mockResolvedValue({
+      data: [
           {
             id: "job-1",
             product: "Casting batch",
             trees: [{ id: "tree-1", label: "Tree", metalKey: "goldGrains995" }],
           },
-        ],
-      },
+      ],
     } as never);
     vi.mocked(karigarApi.workshopMetalAccounts).mockResolvedValue({
       data: {
         simulatorAllowed: true,
         accounts: [
           { systemKey: "GOLD995_VAULT", balanceGrams: "1000.000000" },
-          { systemKey: "CASTING_TREE_WIP", balanceGrams: "0.000000" },
+          { systemKey: "CASTING_TREE_WIP", materialKey: "goldGrains995", bucket: "WIP", balanceGrams: "0.000000" },
         ],
       },
     } as never);
@@ -57,7 +59,7 @@ describe("CaptureWeightDialog", () => {
       data: { id: "device-1" },
     } as never);
     vi.mocked(karigarApi.createWeighingSession).mockResolvedValue({
-      data: { id: "session-1" },
+      data: { id: "session-1", assignedSequence: 18 },
     } as never);
     vi.mocked(karigarApi.captureWeighingSession).mockResolvedValue({
       data: {
@@ -107,6 +109,7 @@ describe("CaptureWeightDialog", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Capture Weight" }));
     await waitFor(() => screen.getByTestId("scale-confirm"));
+    expect(karigarApi.captureWeighingSession).toHaveBeenCalledWith("session-1", expect.objectContaining({ reading: expect.objectContaining({ sequence: 18 }) }));
     expect(screen.getByText("100.250000", { exact: false })).toBeTruthy();
     expect(screen.getAllByText("device-1", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("operator-1", { exact: false })).toBeTruthy();
