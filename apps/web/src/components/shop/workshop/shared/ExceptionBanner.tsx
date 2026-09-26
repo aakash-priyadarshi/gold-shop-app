@@ -89,8 +89,8 @@ export function ExceptionBanner({ exceptions }: ExceptionBannerProps) {
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold">{exc.title}</div>
-                  <div className="text-xs opacity-90 mt-0.5">{exc.description}</div>
+                  <div className="text-xs font-semibold"><T>{exc.title}</T></div>
+                  <div className="text-xs opacity-90 mt-0.5"><T>{exc.description}</T></div>
                 </div>
               </div>
 
