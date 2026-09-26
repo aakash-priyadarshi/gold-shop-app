@@ -5184,6 +5184,8 @@ model WorkshopToleranceRule {
   shopId          String
   movementKind    String   @db.VarChar(40)
   materialKey     String   @default("")
+  definitionId    String   @default("") @db.VarChar(80)
+  policy          String   @default("REQUIRE_CLASSIFICATION") @db.VarChar(32)
   scalePurpose    WorkshopScalePurpose
   maxDifferenceGrams Decimal @db.Decimal(20, 6)
   isActive        Boolean  @default(true)
@@ -5193,7 +5195,8 @@ model WorkshopToleranceRule {
   shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict)
   transfers       WorkshopTransfer[]
 
-  @@unique([shopId, movementKind, materialKey, scalePurpose])
+  @@unique([shopId, movementKind, materialKey, scalePurpose, definitionId])
+  @@index([shopId, movementKind, isActive])
 }
 
 model WorkshopTransfer {

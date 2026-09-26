@@ -33,11 +33,11 @@ export function FactoryManagerControls({ materials, definitions, routes, account
   const [routeDefinitionIds, setRouteDefinitionIds] = useState<string[]>([]);
   const [routeId, setRouteId] = useState("");
   const [stepId, setStepId] = useState("");
-  const [stepAction, setStepAction] = useState("SKIP");
+  const [stepAction, setStepAction] = useState<"SKIP" | "REPEAT" | "REWORK" | "ADD">("SKIP");
   const [addedDefinitionId, setAddedDefinitionId] = useState("");
   const [stepReason, setStepReason] = useState("");
   const [childLabel, setChildLabel] = useState("");
-  const [childKind, setChildKind] = useState("DESIGN_GROUP");
+  const [childKind, setChildKind] = useState<"DESIGN_GROUP" | "ORDER_GROUP" | "PIECE">("DESIGN_GROUP");
   const [childQuantity, setChildQuantity] = useState("1");
   const [workstationName, setWorkstationName] = useState("");
   const [workstationDefinitionId, setWorkstationDefinitionId] = useState("");
@@ -68,7 +68,7 @@ export function FactoryManagerControls({ materials, definitions, routes, account
   const source = accounts.find((account) => account.id === sourceAccountId);
   const destinationScopeId = destinationBucket === "WIP" ? treeId : destinationBucket === "PROCESS" ? runId : "";
   const postManual = async () => {
-    const payload = { materialKey: source?.materialKey, sourceBucket: source?.bucket, sourceScopeId: source?.scopeId,
+    const payload = { materialKey: source?.materialKey ?? "", sourceBucket: source?.bucket ?? "VAULT", sourceScopeId: source?.scopeId ?? "",
       destinationBucket, destinationScopeId, weightGrams: manualGrams, reason: manualReason.trim(),
       ...(treeId ? { treeId, jobId } : {}), ...(runId ? { processRunId: runId } : {}) };
     manualRetry.current = workshopRetryKey(manualRetry.current, payload, () => crypto.randomUUID());
@@ -102,7 +102,7 @@ export function FactoryManagerControls({ materials, definitions, routes, account
         <label><T>Route template</T><select className={field} value={routeId} onChange={(event) => setRouteId(event.target.value)}><option value="">{t("Select route")}</option>{routes.map((route) => <option key={route.id} value={route.id}>{route.name}</option>)}</select></label>
         <Button disabled={busy || !jobId || !routeId} onClick={() => act(() => workshopApi.assignRoute(jobId, routeId), "Route assigned to job")}><T>Assign route to job</T></Button>
         <label><T>Job route step</T><select className={field} value={stepId} onChange={(event) => setStepId(event.target.value)}><option value="">{t("Select step")}</option>{steps.map((step) => <option key={step.id} value={step.id}>{step.position + 1}. {definitions.find((definition) => definition.id === step.definitionId)?.name} · {step.status}</option>)}</select></label>
-        <label><T>Change</T><select className={field} value={stepAction} onChange={(event) => setStepAction(event.target.value)}>{["SKIP", "REPEAT", "REWORK", "ADD"].map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label><T>Change</T><select className={field} value={stepAction} onChange={(event) => setStepAction(event.target.value as typeof stepAction)}>{["SKIP", "REPEAT", "REWORK", "ADD"].map((value) => <option key={value}>{value}</option>)}</select></label>
         {stepAction === "ADD" && <label><T>Process to add</T><select className={field} value={addedDefinitionId} onChange={(event) => setAddedDefinitionId(event.target.value)}><option value="">{t("Select process")}</option>{definitions.map((definition) => <option key={definition.id} value={definition.id}>{definition.name}</option>)}</select></label>}
         <label><T>Reason</T><Input value={stepReason} onChange={(event) => setStepReason(event.target.value)} /></label>
         <Button disabled={busy || !jobId || !stepId || !stepReason.trim() || (stepAction === "ADD" && !addedDefinitionId)} onClick={() => act(() => workshopApi.changeRouteStep(jobId, stepId, { action: stepAction, reason: stepReason.trim(), ...(stepAction === "ADD" ? { definitionId: addedDefinitionId } : {}) }), "Route step changed")}><T>Apply route change</T></Button>
@@ -111,7 +111,7 @@ export function FactoryManagerControls({ materials, definitions, routes, account
     <section className="space-y-2 border-t pt-4"><h3 className="font-semibold"><T>Pieces, machines and transfer tolerance</T></h3>
       <div className="grid gap-2 md:grid-cols-4">
         <label><T>Piece or group label</T><Input value={childLabel} onChange={(event) => setChildLabel(event.target.value)} /></label>
-        <label><T>Granularity</T><select className={field} value={childKind} onChange={(event) => setChildKind(event.target.value)}>{["DESIGN_GROUP", "ORDER_GROUP", "PIECE"].map((kind) => <option key={kind}>{kind}</option>)}</select></label>
+        <label><T>Granularity</T><select className={field} value={childKind} onChange={(event) => setChildKind(event.target.value as typeof childKind)}>{["DESIGN_GROUP", "ORDER_GROUP", "PIECE"].map((kind) => <option key={kind}>{kind}</option>)}</select></label>
         <label><T>Quantity</T><Input inputMode="numeric" value={childQuantity} onChange={(event) => setChildQuantity(event.target.value)} /></label>
         <Button disabled={busy || !treeId || !childLabel.trim()} onClick={() => act(() => workshopApi.createBatchChild({ treeId, kind: childKind, label: childLabel.trim(), quantity: Number(childQuantity) }), "Batch child created")}><T>Add piece or group</T></Button>
         <label><T>Machine or workstation</T><Input value={workstationName} onChange={(event) => setWorkstationName(event.target.value)} /></label>

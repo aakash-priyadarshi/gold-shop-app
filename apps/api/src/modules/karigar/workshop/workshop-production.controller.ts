@@ -65,8 +65,8 @@ export class WorkshopProductionController {
 
   @Post("process-runs/:id/close")
   @RequireWorkshopAbility("workshopApprove")
-  close(@CurrentUser("shopId") shopId: string, @Param("id") id: string, @Body() dto: CompleteWorkshopRunDto) {
-    return this.production.closeRun(this.shop(shopId), id, dto.notes);
+  close(@CurrentUser("shopId") shopId: string, @CurrentUser("id") userId: string, @Param("id") id: string, @Body() dto: CompleteWorkshopRunDto) {
+    return this.production.closeRun(this.shop(shopId), id, dto.notes, userId);
   }
 
   @Get("batches/:id/reconciliation")

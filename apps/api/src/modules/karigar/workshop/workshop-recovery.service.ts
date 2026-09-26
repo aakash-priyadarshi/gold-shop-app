@@ -83,8 +83,14 @@ export class WorkshopRecoveryService {
     const material = await this.prisma.workshopMaterial.findFirst({ where: { id: dto.materialId, shopId } });
     if (!material) throw new NotFoundException("Workshop material not found");
     if (dto.recoveryEventId) {
-      const event = await this.prisma.workshopRecoveryEvent.findFirst({ where: { id: dto.recoveryEventId, shopId } });
+      const event = await this.prisma.workshopRecoveryEvent.findFirst({
+        where: { id: dto.recoveryEventId, shopId },
+        include: { container: true },
+      });
       if (!event || event.status === "OPEN") throw new BadRequestException("Assay requires a sent recovery event in this shop");
+      if (material.key !== event.container.materialKey) {
+        throw new BadRequestException("Assay material must match the recovery container physical material");
+      }
     }
     const purity = new Prisma.Decimal(dto.fineGoldFraction);
     if (purity.lt(0) || purity.gt(1)) throw new BadRequestException("Assay purity must be between zero and one");
@@ -107,6 +113,32 @@ export class WorkshopRecoveryService {
       const event = await tx.workshopRecoveryEvent.findFirst({ where: { id, shopId }, include: { container: true, sendReading: { select: { actorUserId: true } } } });
       if (!event || event.status !== "SENT" || !event.sendReadingId) throw new ConflictException("Recovery must be physically sent before final reconciliation");
       if (event.sendReading?.actorUserId === userId) throw new BadRequestException("A sending operator cannot classify their own recovery difference");
+
+      const hasPhysicalResult = await tx.workshopMetalJournal.findFirst({
+        where: {
+          shopId,
+          recoveryEventId: id,
+          referenceType: WorkshopMetalJournalReferenceType.RECOVERY_RESULT,
+          scaleReadingId: { not: null },
+          reversalOfId: null,
+          status: "POSTED",
+          reversedBy: null,
+        },
+        select: { id: true },
+      });
+      if (!hasPhysicalResult) {
+        throw new BadRequestException("Physical recovery or refinery return weighing result must be recorded before final settlement");
+      }
+
+      const latestAssay = await tx.workshopMaterialAssay.findFirst({
+        where: {
+          shopId,
+          recoveryEventId: id,
+          material: { key: event.container.materialKey },
+        },
+        orderBy: { assayedAt: "desc" },
+      });
+
       const accounts = await tx.workshopMetalAccount.findMany({ where: { shopId, materialKey: event.container.materialKey, OR: [
         { bucket: WorkshopAccountBucket.RECOVERY_PENDING, scopeId: event.containerId },
         { bucket: WorkshopAccountBucket.REFINERY, scopeId: event.id },
@@ -125,7 +157,7 @@ export class WorkshopRecoveryService {
           transactionDate: new Date(), weightGrams: weight, materialKey: source.materialKey,
           recoveryContainerId: event.containerId, recoveryEventId: id, actorUserId: userId,
           derivedClassification: true,
-          metadata: { classification: "RECOVERY_VARIANCE", sourceAccountId: source.id, reason: reason.trim(), approverUserId: userId },
+          metadata: { classification: "RECOVERY_VARIANCE", sourceAccountId: source.id, reason: reason.trim(), approverUserId: userId, assayId: latestAssay?.id ?? null },
           lines: [{ accountId: variance.id, debitGrams: weight }, { accountId: source.id, creditGrams: weight }],
         });
         journals.push(this.journal.serializeEntry(posted.entry, posted.idempotent));
@@ -133,8 +165,8 @@ export class WorkshopRecoveryService {
       }
       await tx.workshopRecoveryEvent.update({ where: { id }, data: { status: "RECONCILED", varianceGrams: total, approvedByUserId: userId, approvedAt: new Date(), notes: reason.trim() } });
       await tx.workshopRecoveryContainer.update({ where: { id: event.containerId }, data: { status: "PROCESSED" } });
-      await tx.auditLog.create({ data: { userId, actorType: "SHOPKEEPER", action: "WORKSHOP_RECOVERY_RECONCILE", resourceType: "WorkshopRecoveryEvent", resourceId: id, newValue: { shopId, varianceGrams: total.toFixed(6), reason: reason.trim(), journalIds: journals.map((journal) => journal.id) } } });
-      return { eventId: id, varianceGrams: total.toFixed(6), journals };
+      await tx.auditLog.create({ data: { userId, actorType: "SHOPKEEPER", action: "WORKSHOP_RECOVERY_RECONCILE", resourceType: "WorkshopRecoveryEvent", resourceId: id, newValue: { shopId, varianceGrams: total.toFixed(6), reason: reason.trim(), journalIds: journals.map((journal) => journal.id), assayPurity: latestAssay?.fineGoldFraction ? latestAssay.fineGoldFraction.toFixed(6) : null } } });
+      return { eventId: id, varianceGrams: total.toFixed(6), journals, assay: latestAssay ? { id: latestAssay.id, fineGoldFraction: latestAssay.fineGoldFraction.toFixed(6), source: latestAssay.source } : null };
     });
   }
 }

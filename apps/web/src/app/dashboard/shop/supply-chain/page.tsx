@@ -1,13 +1,15 @@
 "use client";
 
-import WorkshopFloorView from "@/app/dashboard/shop/workshop/floor/page";
-import WorkshopJobsView from "@/app/dashboard/shop/workshop/jobs/page";
-import WorkshopKarigarsView from "@/app/dashboard/shop/workshop/karigars/page";
-import WorkshopMetalView from "@/app/dashboard/shop/workshop/ledger/page";
-import WorkshopTowerView from "@/app/dashboard/shop/workshop/page";
-import WorkshopProcurementView from "@/app/dashboard/shop/workshop/procurement/page";
-import WorkshopQcView from "@/app/dashboard/shop/workshop/qc/page";
-import WorkshopReportsView from "@/app/dashboard/shop/workshop/reports/page";
+import { WorkshopOverview } from "@/components/shop/workshop/overview/WorkshopOverview";
+import { WorkshopJobsModule } from "@/components/shop/workshop/jobs/WorkshopJobsModule";
+import { WorkshopJobDetailView } from "@/components/shop/workshop/jobs/WorkshopJobDetailView";
+import { WorkshopProductionFloor } from "@/components/shop/workshop/production/WorkshopProductionFloor";
+import { WorkshopMetalModule } from "@/components/shop/workshop/metal/WorkshopMetalModule";
+import { WorkshopTransfersModule } from "@/components/shop/workshop/transfers/WorkshopTransfersModule";
+import { WorkshopRecoveryModule } from "@/components/shop/workshop/recovery/WorkshopRecoveryModule";
+import { WorkshopQcModule } from "@/components/shop/workshop/qc/WorkshopQcModule";
+import { WorkshopReportsModule } from "@/components/shop/workshop/reports/WorkshopReportsModule";
+import { WorkshopSettingsModule } from "@/components/shop/workshop/settings/WorkshopSettingsModule";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { FeatureGate } from "@/components/FeatureGate";
@@ -156,12 +158,16 @@ export default function KarigarSupplyChainPage() {
 }
 
 const FACTORY_VIEWS: Array<{ view: WorkshopView; label: string }> = [
-  { view: "tower", label: "Tower" },
+  { view: "overview", label: "Overview" },
   { view: "jobs", label: "Jobs" },
-  { view: "floor", label: "Floor" },
+  { view: "production", label: "Production" },
   { view: "metal", label: "Metal" },
+  { view: "transfers", label: "Transfers" },
+  { view: "recovery", label: "Recovery" },
   { view: "qc", label: "QC" },
   { view: "reports", label: "Reports" },
+  { view: "book", label: "Karigar Book" },
+  { view: "settings", label: "Factory Settings" },
 ];
 
 function SupplyChainRouteContent() {
@@ -176,14 +182,22 @@ function SupplyChainRouteContent() {
   } = useFeatures();
   const searchParams = useSearchParams();
   const requested = searchParams.get("view");
-  const view = requested ? parseWorkshopView(requested) : null;
+  const requestedDept = searchParams.get("dept");
+  const initialDept = requestedDept && /^[A-Za-z][A-Za-z0-9 _-]{0,63}$/.test(requestedDept) ? requestedDept : null;
   const workshopMode = !!user?.shop?.workshopMode;
   const workshopEnabled = hasFeature("workshopManufacturing");
-  const activeNav = view === "job" ? "jobs" : view;
+
+  // Determine effective view:
+  // When Workshop Mode is ON and feature enabled: defaults to "overview" if no view is in query
+  // When Workshop Mode is OFF: defaults to "book"
+  const parsedView = requested ? parseWorkshopView(requested) : null;
+  const effectiveView: WorkshopView =
+    parsedView ?? (workshopMode && workshopEnabled ? "overview" : "book");
+  const activeNav = effectiveView === "job" ? "jobs" : effectiveView;
   const setTourSubKey = useTourContext((state) => state.setSubKey);
 
   useEffect(() => {
-    if (!view) {
+    if (effectiveView === "book") {
       setTourSubKey(null);
       return () => setTourSubKey(null);
     }
@@ -195,25 +209,24 @@ function SupplyChainRouteContent() {
       setTourSubKey("workshop-locked");
       return () => setTourSubKey(null);
     }
-    setTourSubKey(view === "job" ? "workshop-job" : `workshop-${view}`);
+    setTourSubKey(
+      effectiveView === "job" ? "workshop-job" : `workshop-${effectiveView}`,
+    );
     return () => setTourSubKey(null);
-  }, [loading, setTourSubKey, status, view, workshopEnabled, workshopMode]);
+  }, [
+    effectiveView,
+    loading,
+    setTourSubKey,
+    status,
+    workshopEnabled,
+    workshopMode,
+  ]);
 
   const nav = (
     <div
       data-tour="supply-chain-nav"
       className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-2"
     >
-      <Button
-        data-tour="supply-nav-book"
-        variant={view ? "ghost" : "default"}
-        size="sm"
-        asChild
-      >
-        <Link href={supplyChainHref()}>
-          <T>Karigar book</T>
-        </Link>
-      </Button>
       {FACTORY_VIEWS.map((item) => (
         <Button
           key={item.view}
@@ -236,15 +249,12 @@ function SupplyChainRouteContent() {
     </div>
   );
 
-  if (!view) {
-    return (
-      <div className="space-y-4">
-        {nav}
-        <KarigarSupplyChainLedger />
-      </div>
-    );
+  // If Workshop Mode is OFF and view is book, render the traditional Karigar Supply Chain experience without factory nav.
+  if (!workshopMode && effectiveView === "book") {
+    return <KarigarSupplyChainLedger />;
   }
 
+  // If features are loading and a workshop-specific view was requested
   if (loading && status !== "ready") {
     return (
       <div className="space-y-4">
@@ -257,28 +267,29 @@ function SupplyChainRouteContent() {
     );
   }
 
-  if (error && !workshopEnabled) {
-    return (
-      <div className="space-y-4">
-        {nav}
-        <Card data-tour="workshop-locked" className="max-w-xl border-red-200">
-          <CardHeader>
-            <CardTitle>
-              <T>Could not verify workshop access</T>
-            </CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => void refresh()}>
-              <T>Retry plan check</T>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // If user requested a workshop view or is in workshop mode, but lacks subscription
+  if (!workshopEnabled && effectiveView !== "book") {
+    if (error) {
+      return (
+        <div className="space-y-4">
+          {nav}
+          <Card data-tour="workshop-locked" className="max-w-xl border-red-200">
+            <CardHeader>
+              <CardTitle>
+                <T>Could not verify workshop access</T>
+              </CardTitle>
+              <CardDescription>{error}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => void refresh()}>
+                <T>Retry plan check</T>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
-  if (!workshopEnabled) {
     return (
       <div className="space-y-4">
         {nav}
@@ -290,14 +301,19 @@ function SupplyChainRouteContent() {
             planName={planName}
             loading={false}
           >
-            <WorkshopWorkspace view={view} jobId={searchParams.get("id")} />
+            <WorkshopWorkspace
+              view={effectiveView}
+              jobId={searchParams.get("id")}
+              initialDept={initialDept}
+            />
           </FeatureGate>
         </div>
       </div>
     );
   }
 
-  if (!workshopMode) {
+  // If user requested a workshop view but workshop mode is off in settings
+  if (!workshopMode && effectiveView !== "book") {
     return (
       <div className="space-y-4">
         {nav}
@@ -325,10 +341,25 @@ function SupplyChainRouteContent() {
     );
   }
 
+  // When Workshop Mode is ON and on Karigar Book view
+  if (effectiveView === "book") {
+    return (
+      <div className="space-y-4">
+        {nav}
+        <KarigarSupplyChainLedger />
+      </div>
+    );
+  }
+
+  // Standard Workshop Operating Views
   return (
     <div className="space-y-4">
       {nav}
-      <WorkshopWorkspace view={view} jobId={searchParams.get("id")} />
+      <WorkshopWorkspace
+        view={effectiveView}
+        jobId={searchParams.get("id")}
+        initialDept={initialDept}
+      />
     </div>
   );
 }
@@ -336,34 +367,44 @@ function SupplyChainRouteContent() {
 function WorkshopWorkspace({
   view,
   jobId,
+  initialDept,
 }: {
   view: WorkshopView;
   jobId: string | null;
+  initialDept: string | null;
 }) {
   switch (view) {
     case "jobs":
-      return <WorkshopJobsView />;
+      return <WorkshopJobsModule />;
     case "job":
       return jobId ? (
-        <WorkshopJobCardView jobId={jobId} />
+        <WorkshopJobDetailView jobId={jobId} />
       ) : (
-        <WorkshopJobsView />
+        <WorkshopJobsModule />
       );
+    case "production":
     case "floor":
-      return <WorkshopFloorView />;
+      return <WorkshopProductionFloor initialDept={initialDept} />;
     case "metal":
-      return <WorkshopMetalView />;
-    case "qc":
-      return <WorkshopQcView />;
-    case "reports":
-      return <WorkshopReportsView />;
-    case "karigars":
-      return <WorkshopKarigarsView />;
     case "procurement":
-      return <WorkshopProcurementView />;
+      return <WorkshopMetalModule />;
+    case "transfers":
+      return <WorkshopTransfersModule />;
+    case "recovery":
+      return <WorkshopRecoveryModule />;
+    case "qc":
+      return <WorkshopQcModule />;
+    case "reports":
+      return <WorkshopReportsModule />;
+    case "settings":
+      return <WorkshopSettingsModule />;
+    case "book":
+    case "karigars":
+      return <KarigarSupplyChainLedger />;
+    case "overview":
     case "tower":
     default:
-      return <WorkshopTowerView />;
+      return <WorkshopOverview />;
   }
 }
 

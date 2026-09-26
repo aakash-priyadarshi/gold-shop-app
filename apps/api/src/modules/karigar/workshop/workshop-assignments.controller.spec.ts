@@ -57,4 +57,19 @@ describe("WorkshopAssignmentsController", () => {
     prisma.staffAccount.updateMany.mockResolvedValue({ count: 0 });
     await expect(controller.accept("other-user", "membership-1")).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it("counts only accepted, active Workshop staff in the selected shop", async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      { id: "operator", permissions: { workshopCapture: true } },
+      { id: "other-role", permissions: { inventoryRead: true } },
+      { id: "invalid", permissions: null },
+    ]);
+    prisma.staffAccount.findMany = findMany;
+
+    await expect(controller.staff("shop-1")).resolves.toEqual([{ id: "operator" }]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { shopId: "shop-1", isActive: true, acceptedAt: { not: null } },
+      select: { id: true, permissions: true },
+    });
+  });
 });

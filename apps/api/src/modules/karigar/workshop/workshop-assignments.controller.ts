@@ -21,6 +21,21 @@ class InviteWorkshopStaffDto {
 export class WorkshopAssignmentsController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @Get("staff")
+  @UseGuards(WorkshopPermissionGuard, FeatureGateGuard)
+  @RequireWorkshopAbility("workshopConfigure")
+  @RequireFeature("workshopManufacturing")
+  async staff(@CurrentUser("shopId") shopId: string) {
+    if (!shopId) throw new BadRequestException("Select a shop first");
+    const memberships = await this.prisma.staffAccount.findMany({
+      where: { shopId, isActive: true, acceptedAt: { not: null } },
+      select: { id: true, permissions: true },
+    });
+    return memberships.filter((member) => member.permissions && typeof member.permissions === "object" && !Array.isArray(member.permissions) &&
+      ((member.permissions as Record<string, unknown>).workshopCapture === true || (member.permissions as Record<string, unknown>).workshopApprove === true))
+      .map((member) => ({ id: member.id }));
+  }
+
   @Post("staff/invite")
   @UseGuards(WorkshopPermissionGuard, FeatureGateGuard)
   @RequireWorkshopAbility("workshopConfigure")
