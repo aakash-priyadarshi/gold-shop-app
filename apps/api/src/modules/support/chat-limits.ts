@@ -7,33 +7,35 @@ export const CHAT_LIMITS: Record<
     maxReply: number;
     maxHistory: number;
     historyItemChars: number;
+    maxHistoryChars?: number;
     maxOutputTokens: number;
     hourlyMessages: number;
   }
 > = {
   public: {
     maxInput: 500,
-    maxReply: 400,
+    // Emergency output guard, not a stylistic target. Token budgets bound normal replies.
+    maxReply: 48000,
     maxHistory: 8,
-    historyItemChars: 400,
-    // Enough for ~400 visible chars after disabling Gemini 2.5 Flash thinking budget.
-    maxOutputTokens: 256,
+    historyItemChars: 6000,
+    maxHistoryChars: 12000,
+    maxOutputTokens: 2048,
     hourlyMessages: 20,
   },
   dashboard: {
     maxInput: 1500,
-    maxReply: 1200,
+    maxReply: 64000,
     maxHistory: 12,
-    historyItemChars: 800,
-    maxOutputTokens: 500,
+    historyItemChars: 8000,
+    maxOutputTokens: 4096,
     hourlyMessages: 60,
   },
   admin: {
     maxInput: 2000,
-    maxReply: 1800,
+    maxReply: 64000,
     maxHistory: 16,
-    historyItemChars: 1000,
-    maxOutputTokens: 700,
+    historyItemChars: 8000,
+    maxOutputTokens: 4096,
     hourlyMessages: 120,
   },
 };
@@ -86,14 +88,23 @@ export function sanitizeHistory(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   maxItems: number,
   itemChars: number,
+  maxTotalChars = Infinity,
 ): Array<{ role: "user" | "assistant"; content: string }> {
-  return history
+  const sanitized = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .slice(-maxItems)
     .map((m) => ({
       role: m.role,
       content: m.content.length > itemChars ? `${m.content.slice(0, itemChars)}…` : m.content,
     }));
+
+  // Keep a contiguous suffix of newest entries; count the truncation marker too.
+  let totalChars = 0;
+  for (let i = sanitized.length - 1; i >= 0; i--) {
+    totalChars += sanitized[i].content.length;
+    if (totalChars > maxTotalChars) return sanitized.slice(i + 1);
+  }
+  return sanitized;
 }
 
 export const PUBLIC_PRIVACY_REFUSAL =

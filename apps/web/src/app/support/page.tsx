@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { SupportMessageMarkdown } from "@/components/support/SupportMessageMarkdown";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { ticketsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { 
   AlertCircle,
   Bot, 
@@ -44,11 +46,13 @@ const TICKET_TYPES = [
 ];
 
 export default function SupportPage() {
+  const t = useT();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"ai" | "ticket" | "contact">("ai");
 
   // AI Chat state
-  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "assistant"; content: string; interrupted?: boolean }>>([]);
+  const chatSessionId = useRef<string | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
@@ -78,7 +82,7 @@ export default function SupportPage() {
   }, []);
 
   const handleAiChatSubmit = async () => {
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || chatLoading) return;
 
     const newHistory = [...chatHistory, { role: "user" as const, content: chatInput.trim() }];
     setChatHistory(newHistory);
@@ -86,14 +90,16 @@ export default function SupportPage() {
     setChatLoading(true);
 
     try {
+      chatSessionId.current ??= crypto.randomUUID();
       const response = await ticketsApi.aiChat({
         message: chatInput.trim(),
-        history: chatHistory,
+        sessionId: chatSessionId.current,
+        history: chatHistory.slice(-8).map(({ role, content }) => ({ role, content })),
       });
 
       setChatHistory((prev) => [
         ...prev,
-        { role: "assistant" as const, content: response.data.reply }
+        { role: "assistant" as const, content: response.data.reply, interrupted: response.data.interrupted }
       ]);
       
     } catch (e) {
@@ -227,7 +233,7 @@ export default function SupportPage() {
                   </div>
                 </div>
 
-                <div className="flex-grow p-4 overflow-y-auto space-y-4">
+                <div className="min-w-0 flex-grow p-4 overflow-y-auto space-y-4">
                   {chatHistory.length === 0 && (
                      <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                        <Bot className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -238,8 +244,9 @@ export default function SupportPage() {
 
                   {chatHistory.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-tl-sm'}`}>
-                         {msg.content}
+                      <div className={`min-w-0 max-w-[80%] [overflow-wrap:anywhere] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-tl-sm'}`}>
+                         {msg.role === "user" ? <p className="whitespace-pre-wrap">{msg.content}</p> : <SupportMessageMarkdown text={msg.content} />}
+                         {msg.role === "assistant" && msg.interrupted && <p role="status" className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-300"><T>Response was interrupted before completion. Please retry.</T></p>}
                       </div>
                     </div>
                   ))}
@@ -260,7 +267,8 @@ export default function SupportPage() {
                      <Input 
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="Type your message..."
+                        placeholder={t("Type your message...")}
+                        maxLength={500}
                         className="bg-white dark:bg-gray-950 border-gray-300 cursor-text"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleAiChatSubmit();
@@ -268,6 +276,7 @@ export default function SupportPage() {
                      />
                      <Button 
                        onClick={handleAiChatSubmit} 
+                       aria-label={t("Send")}
                        disabled={!chatInput.trim() || chatLoading}
                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                      >

@@ -128,7 +128,7 @@ export function ScaleCapturePanel({
     const device = devices.find((d) => d.id === selectedDeviceId);
     if (!device) {
       setScaleState("disconnected");
-      setErrorMessage(t("No active scale device selected. Register or select a scale."));
+      setErrorMessage("No active scale device selected. Register or select a scale.");
       return;
     }
     if (device.adapterKind === "SIMULATOR") {
@@ -173,14 +173,14 @@ export function ScaleCapturePanel({
       setScaleState(res.stable ? "stable" : "unstable");
     } catch (err: any) {
       setScaleState("error");
-      setErrorMessage(err?.message || t("Scale read failed. Check serial/TCP cable connection."));
+      setErrorMessage(err?.message || "Scale read failed. Check serial/TCP cable connection.");
     }
-  }, [devices, selectedDeviceId, purpose, t]);
+  }, [devices, selectedDeviceId, purpose]);
 
   // Open weighing session and capture reading
   const handleCapture = async () => {
     if (!materialKey || !movementKind || !selectedDeviceId) {
-      setErrorMessage(t("Please select a material and registered scale before capturing weight"));
+      setErrorMessage("Please select a material and registered scale before capturing weight");
       return;
     }
     setLoading(true);
@@ -231,7 +231,7 @@ export function ScaleCapturePanel({
         onCaptured(currentSessionId, newReadingId, liveWeight);
       }
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || err?.message || t("Failed to capture reading"));
+      setErrorMessage(err?.response?.data?.message || err?.message || "Failed to capture reading");
       setScaleState("error");
     } finally {
       setLoading(false);
@@ -245,14 +245,14 @@ export function ScaleCapturePanel({
     try {
       const res = await workshopApi.confirm(sessionId, { readingId, exceptionReason: movementKind === "TRANSFER_RECEIPT" ? exceptionReason.trim() || undefined : undefined });
       if ("requiresApproval" in res.data) {
-        setErrorMessage(t("Transfer difference requires supervisor approval. Keep this reading and confirm again after approval."));
+        setErrorMessage("Transfer difference requires supervisor approval. Keep this reading and confirm again after approval.");
         onRequiresApproval?.();
         return;
       }
       setConfirmed(true);
       onConfirmed?.({ journalId: res.data.journal.id, inventoryItemId: res.data.inventoryItem?.id });
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || err?.message || t("Movement confirmation failed"));
+      setErrorMessage(err?.response?.data?.message || err?.message || "Movement confirmation failed");
     } finally {
       setLoading(false);
     }
@@ -261,11 +261,11 @@ export function ScaleCapturePanel({
   // Submit manual override (Owner only)
   const handleManualOverride = async () => {
     if (!overrideWeight || parseFloat(overrideWeight) <= 0) {
-      setErrorMessage(t("Enter a positive physical weight for manual override"));
+      setErrorMessage("Enter a positive physical weight for manual override");
       return;
     }
     if (!overrideReason.trim()) {
-      setErrorMessage(t("Manual override requires an explicit verified operational reason"));
+      setErrorMessage("Manual override requires an explicit verified operational reason");
       return;
     }
     setLoading(true);
@@ -292,7 +292,7 @@ export function ScaleCapturePanel({
         onConfirmed({ journalId: res.data.id, metalGrams: overrideWeight });
       }
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || err?.message || t("Manual override failed"));
+      setErrorMessage(err?.response?.data?.message || err?.message || "Manual override failed");
     } finally {
       setLoading(false);
     }
@@ -319,7 +319,7 @@ export function ScaleCapturePanel({
             className="capitalize text-xs font-mono"
           >
             {scaleState === "stable" && <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-400" />}
-            {scaleState}
+            <T>{scaleState}</T>
           </Badge>
         </div>
         <CardDescription className="text-xs">
@@ -341,7 +341,7 @@ export function ScaleCapturePanel({
                 const portStr = transport?.port ? ` - ${transport.port}` : transport?.host ? ` - ${transport.host}` : "";
                 return (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.adapterKind}{portStr})
+                    {d.name} ({t(d.adapterKind)}{portStr})
                   </option>
                 );
               })}
@@ -474,7 +474,7 @@ export function ScaleCapturePanel({
         {errorMessage && (
           <div className="rounded-md bg-destructive/10 border border-destructive/20 p-2 text-xs text-destructive flex items-start gap-1.5">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>{errorMessage}</span>
+            <span><T>{errorMessage}</T></span>
           </div>
         )}
       </CardContent>

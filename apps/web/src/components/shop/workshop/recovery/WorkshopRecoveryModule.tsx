@@ -117,7 +117,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
       setBagCode("");
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to create bag");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to create bag"));
     } finally {
       setSubmittingBag(false);
     }
@@ -131,7 +131,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
       loadData();
       if (eventId) handleInspectEvent(eventId);
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to create recovery event");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to create recovery event"));
     } finally {
       setSendLoading(false);
     }
@@ -143,7 +143,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
       setActiveEvent(res.data);
       setResultMaterialKey(res.data.container.materialKey);
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to load event");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to load event"));
     }
   };
 
@@ -156,7 +156,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
       setVarianceReason("");
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Reconciliation failed");
+      alert(t(err?.response?.data?.message || err?.message || "Reconciliation failed"));
     } finally {
       setReconcilingLoading(false);
     }
@@ -252,7 +252,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                         variant={isOpen ? "secondary" : isProcessed ? "default" : "outline"}
                         className="text-[10px] font-mono capitalize"
                       >
-                        {bag.status}
+                        <T>{bag.status}</T>
                       </Badge>
                     </div>
 
@@ -268,7 +268,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
 
                     <div className="text-[11px] text-muted-foreground pt-2 border-t flex justify-between">
                       <span>{bag.materialKey}</span>
-                      <span>{daysOld === 0 ? "Opened today" : `${daysOld} days ago`}</span>
+                      <span>{daysOld === 0 ? <T>Opened today</T> : <>{daysOld} <T>days ago</T></>}</span>
                     </div>
 
                     {/* Actions */}
@@ -321,7 +321,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                   <T>Event #</T>{activeEvent.id.slice(0, 8)} · <T>Bag:</T> {activeEvent.container?.code}
                 </p>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setActiveEvent(null)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setActiveEvent(null)} aria-label={t("Close")}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -338,7 +338,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]"><T>Status</T></span>
-                  <span className="font-bold text-foreground capitalize">{activeEvent.status}</span>
+                  <span className="font-bold text-foreground capitalize"><T>{activeEvent.status}</T></span>
                 </div>
               </div>
 

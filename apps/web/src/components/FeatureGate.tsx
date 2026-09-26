@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -61,7 +62,7 @@ export function FeatureGate({
     } catch (err: any) {
       toast({
         title: t("Trial Activation Failed"),
-        description: err?.response?.data?.message || t("Could not activate trial. Please contact support."),
+        description: t(err?.response?.data?.message || "Could not activate trial. Please contact support."),
         variant: "destructive",
       });
     } finally {
@@ -108,11 +109,11 @@ export function FeatureGate({
             <Lock className="h-7 w-7" />
           </div>
           <CardTitle className="text-xl font-bold tracking-tight">
-            {t(label)} is not available on your plan
+            <T>{label}</T>{" "}<T>is not available on your plan</T>
           </CardTitle>
           <CardDescription className="text-sm">
-            Your <strong>{planName || "current"}</strong> plan does not include{" "}
-            <strong>{t(label)}</strong>.{" "}
+            <T>Your</T>{" "}<strong>{planName || <T>current</T>}</strong>{" "}<T>plan does not include</T>{" "}
+            <strong><T>{label}</T></strong>.{" "}
             {plans.length > 0
               ? <>{t("Available on")} {plans.map((plan) => plan.displayName).join(", ")}.</>
               : hasUpgradeCatalog

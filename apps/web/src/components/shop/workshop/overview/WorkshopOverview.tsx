@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   workshopApi,
   type WorkshopJob,
@@ -46,7 +45,6 @@ import { WorkshopOnboardingChecklist, type WorkshopSetupStatus } from "../onboar
 import { WorkshopCreateJobDialog } from "../jobs/WorkshopCreateJobDialog";
 
 export function WorkshopOverview() {
-  const t = useT();
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [jobs, setJobs] = useState<WorkshopJob[]>([]);
@@ -140,8 +138,8 @@ export function WorkshopOverview() {
       .forEach((tr) => {
         list.push({
           id: `transfer-exc-${tr.id}`,
-          title: t("Transfer Variance Above Tolerance"),
-          description: `${tr.fromDepartment} → ${tr.toDepartment} (${tr.materialKey}): Difference of ${parseFloat(tr.differenceGrams || "0").toFixed(3)}g exceeds rule limit`,
+          title: "Transfer Variance Above Tolerance",
+          description: <>{tr.fromDepartment} → {tr.toDepartment} ({tr.materialKey}): <T>Difference of</T> {parseFloat(tr.differenceGrams || "0").toFixed(3)}g <T>exceeds rule limit</T></>,
           severity: "CRITICAL",
           category: "TRANSFER",
           actionHref: supplyChainHref("transfers"),
@@ -157,8 +155,8 @@ export function WorkshopOverview() {
           const totalUnclass = r.unclassified?.reduce((sum, u) => sum + parseFloat(u.balanceGrams || "0"), 0) || 0;
           list.push({
             id: `run-unclass-${r.id}`,
-            title: t("Process Remainder Awaiting Classification"),
-            description: `${r.definition?.name || r.department}: ${totalUnclass.toFixed(3)}g physical remainder must be reconciled or approved`,
+            title: "Process Remainder Awaiting Classification",
+            description: <>{r.definition?.name || r.department}: {totalUnclass.toFixed(3)}g <T>physical remainder must be reconciled or approved</T></>,
             severity: "CRITICAL",
             category: "PROCESS",
             actionHref: supplyChainHref("production"),
@@ -174,8 +172,8 @@ export function WorkshopOverview() {
       .forEach((e) => {
         list.push({
           id: `recovery-sent-${e.id}`,
-          title: t("Refinery Recovery Event Awaiting Final Settlement"),
-          description: `Bag ${e.bagCode}: Material sent to refinery; record assay and classify recovered metal`,
+          title: "Refinery Recovery Event Awaiting Final Settlement",
+          description: <><T>Bag</T> {e.bagCode}: <T>Material sent to refinery; record assay and classify recovered metal</T></>,
           severity: "WARNING",
           category: "RECOVERY",
           actionHref: supplyChainHref("recovery"),
@@ -189,8 +187,8 @@ export function WorkshopOverview() {
       .forEach((j) => {
         list.push({
           id: `qc-job-${j.id}`,
-          title: t("Approved Fabrication Job Awaiting Scale Receipt"),
-          description: `${j.product} (${j.artisan}): Ready for authoritative gross jewellery weigh-in and catalog stock creation`,
+          title: "Approved Fabrication Job Awaiting Scale Receipt",
+          description: <>{j.product} ({j.artisan}): <T>Ready for authoritative gross jewellery weigh-in and catalog stock creation</T></>,
           severity: "INFO",
           category: "RECEIPT",
           actionHref: supplyChainHref("qc"),
@@ -204,8 +202,8 @@ export function WorkshopOverview() {
       if (recentOverrides.length > 0) {
         list.push({
           id: "recent-overrides",
-          title: t("Physical Scale Manual Override Recently Used"),
-          description: `${recentOverrides.length} transaction(s) posted with manual typed grams bypassing scale hardware`,
+          title: "Physical Scale Manual Override Recently Used",
+          description: <>{recentOverrides.length} <T>transaction(s) posted with manual typed grams bypassing scale hardware</T></>,
           severity: "WARNING",
           category: "OVERRIDE",
           actionHref: supplyChainHref("reports"),
@@ -215,7 +213,7 @@ export function WorkshopOverview() {
     }
 
     return list;
-  }, [transfers, reports, bags, qcPendingJobs, t]);
+  }, [transfers, reports, bags, qcPendingJobs]);
 
   // Dynamic Pipeline: count jobs by process definition
   const pipeline = useMemo(() => {

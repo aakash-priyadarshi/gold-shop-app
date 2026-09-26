@@ -52,7 +52,7 @@ export function GoldLossReport({
             {report.trees.map((row) => (
               <tr key={row.jobId + row.label} className="border-b dark:border-gray-800">
                 <td className="py-2 pr-2">
-                  {row.product} — {row.label}
+                  {row.product} — {/* i18n-user-content: stored casting tree name */ row.label}
                 </td>
                 <td className="tabular-nums">{grams(row.goldLoss.issued)}</td>
                 <td className="tabular-nums">{grams(row.goldLoss.finished)}</td>

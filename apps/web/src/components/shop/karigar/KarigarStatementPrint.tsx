@@ -60,7 +60,7 @@ export function KarigarStatementPrint({
     window.print();
   };
 
-  const displayName = shopName || workshop.name || "Jewellery Workshop";
+  const displayName = shopName || workshop.name;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-4 sm:p-6 flex justify-center print:p-0 print:bg-white print:static">
@@ -131,7 +131,7 @@ export function KarigarStatementPrint({
           <div className="flex justify-between items-start border-b border-slate-300 pb-6 mb-6">
             <div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
-                {displayName}
+                {displayName || <T>Jewellery Workshop</T>}
               </h1>
               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-0.5">
                 <T>Karigar Reconciliation & Statement of Account</T>
@@ -328,7 +328,7 @@ export function KarigarStatementPrint({
                               : "bg-slate-100 text-slate-800"
                           }`}
                         >
-                          {item.eventType.replace(/_/g, " ")}
+                          <T>{item.eventType.replace(/_/g, " ")}</T>
                         </span>
                       </td>
                       <td className="p-2 text-slate-800 max-w-[150px] truncate">

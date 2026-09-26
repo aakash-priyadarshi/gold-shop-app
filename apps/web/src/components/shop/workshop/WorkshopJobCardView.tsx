@@ -129,7 +129,7 @@ export function WorkshopJobCardView({ jobId }: { jobId: string }) {
             <T>Qty</T>: <bdi>{job.qty ?? 1}</bdi>
           </div>
           <div>
-            <T>Size</T>: <span dir="auto">{job.sizeLabel || "—"}</span>
+            <T>Size</T>: <span dir="auto">{/* i18n-user-content: operator-entered jewellery size specification */ job.sizeLabel || "—"}</span>
           </div>
           <div>
             <T>Purity</T>: <bdi>{job.purity || "—"}</bdi>

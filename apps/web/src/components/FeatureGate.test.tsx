@@ -11,17 +11,25 @@ const mockUseFeatures = vi.hoisted(() =>
     hasUpgradeCatalog: true,
   })),
 );
+const translation = vi.hoisted(() => ({
+  locale: "en",
+  t: vi.fn((value: string) => value),
+  register: vi.fn(),
+}));
 
 vi.mock("@/hooks/useFeatures", () => ({
   useFeatures: mockUseFeatures,
 }));
 vi.mock("@/providers/translation-provider", () => ({
-  useT: () => (value: string) => value,
+  useT: () => translation.t,
+  useTranslation: () => translation,
 }));
 
 describe("FeatureGate", () => {
   beforeEach(() => {
     mockUseFeatures.mockClear();
+    translation.locale = "en";
+    translation.t.mockReset().mockImplementation((value: string) => value);
   });
 
   it("names only plans configured for workshop access and does not offer a Pro trial", () => {
@@ -60,5 +68,20 @@ describe("FeatureGate", () => {
     expect(screen.getByRole("link", { name: "View plans" }).getAttribute("href")).toBe(
       "/dashboard/shop/billing?tab=upgrade",
     );
+  });
+
+  it("translates the Workshop access wall without translating configured plan names", () => {
+    translation.locale = "ne";
+    translation.t.mockImplementation((value: string) => `translated:${value}`);
+    render(
+      <FeatureGate feature="workshopManufacturing" featureLabel="Workshop manufacturing" hasFeature={() => false} planName="Free (India)">
+        <div>Workshop</div>
+      </FeatureGate>,
+    );
+    expect(screen.getByText(/translated:is not available on your plan/)).toBeTruthy();
+    expect(screen.getByText(/translated:plan does not include/)).toBeTruthy();
+    for (const name of ["Free (India)", "Pro+ (India)", "Enterprise (India)"]) {
+      expect(translation.t).not.toHaveBeenCalledWith(name);
+    }
   });
 });

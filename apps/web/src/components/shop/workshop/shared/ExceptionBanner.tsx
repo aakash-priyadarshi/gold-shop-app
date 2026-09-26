@@ -4,13 +4,14 @@ import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ShieldAlert } fro
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 export type ExceptionSeverity = "CRITICAL" | "WARNING" | "INFO";
 
 export interface WorkshopException {
   id: string;
   title: string;
-  description: string;
+  description: ReactNode;
   severity: ExceptionSeverity;
   category: "TRANSFER" | "PROCESS" | "RECOVERY" | "SCALE" | "QC" | "OVERRIDE" | "RECEIPT";
   actionHref?: string;
@@ -89,8 +90,8 @@ export function ExceptionBanner({ exceptions }: ExceptionBannerProps) {
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold">{exc.title}</div>
-                  <div className="text-xs opacity-90 mt-0.5">{exc.description}</div>
+                  <div className="text-xs font-semibold"><T>{exc.title}</T></div>
+                  <div className="text-xs opacity-90 mt-0.5">{typeof exc.description === "string" ? <T>{exc.description}</T> : exc.description}</div>
                 </div>
               </div>
 

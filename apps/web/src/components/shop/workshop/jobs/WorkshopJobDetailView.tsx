@@ -106,7 +106,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
       setChildQuantity("1");
       loadJobData();
     } catch (err: any) {
-      setChildError(err?.response?.data?.message || err?.message || t("Unable to create batch child"));
+      setChildError(err?.response?.data?.message || err?.message || "Unable to create batch child");
     } finally {
       setChildSubmitting(false);
     }
@@ -187,7 +187,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                   }
                   className="font-mono text-xs capitalize"
                 >
-                  {job.status}
+                  <T>{job.status}</T>
                 </Badge>
                 {job.inventoryItemId && (
                   <Badge variant="outline" className="border-emerald-500 text-emerald-600 text-xs">
@@ -212,7 +212,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                     : "text-amber-600 dark:text-amber-400"
                 }`}
               >
-                {reconciliation?.reconciliationState || "PENDING"}
+                <T>{reconciliation?.reconciliationState || "PENDING"}</T>
               </span>
             </div>
           </div>
@@ -390,14 +390,14 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                       </div>
                       <div>
                         <div className="font-semibold text-foreground text-xs">
-                          {step.definition?.name || `Process Step #${idx + 1}`}
+                          {step.definition?.name || <><T>Process Step #</T>{idx + 1}</>}
                           {step.definition?.department && (
                             <span className="text-muted-foreground font-normal"> · {step.definition.department}</span>
                           )}
                         </div>
                         {stepRuns.length > 0 && (
                           <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                            {stepRuns.length} <T>run(s) · Last status:</T> {stepRuns[0].status}
+                            {stepRuns.length} <T>run(s) · Last status:</T> <T>{stepRuns[0].status}</T>
                           </div>
                         )}
                         {step.reason && (
@@ -413,7 +413,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                         variant={isDone ? "default" : isStarted ? "secondary" : "outline"}
                         className="text-[10px] font-mono capitalize"
                       >
-                        {step.status}
+                        <T>{step.status}</T>
                       </Badge>
                     </div>
                   </div>
@@ -460,12 +460,12 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                 <div key={child.id} className="rounded-xl border p-3 bg-muted/20 text-xs space-y-1">
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="text-[10px]">
-                      {child.kind}
+                      <T>{child.kind}</T>
                     </Badge>
                     <span className="font-mono text-muted-foreground"><T>Qty:</T> {child.quantity}</span>
                   </div>
                   <div className="font-semibold text-foreground truncate mt-1">
-                    {child.label}
+                    {/* i18n-user-content: operator-entered batch child label */ child.label}
                   </div>
                 </div>
               ))}
@@ -534,7 +534,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
               )}
             </div>
 
-            {childError && <p role="alert" className="text-xs text-destructive">{childError}</p>}
+            {childError && <p role="alert" className="text-xs text-destructive"><T>{childError}</T></p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={() => setShowChildModal(false)}>
                 <T>Cancel</T>

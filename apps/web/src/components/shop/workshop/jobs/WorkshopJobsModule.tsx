@@ -239,7 +239,7 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
                             variant={isDone ? "default" : isQc ? "secondary" : "outline"}
                             className="text-[10px] capitalize font-mono"
                           >
-                            {job.status}
+                            <T>{job.status}</T>
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">

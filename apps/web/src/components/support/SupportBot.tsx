@@ -26,6 +26,7 @@ import { useT } from "@/providers/translation-provider";
 import { Mail, MessageCircle, Pencil, Phone, Send, Sparkles, X } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SupportMessageMarkdown } from "./SupportMessageMarkdown";
 
 const SUPPORT = {
   name: "Support",
@@ -43,6 +44,7 @@ type Message = {
   id: string;
   from: "bot" | "user";
   text: string;
+  interrupted?: boolean;
   cta?: { label: string; href: string }[];
 };
 
@@ -179,7 +181,12 @@ const WELCOME_MSG_PUBLIC: Message = {
 const DEFAULT_BOT_NAME_DESKTOP = "Orivraa AI Assistant";
 const DEFAULT_BOT_NAME_MOBILE = "Orivraa Mobile Assistant";
 
+function greetingName(name?: string): string | undefined {
+  return name?.trim().split(/\s+/)[0] || undefined;
+}
+
 function makePublicWelcome(botName?: string, userName?: string): Message {
+  userName = greetingName(userName);
   const who = userName ? `, ${userName}` : "";
   const intro = botName
     ? `I'm ${botName}, your Orivraa AI assistant.`
@@ -196,6 +203,7 @@ function botIntro(botName?: string, fallback = "I"): string {
 }
 
 function makeAdminWelcome(firstName?: string, botName?: string): Message {
+  firstName = greetingName(firstName);
   const who = firstName ? `, ${firstName}` : "";
   const intro = botName
     ? `I'm ${botName}, your Orivraa ops co-pilot.`
@@ -208,6 +216,7 @@ function makeAdminWelcome(firstName?: string, botName?: string): Message {
 }
 
 function makeCustomerWelcome(firstName?: string, botName?: string): Message {
+  firstName = greetingName(firstName);
   const who = firstName ? `, ${firstName}` : "";
   const intro = botName
     ? `I'm ${botName}, your Orivraa assistant.`
@@ -220,6 +229,7 @@ function makeCustomerWelcome(firstName?: string, botName?: string): Message {
 }
 
 function makeSellerWelcome(shopName?: string, firstName?: string, botName?: string): Message {
+  firstName = greetingName(firstName);
   const nameStr = firstName && shopName 
     ? `${firstName} from ${shopName}` 
     : firstName 
@@ -235,6 +245,7 @@ function makeSellerWelcome(shopName?: string, firstName?: string, botName?: stri
 }
 
 function makeMobileWelcome(shopName?: string, firstName?: string, botName?: string): Message {
+  firstName = greetingName(firstName);
   const nameStr = firstName && shopName 
     ? `${firstName} from ${shopName}` 
     : firstName 
@@ -319,46 +330,6 @@ function parseTextWithT(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
-function renderMessageContent(text: string) {
-  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
-    }
-    const label = match[1];
-    const href = match[2];
-    const isExternal = /^https?:/.test(href);
-
-    parts.push(
-      <a
-        key={match.index}
-        href={href}
-        target={isExternal ? "_blank" : undefined}
-        rel={isExternal ? "noopener noreferrer" : undefined}
-        className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 underline font-semibold transition-colors"
-      >
-        {label}
-      </a>
-    );
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
-  }
-
-  return parts.map((part, idx) => {
-    if (typeof part === "string") {
-      return parseTextWithT(part);
-    }
-    return part;
-  });
-}
-
 export function SupportBot() {
   const t = useT();
   const pathname = usePathname();
@@ -390,8 +361,20 @@ export function SupportBot() {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   // For logged-in sellers we already know their name; guests use the saved one.
-  const userDisplayName = user?.firstName || guestName || undefined;
+  const userDisplayName = greetingName(user?.firstName || guestName);
   const headerTitle = botName || (isMobile ? DEFAULT_BOT_NAME_MOBILE : DEFAULT_BOT_NAME_DESKTOP);
+  // Only locally constructed welcomes may use the legacy <T> string markers.
+  // Reconstruct these on render rather than trusting saved message contents.
+  const welcomeMessage = useMemo(() => {
+    if (isSellerLoggedIn) {
+      return isMobile
+        ? makeMobileWelcome(shopName, user?.firstName, botName)
+        : makeSellerWelcome(shopName, user?.firstName, botName);
+    }
+    if (isAdmin) return makeAdminWelcome(user?.firstName, botName);
+    if (isCustomerLoggedIn) return makeCustomerWelcome(user?.firstName, botName);
+    return makePublicWelcome(botName, guestName);
+  }, [isSellerLoggedIn, isMobile, isAdmin, isCustomerLoggedIn, shopName, user?.firstName, botName, guestName]);
   
   const { isChatDismissed, dismissChat, isChatShaking } = useHelpUIStore();
   const dashboardMode = usePreferencesStore((s) => s.dashboardMode);
@@ -723,7 +706,7 @@ export function SupportBot() {
     let effectiveUserName = userDisplayName;
     if (!isSellerLoggedIn) {
       const nameMatch = text.match(/\b(?:my name is|i am|i'm|im|call me)\s+([a-z][a-z .'-]{1,38})/i);
-      const captured = nameMatch?.[1]?.trim().replace(/[.'\s-]+$/, "");
+      const captured = greetingName(nameMatch?.[1]?.trim().replace(/[.'\s-]+$/, ""));
       if (captured && captured.toLowerCase() !== (guestName || "").toLowerCase()) {
         setGuestName(captured);
         writeLocalString(STORAGE_USER_NAME, captured);
@@ -748,7 +731,7 @@ export function SupportBot() {
         : user
         ? "/tickets/assistant-chat"
         : "/tickets/ai-chat";
-      const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number }>(
+      const res = await api.post<{ reply: string; shouldEscalate: boolean; confidence: number; interrupted?: boolean }>(
         endpoint,
         { 
           message: text, 
@@ -759,12 +742,14 @@ export function SupportBot() {
           botName: botName || undefined,
           userName: effectiveUserName || undefined,
         },
+        { timeout: 90_000 },
       );
 
       const botMsg: Message = {
         id: `${Date.now()}-b`,
         from: "bot",
         text: res.data.reply,
+        interrupted: res.data.interrupted,
         cta: res.data.shouldEscalate ? ESCALATION_CTA : undefined,
       };
       setMessages((m) => [...m, botMsg]);
@@ -1385,20 +1370,31 @@ export function SupportBot() {
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gradient-to-b from-amber-50/15 via-white to-amber-50/10 dark:from-amber-950/5 dark:via-gray-950 dark:to-amber-950/5 custom-scrollbar">
+          <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-gradient-to-b from-amber-50/15 via-white to-amber-50/10 dark:from-amber-950/5 dark:via-gray-950 dark:to-amber-950/5 custom-scrollbar">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed transition-all ${
+                  className={`min-w-0 max-w-[85%] [overflow-wrap:anywhere] rounded-2xl px-3.5 py-2 text-sm leading-relaxed transition-all ${
                     m.from === "user"
                       ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-br-sm shadow-md shadow-amber-500/10"
                       : "bg-white/95 dark:bg-gray-800/95 text-gray-800 dark:text-gray-100 border border-amber-100/50 dark:border-amber-950/30 rounded-bl-sm shadow-[0_2px_8px_rgba(0,0,0,0.02)] backdrop-blur-sm"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{renderMessageContent(m.text)}</p>
+                  {m.from === "user" ? (
+                    <p className="whitespace-pre-wrap">{m.text}</p>
+                  ) : m.id === "welcome" ? (
+                    <p className="whitespace-pre-wrap">{parseTextWithT(welcomeMessage.text)}</p>
+                  ) : (
+                    <SupportMessageMarkdown text={m.text} />
+                  )}
+                  {m.from === "bot" && m.interrupted && (
+                    <p role="status" className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-300">
+                      <T>Response was interrupted before completion. Please retry.</T>
+                    </p>
+                  )}
                   {m.cta && m.cta.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {m.cta.map((c) => {

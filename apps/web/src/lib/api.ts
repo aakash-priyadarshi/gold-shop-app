@@ -1833,8 +1833,9 @@ export const ticketsApi = {
   // AI chatbot (public, no auth)
   aiChat: (data: {
     message: string;
+    sessionId: string;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
-  }) => api.post("/tickets/ai-chat", data),
+  }) => api.post<{ reply: string; interrupted?: boolean; shouldEscalate: boolean; confidence: number }>("/tickets/ai-chat", data, { timeout: 90_000 }),
   // Admin — bot session history
   getBotSessions: (page = 1, limit = 20) =>
     api.get("/tickets/ai-chat/sessions", { params: { page, limit } }),

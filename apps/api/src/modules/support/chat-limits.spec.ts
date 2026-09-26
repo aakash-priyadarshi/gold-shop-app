@@ -96,4 +96,42 @@ describe("chat-limits", () => {
     expect(out).toHaveLength(4);
     expect(out[0].content.endsWith("…")).toBe(true);
   });
+
+  it("keeps the newest complete entries within the configured public history budget", () => {
+    const limits = CHAT_LIMITS.public;
+    expect(limits.maxHistoryChars).toBe(12000);
+    const history = Array.from({ length: limits.maxHistory }, (_, i) => ({
+      role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+      content: String(i).repeat(limits.historyItemChars),
+    }));
+    const out = sanitizeHistory(history, limits.maxHistory, limits.historyItemChars, limits.maxHistoryChars);
+    expect(out).toEqual(history.slice(-2));
+    expect(out.reduce((sum, item) => sum + item.content.length, 0)).toBe(limits.maxHistoryChars);
+    expect(history).toHaveLength(limits.maxHistory);
+    expect(history[0].content).toHaveLength(limits.historyItemChars);
+  });
+
+  it.each([14, 13])("preserves per-item/count limits and counts ellipses toward a %i-character budget", (budget) => {
+    const history: Array<{ role: "user" | "assistant"; content: string }> = [
+      { role: "user", content: "old" },
+      { role: "assistant", content: "x".repeat(50) },
+      { role: "user", content: "new" },
+    ];
+    const out = sanitizeHistory(history, 2, 10, budget);
+    expect(out).toEqual(budget === 14 ? [
+      { role: "assistant", content: `${"x".repeat(10)}…` },
+      history[2],
+    ] : [history[2]]);
+    expect(out.reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(budget);
+    expect(history[1].content).toHaveLength(50);
+  });
+
+  it("does not fill the budget with older entries past a dropped item", () => {
+    const history: Array<{ role: "user" | "assistant"; content: string }> = [
+      { role: "user", content: "old" },
+      { role: "assistant", content: "longer answer" },
+      { role: "user", content: "new" },
+    ];
+    expect(sanitizeHistory(history, 3, 50, 6)).toEqual([history[2]]);
+  });
 });

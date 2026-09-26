@@ -21,7 +21,7 @@ export function WorkshopReportView({ report }: { report: any }) {
   if (report?.treeId && report?.actualInputsByMaterial) {
     const materials = new Set([...keys(report.actualInputsByMaterial), ...keys(report.recommendedInputsByMaterial)]);
     const balances = Object.entries(report.balancesByMaterial ?? {}).flatMap(([material, buckets]) =>
-      Object.entries((buckets ?? {}) as Record<string, unknown>).map(([bucket, value]) => [material, bucket, grams(value)]));
+      Object.entries((buckets ?? {}) as Record<string, unknown>).map(([bucket, value]) => [material, t(bucket), grams(value)]));
     return <section className="space-y-3 rounded border p-3 text-sm" aria-label={t("Batch reconciliation report")}>
       <h3 className="font-semibold"><T>Batch reconciliation</T> · {report.treeId}</h3>
       <p><T>Status</T>: {t(String(report.reconciliationState).replaceAll("_", " "))} · <T>CAD theoretical</T>: {grams(report.theoreticalCadGrams)} · <T>Actual material input</T>: {grams(report.actualInputGrams)}</p>
@@ -40,18 +40,18 @@ export function WorkshopReportView({ report }: { report: any }) {
   if (report?.materialStock) {
     return <section className="space-y-4 rounded border p-3 text-sm" aria-label={t("Workshop management report")}>
       <h3 className="font-semibold"><T>Workshop management report</T></h3>
-      <div><h4 className="mb-1 font-medium"><T>Material stock</T></h4><ReportTable headings={["Material", "Location / state", "Balance"]} values={rows(report.materialStock).filter((item) => item.balanceGrams !== "0.000000").map((item) => [item.materialKey, `${item.bucket}${item.scopeId ? ` · ${String(item.scopeId).slice(0, 8)}` : ""}`, grams(item.balanceGrams)])} /></div>
+      <div><h4 className="mb-1 font-medium"><T>Material stock</T></h4><ReportTable headings={["Material", "Location / state", "Balance"]} values={rows(report.materialStock).filter((item) => item.balanceGrams !== "0.000000").map((item) => [item.materialKey, `${t(item.bucket)}${item.scopeId ? ` · ${String(item.scopeId).slice(0, 8)}` : ""}`, grams(item.balanceGrams)])} /></div>
       <div><h4 className="mb-1 font-medium"><T>Process variance</T></h4><ReportTable headings={["Process / product", "Machine / operator", "Material", "Classified variance"]} values={rows(report.processVariance).map((item) => [
         `${item.process?.definition?.name ?? item.processRunId ?? "—"} · ${item.process?.job?.product ?? "—"}`,
         `${item.process?.workstation?.name ?? "—"} · ${item.process?.operatorUserId ?? "—"}`,
         item.materialKey, grams(item.weightGrams),
       ])} /></div>
       <div><h4 className="mb-1 font-medium"><T>Transfer variance</T></h4><ReportTable headings={["Departments", "Dispatch", "Receive", "Difference / status"]} values={rows(report.transferVariance).map((item) => [
-        `${item.fromDepartment} → ${item.toDepartment}`, grams(item.dispatchGrams), grams(item.receiveGrams), `${grams(item.differenceGrams)} · ${item.status}`,
+        `${item.fromDepartment} → ${item.toDepartment}`, grams(item.dispatchGrams), grams(item.receiveGrams), `${grams(item.differenceGrams)} · ${t(item.status)}`,
       ])} /></div>
-      <div><h4 className="mb-1 font-medium"><T>Recovery bags</T></h4><ReportTable headings={["Bag", "Material", "Pending", "Status"]} values={rows(report.recovery).map((item) => [item.code, item.materialKey, grams(item.expectedBalanceGrams), item.status])} /></div>
+      <div><h4 className="mb-1 font-medium"><T>Recovery bags</T></h4><ReportTable headings={["Bag", "Material", "Pending", "Status"]} values={rows(report.recovery).map((item) => [item.code, item.materialKey, grams(item.expectedBalanceGrams), t(item.status)])} /></div>
       <div><h4 className="mb-1 font-medium"><T>Scale audit</T></h4><ReportTable headings={["Captured", "Device / method", "Weight", "Operator / journal"]} values={rows(report.scaleAudit).map((item) => [
-        item.capturedAt, `${item.deviceName} · ${item.adapterKind}`, grams(item.weightGrams), `${item.actorUserId ?? "—"} · ${item.journalId ?? "unposted"}`,
+        item.capturedAt, `${item.deviceName} · ${t(item.adapterKind)}`, grams(item.weightGrams), `${item.actorUserId ?? "—"} · ${item.journalId ?? t("unposted")}`,
       ])} /></div>
       <p><T>Corrections and manual openings</T>: {rows(report.correctionHistory).length} · <T>Finished inventory receipts</T>: {rows(report.finishedGoods).length}</p>
     </section>;

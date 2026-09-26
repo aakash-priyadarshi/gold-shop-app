@@ -104,7 +104,7 @@ export function WorkshopCreateJobDialog({
   const handleQuickAddKarigar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newArtisanName.trim() || !newWorkshopName.trim()) {
-      setKarigarError(t("Please fill in both artisan and workshop names."));
+      setKarigarError("Please fill in both artisan and workshop names.");
       return;
     }
     setSavingKarigar(true);
@@ -125,7 +125,7 @@ export function WorkshopCreateJobDialog({
       setNewArtisanName("");
       setNewWorkshopName("");
     } catch (err: any) {
-      setKarigarError(err?.response?.data?.message || err?.message || t("Could not save karigar."));
+      setKarigarError(err?.response?.data?.message || err?.message || "Could not save karigar.");
     } finally {
       setSavingKarigar(false);
     }
@@ -134,17 +134,17 @@ export function WorkshopCreateJobDialog({
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product.trim()) {
-      setError(t("Please enter a product or design name."));
+      setError("Please enter a product or design name.");
       return;
     }
     if (!workshopId) {
-      setError(t("Please select a karigar or workshop."));
+      setError("Please select a karigar or workshop.");
       return;
     }
 
     const selectedWs = workshops.find((w) => w.id === workshopId);
     if (!selectedWs) {
-      setError(t("Selected karigar not found."));
+      setError("Selected karigar not found.");
       return;
     }
 
@@ -184,7 +184,7 @@ export function WorkshopCreateJobDialog({
         setDueAt("");
       }, 900);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || t("Failed to create manufacturing job."));
+      setError(err?.response?.data?.message || err?.message || "Failed to create manufacturing job.");
     } finally {
       setSubmitting(false);
     }
@@ -220,7 +220,7 @@ export function WorkshopCreateJobDialog({
             {error && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{error}</span>
+                <span><T>{error}</T></span>
               </div>
             )}
 
@@ -275,7 +275,7 @@ export function WorkshopCreateJobDialog({
                       <T>Quick Add Karigar</T>
                     </div>
                     {karigarError && (
-                      <p className="text-[11px] text-destructive">{karigarError}</p>
+                      <p className="text-[11px] text-destructive"><T>{karigarError}</T></p>
                     )}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
@@ -339,7 +339,7 @@ export function WorkshopCreateJobDialog({
 
                 {isAddingKarigar && (
                   <div className="rounded-lg border bg-muted/30 p-2.5 space-y-2 mb-2">
-                    {karigarError && <p className="text-[11px] text-destructive">{karigarError}</p>}
+                    {karigarError && <p className="text-[11px] text-destructive"><T>{karigarError}</T></p>}
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         value={newArtisanName}

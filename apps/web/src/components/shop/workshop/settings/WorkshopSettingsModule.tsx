@@ -177,7 +177,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
           weight: res.weightGrams,
         });
     } catch (err: any) {
-      alert(err?.message || "Scale test failed");
+      alert(t(err?.message || "Scale test failed"));
     } finally {
       setTestingScale(false);
     }
@@ -201,7 +201,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
       setScaleName("");
       loadCatalog();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to register scale");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to register scale"));
     }
   };
 
@@ -223,7 +223,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
       setMatPurity("0.995");
       loadCatalog();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to create material");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to create material"));
     }
   };
 
@@ -250,7 +250,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
       setRecipeName("");
       loadCatalog();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to save recipe");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to save recipe"));
     }
   };
 
@@ -286,11 +286,11 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
         canCapture: staffCanCapture,
         canApprove: staffCanApprove,
       });
-      setStaffNotice(t("Staff invitation sent successfully"));
+      setStaffNotice("Staff invitation sent successfully");
       setStaffEmail("");
       setTimeout(() => setStaffNotice(null), 3500);
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to invite staff");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to invite staff"));
     } finally {
       setInvitingStaff(false);
     }
@@ -305,7 +305,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
         window.dispatchEvent(new CustomEvent("workshop-catalog-updated"));
       }
     } catch (err: any) {
-      setSettingsError(err?.response?.data?.message || err?.message || t("Unable to save workshop setting"));
+      setSettingsError(err?.response?.data?.message || err?.message || "Unable to save workshop setting");
     }
   };
 
@@ -389,11 +389,11 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-foreground">{dev.name}</span>
                       <Badge variant="outline" className="text-[10px] font-mono">
-                        {dev.purpose} ({dev.purpose === "GOLD" ? "0.01g" : "0.001g"})
+                        <T>{dev.purpose}</T> ({dev.purpose === "GOLD" ? "0.01g" : "0.001g"})
                       </Badge>
                     </div>
                     <div className="text-muted-foreground font-mono text-[11px] space-y-0.5">
-                      <div><T>Adapter:</T> {dev.adapterKind}</div>
+                      <div><T>Adapter:</T> <T>{dev.adapterKind}</T></div>
                       {dev.profile?.transport?.port && dev.adapterKind === "SERIAL" && <div><T>Port:</T> {dev.profile.transport.port} · <T>Baud:</T> {dev.profile.transport.baudRate}</div>}
                       {dev.profile?.transport?.host && <div><T>Host:</T> {dev.profile.transport.host}:{dev.profile.transport.port}</div>}
                     </div>
@@ -436,11 +436,11 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-foreground">{mat.name}</span>
                     <Badge variant="outline" className="text-[10px] font-mono">
-                      {mat.scalePurpose}
+                      <T>{mat.scalePurpose}</T>
                     </Badge>
                   </div>
                   <div className="text-[11px] font-mono text-muted-foreground">
-                    <T>Key:</T> {mat.key} · <T>Kind:</T> {mat.kind}
+                    <T>Key:</T> {mat.key} · <T>Kind:</T> <T>{mat.kind}</T>
                   </div>
                   {mat.theoreticalPurity && (
                     <div className="text-[11px] font-mono text-amber-600 font-semibold">
@@ -505,7 +505,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
         </Card>
       )}
 
-      {settingsError && <p role="alert" className="text-xs text-destructive">{settingsError}</p>}
+      {settingsError && <p role="alert" className="text-xs text-destructive"><T>{settingsError}</T></p>}
 
       {activeTab === "PROCESSES" && (
         <Card data-tour="workshop-settings-processes"><CardHeader><CardTitle><T>Manufacturing processes</T></CardTitle></CardHeader><CardContent className="space-y-3">
@@ -642,6 +642,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                                   variant="ghost"
                                   className="h-6 w-6"
                                   disabled={idx === 0}
+                                  aria-label={t("Move step up")}
                                   onClick={() => {
                                     setRouteDefinitionIds((prev) => {
                                       const next = [...prev];
@@ -660,6 +661,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                                   variant="ghost"
                                   className="h-6 w-6"
                                   disabled={idx === routeDefinitionIds.length - 1}
+                                  aria-label={t("Move step down")}
                                   onClick={() => {
                                     setRouteDefinitionIds((prev) => {
                                       const next = [...prev];
@@ -677,6 +679,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                                   size="icon"
                                   variant="ghost"
                                   className="h-6 w-6 text-destructive hover:text-destructive"
+                                  aria-label={t("Remove step")}
                                   onClick={() => {
                                     setRouteDefinitionIds((prev) => prev.filter((_, i) => i !== idx));
                                   }}
@@ -727,9 +730,9 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
 
       {activeTab === "TOLERANCES" && (
         <Card data-tour="workshop-settings-tolerances"><CardHeader><CardTitle><T>Movement tolerances</T></CardTitle></CardHeader><CardContent className="space-y-3">
-          {catalog?.tolerances.map((rule) => <div key={rule.id} className="text-xs border-b py-2">{rule.movementKind} · {rule.materialKey || rule.scalePurpose} · {rule.maxDifferenceGrams} g · {rule.policy}</div>)}
+          {catalog?.tolerances.map((rule) => <div key={rule.id} className="text-xs border-b py-2"><T>{rule.movementKind}</T> · {rule.materialKey || <T>{rule.scalePurpose}</T>} · {rule.maxDifferenceGrams} g · <T>{rule.policy}</T></div>)}
           {canApprove && <div className="grid gap-2 sm:grid-cols-3">
-            <select value={toleranceKind} onChange={(e) => setToleranceKind(e.target.value)} className="rounded-md border bg-background p-2 text-xs">{["TRANSFER_RECEIPT", "PROCESS_OUTPUT", "RECOVERY_RESULT", "FINISHED_RECEIPT", "STONE_SETTING", "STONE_RETURN"].map((kind) => <option key={kind} value={kind}>{kind}</option>)}</select>
+            <select value={toleranceKind} onChange={(e) => setToleranceKind(e.target.value)} className="rounded-md border bg-background p-2 text-xs">{["TRANSFER_RECEIPT", "PROCESS_OUTPUT", "RECOVERY_RESULT", "FINISHED_RECEIPT", "STONE_SETTING", "STONE_RETURN"].map((kind) => <option key={kind} value={kind}>{t(kind)}</option>)}</select>
             <select value={tolerancePurpose} onChange={(e) => { setTolerancePurpose(e.target.value as "GOLD" | "STONE"); setToleranceMaterialKey(""); }} className="rounded-md border bg-background p-2 text-xs"><option value="GOLD"><T>Gold scale</T></option><option value="STONE"><T>Stone scale</T></option></select>
             <select value={toleranceDefinitionId} onChange={(e) => setToleranceDefinitionId(e.target.value)} className="rounded-md border bg-background p-2 text-xs"><option value=""><T>All processes</T></option>{catalog?.processes.filter((process) => process.isActive).map((process) => <option key={process.id} value={process.id}>{process.name}</option>)}</select>
             <select value={toleranceMaterialKey} onChange={(e) => setToleranceMaterialKey(e.target.value)} className="rounded-md border bg-background p-2 text-xs"><option value=""><T>All materials of scale type</T></option>{catalog?.materials.filter((m) => m.isActive && m.scalePurpose === tolerancePurpose).map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}</select>
@@ -758,7 +761,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <Label className="text-xs font-semibold block"><T>Invite Staff Member</T></Label>
                 <div className="space-y-2">
                   <Input
-                    placeholder={t("operator@workshop.com")}
+                    placeholder="operator@workshop.com"
                     value={staffEmail}
                     onChange={(e) => setStaffEmail(e.target.value)}
                     className="text-xs"
@@ -798,7 +801,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 {staffNotice && (
                   <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>{staffNotice}</span>
+                    <span><T>{staffNotice}</T></span>
                   </div>
                 )}
               </div>
@@ -896,7 +899,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     <div className="flex justify-between">
                       <span className="text-muted-foreground"><T>Status:</T></span>
                       <span className={testResult.stable ? "text-emerald-600 font-bold" : "text-amber-600"}>
-                        {testResult.stable ? "STABLE" : "UNSTABLE"}
+                        <T>{testResult.stable ? "STABLE" : "UNSTABLE"}</T>
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1129,6 +1132,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-rose-500"
+                        aria-label={t("Remove component")}
                         onClick={() => {
                           const updated = recipeComponents.filter((_, i) => i !== idx);
                           setRecipeComponents(updated);

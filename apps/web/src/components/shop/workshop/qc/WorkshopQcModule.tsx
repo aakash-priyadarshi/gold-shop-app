@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -74,20 +74,20 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
   // Compute QC blocker diagnostics for each job
   const getBlockersForJob = useCallback(
     (job: WorkshopJob) => {
-      const blockers: string[] = [];
+      const blockers: ReactNode[] = [];
 
       const openRuns = (job.workshopProcessRuns || []).filter((r) => r.status !== "RECONCILED");
       if ((job.workshopProcessRuns || []).length === 0) {
-        blockers.push(t("No process runs recorded for this fabrication order"));
+        blockers.push(<T>No process runs recorded for this fabrication order</T>);
       } else if (openRuns.length > 0) {
-        blockers.push(`${openRuns.length} open/unreconciled process run(s)`);
+        blockers.push(<>{openRuns.length} <T>open/unreconciled process run(s)</T></>);
       }
 
       const pendingSteps = (job.workshopRouteSteps || []).filter(
         (s) => !["DONE", "SKIPPED"].includes(s.status)
       );
       if (pendingSteps.length > 0) {
-        blockers.push(`${pendingSteps.length} unresolved route step(s) pending`);
+        blockers.push(<>{pendingSteps.length} <T>unresolved route step(s) pending</T></>);
       }
 
       const jobTransfers = transfers.filter(
@@ -97,22 +97,22 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
         (tr) => !["RECONCILED", "CANCELLED"].includes(tr.status)
       );
       if (pendingTransfers.length > 0) {
-        blockers.push(`${pendingTransfers.length} inter-department transfer(s) awaiting receipt`);
+        blockers.push(<>{pendingTransfers.length} <T>inter-department transfer(s) awaiting receipt</T></>);
       }
 
       return blockers;
     },
-    [transfers, t]
+    [transfers]
   );
 
   const handleExecuteQc = async () => {
     if (!selectedJob) return;
     if (qcAction === "APPROVED" && getBlockersForJob(selectedJob).length > 0) {
-      setQcError(t("Reconcile all process runs, route steps and transfers before QC approval"));
+      setQcError("Reconcile all process runs, route steps and transfers before QC approval");
       return;
     }
     if (qcAction !== "APPROVED" && !qcReason.trim()) {
-      setQcError(t("Rework or rejection requires an explicit reason"));
+      setQcError("Rework or rejection requires an explicit reason");
       return;
     }
 
@@ -134,7 +134,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
       }
     } catch (err: any) {
       setQcError(
-        err?.response?.data?.message || err?.message || t("QC inspection failed")
+        err?.response?.data?.message || err?.message || "QC inspection failed"
       );
     } finally {
       setSubmittingQc(false);
@@ -230,7 +230,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
                         variant={canApproveJob ? "default" : "outline"}
                         className="text-[10px] font-mono capitalize"
                       >
-                        {job.status}
+                        <T>{job.status}</T>
                       </Badge>
                     </div>
 
@@ -363,7 +363,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
               {qcError && (
                 <div className="rounded-md bg-destructive/10 border border-destructive/20 p-2 text-xs text-destructive flex items-start gap-1.5">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>{qcError}</span>
+                  <span><T>{qcError}</T></span>
                 </div>
               )}
             </div>

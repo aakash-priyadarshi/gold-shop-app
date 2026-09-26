@@ -195,13 +195,12 @@ export function KarigarAccountDrawer({
       setStatementData(stmtRes.data);
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          t("Failed to load karigar account data"),
+        String(err.response?.data?.message || "Failed to load karigar account data"),
       );
     } finally {
       setLoading(false);
     }
-  }, [workshopId, statementFilter, t]);
+  }, [workshopId, statementFilter]);
 
   useEffect(() => {
     loadData();
@@ -269,29 +268,29 @@ export function KarigarAccountDrawer({
       const items = await fetchAllStatementItems();
       if (items.length === 0) return;
       const headers = [
-        "Date",
-        "Kind",
-        "Event Type",
-        "Job / Material",
-        "Quantity (g)",
-        `Amount (${currency})`,
-        "Method",
-        "Reference",
-        "Note",
+        t("Date"),
+        t("Kind"),
+        t("Event Type"),
+        t("Job / Material"),
+        t("Quantity (g)"),
+        `${t("Amount")} (${currency})`,
+        t("Method"),
+        t("Reference"),
+        t("Note"),
       ];
       const rows = items.map((it: any) => [
         sanitizeCsvCell(format(new Date(it.createdAt), "yyyy-MM-dd HH:mm")),
-        sanitizeCsvCell(it.kind),
-        sanitizeCsvCell(it.eventType),
+        sanitizeCsvCell(t(it.kind)),
+        sanitizeCsvCell(t(it.eventType.replace(/_/g, " "))),
         sanitizeCsvCell(it.jobProduct || it.metalKey || ""),
         it.quantity != null ? String(it.quantity) : "",
         it.amount != null ? String(it.amount) : "",
-        sanitizeCsvCell(it.paymentMethod || ""),
+        sanitizeCsvCell(it.paymentMethod ? t(it.paymentMethod.replace(/_/g, " ")) : ""),
         sanitizeCsvCell(it.reference || ""),
         sanitizeCsvCell(it.note || ""),
       ]);
       const csvContent =
-        [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
+        [headers.map(sanitizeCsvCell).join(","), ...rows.map((r: any) => r.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -306,7 +305,7 @@ export function KarigarAccountDrawer({
       URL.revokeObjectURL(url);
     } catch (err: any) {
       setActionError(
-        err.response?.data?.message || t("Failed to export statement"),
+        String(err.response?.data?.message || "Failed to export statement"),
       );
     } finally {
       setActionLoading(false);
@@ -321,8 +320,7 @@ export function KarigarAccountDrawer({
       setShowPrintModal(true);
     } catch (err: any) {
       setActionError(
-        err.response?.data?.message ||
-          t("Failed to prepare statement for printing"),
+        String(err.response?.data?.message || "Failed to prepare statement for printing"),
       );
     } finally {
       setActionLoading(false);
@@ -334,12 +332,12 @@ export function KarigarAccountDrawer({
     e.preventDefault();
     const amountNum = parseFloat(payAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setActionError(t("Please enter a valid positive payment amount"));
+      setActionError("Please enter a valid positive payment amount");
       return;
     }
     if (payMethod === "OTHER" && !payRef.trim() && !payNote.trim()) {
       setActionError(
-        t("Reference or note is required for Other payment method"),
+        "Reference or note is required for Other payment method",
       );
       return;
     }
@@ -370,13 +368,13 @@ export function KarigarAccountDrawer({
         note: payNote || undefined,
         idempotencyKey: keyToUse,
       });
-      setActionSuccess(t("Settlement payment recorded successfully"));
+      setActionSuccess("Settlement payment recorded successfully");
       handleClosePayModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
       setActionError(
-        err.response?.data?.message || t("Failed to record payment"),
+        String(err.response?.data?.message || "Failed to record payment"),
       );
     } finally {
       setActionLoading(false);
@@ -388,12 +386,12 @@ export function KarigarAccountDrawer({
     e.preventDefault();
     const amountNum = parseFloat(advAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setActionError(t("Please enter a valid positive advance amount"));
+      setActionError("Please enter a valid positive advance amount");
       return;
     }
     if (advMethod === "OTHER" && !advRef.trim() && !advNote.trim()) {
       setActionError(
-        t("Reference or note is required for Other payment method"),
+        "Reference or note is required for Other payment method",
       );
       return;
     }
@@ -424,13 +422,13 @@ export function KarigarAccountDrawer({
         note: advNote || undefined,
         idempotencyKey: keyToUse,
       });
-      setActionSuccess(t("Advance payment recorded successfully"));
+      setActionSuccess("Advance payment recorded successfully");
       handleCloseAdvanceModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
       setActionError(
-        err.response?.data?.message || t("Failed to record advance"),
+        String(err.response?.data?.message || "Failed to record advance"),
       );
     } finally {
       setActionLoading(false);
@@ -442,7 +440,7 @@ export function KarigarAccountDrawer({
     e.preventDefault();
     const weightNum = parseFloat(retWeight);
     if (isNaN(weightNum) || weightNum <= 0) {
-      setActionError(t("Please enter a valid positive weight"));
+      setActionError("Please enter a valid positive weight");
       return;
     }
 
@@ -474,13 +472,13 @@ export function KarigarAccountDrawer({
         note: retNote || undefined,
         idempotencyKey: keyToUse,
       });
-      setActionSuccess(t("Metal return reconciled successfully"));
+      setActionSuccess("Metal return reconciled successfully");
       handleCloseReturnModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
       setActionError(
-        err.response?.data?.message || t("Failed to record metal return"),
+        String(err.response?.data?.message || "Failed to record metal return"),
       );
     } finally {
       setActionLoading(false);
@@ -492,11 +490,11 @@ export function KarigarAccountDrawer({
     e.preventDefault();
     const amountNum = parseFloat(adjAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setActionError(t("Please enter a valid positive adjustment amount"));
+      setActionError("Please enter a valid positive adjustment amount");
       return;
     }
     if (!adjNote.trim()) {
-      setActionError(t("Please provide a reason note for the adjustment"));
+      setActionError("Please provide a reason note for the adjustment");
       return;
     }
 
@@ -524,13 +522,13 @@ export function KarigarAccountDrawer({
         note: adjNote,
         idempotencyKey: keyToUse,
       });
-      setActionSuccess(t("Financial adjustment recorded successfully"));
+      setActionSuccess("Financial adjustment recorded successfully");
       handleCloseAdjustModal();
       loadData();
       onRefreshParent?.();
     } catch (err: any) {
       setActionError(
-        err.response?.data?.message || t("Failed to record adjustment"),
+        String(err.response?.data?.message || "Failed to record adjustment"),
       );
     } finally {
       setActionLoading(false);
@@ -579,7 +577,7 @@ export function KarigarAccountDrawer({
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 <T>Artisan</T>: {workshop?.artisan || "—"} •{" "}
-                {workshop?.location || "Workshop"}
+                {workshop?.location || <T>Workshop</T>}
               </p>
             </div>
           </div>
@@ -589,6 +587,7 @@ export function KarigarAccountDrawer({
               size="icon"
               onClick={loadData}
               title={t("Refresh statement")}
+              aria-label={t("Refresh statement")}
               className="text-slate-500 hover:text-slate-900 dark:hover:text-white"
             >
               <RefreshCw className="w-4 h-4" />
@@ -597,6 +596,7 @@ export function KarigarAccountDrawer({
               variant="ghost"
               size="icon"
               onClick={onClose}
+              aria-label={t("Close")}
               className="text-slate-500 hover:text-slate-900 dark:hover:text-white"
             >
               <X className="w-5 h-5" />
@@ -609,9 +609,9 @@ export function KarigarAccountDrawer({
           <div className="mx-6 mt-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{actionError}</span>
+              <span><T>{actionError}</T></span>
             </div>
-            <button onClick={() => setActionError(null)}>
+            <button onClick={() => setActionError(null)} aria-label={t("Dismiss notification")}>
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -621,9 +621,9 @@ export function KarigarAccountDrawer({
           <div className="mx-6 mt-4 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>{actionSuccess}</span>
+              <span><T>{actionSuccess}</T></span>
             </div>
-            <button onClick={() => setActionSuccess(null)}>
+            <button onClick={() => setActionSuccess(null)} aria-label={t("Dismiss notification")}>
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -641,7 +641,7 @@ export function KarigarAccountDrawer({
           ) : error ? (
             <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-sm flex items-center gap-3">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
+              <span><T>{error}</T></span>
             </div>
           ) : accountData ? (
             <>
@@ -895,7 +895,7 @@ export function KarigarAccountDrawer({
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-slate-900 dark:text-white">
-                                {item.eventType.replace(/_/g, " ")}
+                                <T>{item.eventType.replace(/_/g, " ")}</T>
                               </span>
                               {item.jobProduct && (
                                 <button
@@ -919,7 +919,7 @@ export function KarigarAccountDrawer({
                               {item.paymentMethod && (
                                 <span>
                                   {" "}
-                                  • <T>via</T> {item.paymentMethod}
+                                  • <T>via</T> <T>{item.paymentMethod.replace(/_/g, " ")}</T>
                                 </span>
                               )}
                               {item.reference && (
@@ -994,7 +994,7 @@ export function KarigarAccountDrawer({
                     {accountData?.summary?.amountPayable?.toLocaleString()}
                   </p>
                 </div>
-                <button onClick={handleClosePayModal}>
+                <button onClick={handleClosePayModal} aria-label={t("Close")}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -1112,7 +1112,7 @@ export function KarigarAccountDrawer({
                     <T>Will create an advance balance against future jobs</T>
                   </p>
                 </div>
-                <button onClick={handleCloseAdvanceModal}>
+                <button onClick={handleCloseAdvanceModal} aria-label={t("Close")}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -1204,7 +1204,7 @@ export function KarigarAccountDrawer({
                     <T>Increases shop vault & reduces karigar outstanding float</T>
                   </p>
                 </div>
-                <button onClick={handleCloseReturnModal}>
+                <button onClick={handleCloseReturnModal} aria-label={t("Close")}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
@@ -1247,7 +1247,7 @@ export function KarigarAccountDrawer({
                           {mb.metalKey} (<T>Max float</T>: {mb.outstandingGrams.toFixed(3)}g)
                         </SelectItem>
                       )) || (
-                        <SelectItem value="goldGrains24k"><T>goldGrains24k</T></SelectItem>
+                        <SelectItem value="goldGrains24k">goldGrains24k</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -1318,7 +1318,7 @@ export function KarigarAccountDrawer({
                     <T>Append an immutable financial adjustment</T>
                   </p>
                 </div>
-                <button onClick={handleCloseAdjustModal}>
+                <button onClick={handleCloseAdjustModal} aria-label={t("Close")}>
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
