@@ -226,6 +226,7 @@ export class AiChatbotService {
         history || [],
         limits.maxHistory,
         limits.historyItemChars,
+        limits.maxHistoryChars,
       ),
     };
   }

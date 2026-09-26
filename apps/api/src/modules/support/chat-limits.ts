@@ -7,6 +7,7 @@ export const CHAT_LIMITS: Record<
     maxReply: number;
     maxHistory: number;
     historyItemChars: number;
+    maxHistoryChars?: number;
     maxOutputTokens: number;
     hourlyMessages: number;
   }
@@ -17,6 +18,7 @@ export const CHAT_LIMITS: Record<
     maxReply: 48000,
     maxHistory: 8,
     historyItemChars: 6000,
+    maxHistoryChars: 12000,
     maxOutputTokens: 2048,
     hourlyMessages: 20,
   },
@@ -86,14 +88,23 @@ export function sanitizeHistory(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   maxItems: number,
   itemChars: number,
+  maxTotalChars = Infinity,
 ): Array<{ role: "user" | "assistant"; content: string }> {
-  return history
+  const sanitized = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .slice(-maxItems)
     .map((m) => ({
       role: m.role,
       content: m.content.length > itemChars ? `${m.content.slice(0, itemChars)}…` : m.content,
     }));
+
+  // Keep a contiguous suffix of newest entries; count the truncation marker too.
+  let totalChars = 0;
+  for (let i = sanitized.length - 1; i >= 0; i--) {
+    totalChars += sanitized[i].content.length;
+    if (totalChars > maxTotalChars) return sanitized.slice(i + 1);
+  }
+  return sanitized;
 }
 
 export const PUBLIC_PRIVACY_REFUSAL =

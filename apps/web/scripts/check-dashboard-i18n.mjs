@@ -56,9 +56,9 @@ export function parseAddedLines(diff) {
   let inHunk = false;
 
   for (const line of diff.split(/\r?\n/)) {
-    if (line.startsWith("+++ b/")) {
-      file = line.slice(6);
-      if (!changed.has(file)) changed.set(file, new Set());
+    if (line.startsWith("+++ ")) {
+      file = line.startsWith("+++ b/") ? line.slice(6) : null;
+      if (file !== null && !changed.has(file)) changed.set(file, new Set());
       inHunk = false;
       continue;
     }

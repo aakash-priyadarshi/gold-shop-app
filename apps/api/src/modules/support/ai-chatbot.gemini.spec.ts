@@ -84,6 +84,36 @@ describe("AiChatbotService - bounded Gemini completion", () => {
     expect(prepared.history[0].content).toBe(result.reply);
   });
 
+  it("caps public history before the initial provider call and continuation", async () => {
+    const history = Array.from({ length: 8 }, (_, i) => ({
+      role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+      content: String(i).repeat(6000),
+    }));
+    fetchMock.mockResolvedValueOnce(response("Partial answer", "MAX_TOKENS"))
+      .mockResolvedValueOnce(response(" completed."));
+
+    await service.chat("Explain Workshop features", history, undefined, "test-session");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const initial = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(initial.contents).toHaveLength(5); // System, greeting, two history items, current turn.
+    expect(initial.contents.slice(2, -1)).toEqual(history.slice(-2).map((item) => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.content }],
+    })));
+    const continuation = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(continuation.contents.slice(0, -2)).toEqual(initial.contents);
+    expect(history).toHaveLength(8);
+  });
+
+  it.each(["dashboard", "admin"])("does not apply the public aggregate budget to %s history", (audience) => {
+    const history = Array.from({ length: 8 }, () => ({
+      role: "assistant" as const,
+      content: "x".repeat(6000),
+    }));
+    expect((service as any).prepareChatTurn(audience, "Thanks", history).history).toEqual(history);
+  });
+
   it("shows and saves an explicit retry fallback for whitespace-only STOP without continuing", async () => {
     fetchMock.mockResolvedValue(response(" \n ", "STOP"));
     const result = await service.chat("Explain Workshop features", [], undefined, "test-session");

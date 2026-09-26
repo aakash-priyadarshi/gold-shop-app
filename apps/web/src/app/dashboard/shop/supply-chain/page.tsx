@@ -967,7 +967,7 @@ function KarigarSupplyChainLedger() {
       });
       setAddJobModalOpen(false);
       setJobForm({ product: "", workshopId: "", grossWeight: "", metalKey: "goldGrains24k" });
-      showToast(<><T>Job</T> "{jobForm.product}" <T>created!</T></>);
+      showToast(<><T>Job</T> "{/* i18n-user-content: product name entered by the shop */ jobForm.product}" <T>created!</T></>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(

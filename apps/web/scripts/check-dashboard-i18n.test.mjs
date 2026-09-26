@@ -323,6 +323,29 @@ test("diff parser keeps only added line numbers across hunks and files", () => {
   );
 });
 
+for (const header of ["+++ /dev/null", "+++ other/ignored.tsx"]) {
+  test(`diff parser clears the previous file and hunk for ${header}`, () => {
+    const diff = `+++ b/apps/web/src/components/shop/workshop/A.tsx
+@@ -1 +1 @@
++first
+${header}
++outside a hunk
+@@ -1 +5 @@
++not a supported destination
++++ b/apps/web/src/components/shop/workshop/B.tsx
++outside the next hunk
+@@ -1 +1 @@
++second`;
+    assert.deepEqual(
+      [...parseAddedLines(diff)].map(([file, lines]) => [file, [...lines]]),
+      [
+        ["apps/web/src/components/shop/workshop/A.tsx", [1]],
+        ["apps/web/src/components/shop/workshop/B.tsx", [1]],
+      ],
+    );
+  });
+}
+
 test("test/mock/fixture files are excluded from scanning on Windows and POSIX", () => {
   for (const file of [
     "View.test.tsx",
