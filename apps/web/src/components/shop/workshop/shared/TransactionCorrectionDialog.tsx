@@ -169,7 +169,7 @@ export function TransactionCorrectionDialog({
                 <T>Correct Physical Transaction</T>
               </h3>
               <p className="text-[11px] text-muted-foreground font-mono">
-                #{journal.entryNumber} · {journal.referenceType} · {journal.id.slice(0, 8)}…
+                #{journal.entryNumber} · {t(journal.referenceType)} · {journal.id.slice(0, 8)}…
               </p>
             </div>
           </div>
@@ -196,7 +196,7 @@ export function TransactionCorrectionDialog({
             <div className="grid grid-cols-2 gap-2 font-mono">
               <div>
                 <span className="text-muted-foreground"><T>Reference Type</T>:</span>{" "}
-                <span className="font-semibold text-foreground">{journal.referenceType}</span>
+                <span className="font-semibold text-foreground">{t(journal.referenceType)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground"><T>Material</T>:</span>{" "}
@@ -213,7 +213,7 @@ export function TransactionCorrectionDialog({
             </div>
             {journal.description && (
               <div className="text-[11px] text-muted-foreground pt-1 border-t">
-                {journal.description}
+                <T>{journal.description}</T>
               </div>
             )}
           </div>
@@ -222,10 +222,10 @@ export function TransactionCorrectionDialog({
           <div className="rounded-lg border border-amber-300 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200">
               <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-              <span>{context.title}</span>
+              <T>{context.title}</T>
             </div>
             <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-              {context.warning}
+              <T>{context.warning}</T>
             </p>
           </div>
 
@@ -286,7 +286,7 @@ export function TransactionCorrectionDialog({
               {errorMessage && (
                 <div className="rounded-md bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>{errorMessage}</span>
+                  <span>{t(errorMessage)}</span>
                 </div>
               )}
             </div>
