@@ -158,6 +158,36 @@ describe("workshop chat context", () => {
     ).toContain("normal small-artisan ledger");
   });
 
+  it.each(["Do I need an assay office on my invoice?", "Where are invoice settings?", "Do I need an assay?"])("does not hijack unrelated support: %s", (message) => {
+    expect(isWorkshopOperationalQuestion(message)).toBe(false);
+  });
+
+  it.each(["Do I need an assay for workshop recovery?", "Do I need an assay for my recovery bag?", "Where are Workshop settings?", "How do I configure factory routes?", "How do I settle a recovery bag?"])("recognizes contextual operations: %s", (message) => {
+    expect(isWorkshopOperationalQuestion(message)).toBe(true);
+  });
+
+  it.each([
+    ["How do I start a process?", "?view=production"],
+    ["How do I create a transfer?", "?view=transfers"],
+    ["How do I settle a recovery bag?", "?view=recovery"],
+    ["Where are Workshop settings?", "?view=settings"],
+    ["How do I configure factory routes?", "?view=settings"],
+    ["What's Capture vs Confirm?", "Capture"],
+    ["Why can't I close this run?", "Total Input"],
+  ])("guards factory guidance for %s", (question, readyText) => {
+    expect(formatWorkshopOperationalReply({ workshopMode: true, workshopManufacturingEnabled: true }, question)).toContain(readyText);
+    const modeOff = formatWorkshopOperationalReply({ workshopMode: false, workshopManufacturingEnabled: true }, question);
+    expect(modeOff).toContain("Turn on Workshop Mode in Shop Settings → Preferences");
+    const noEntitlement = formatWorkshopOperationalReply({ workshopMode: true, workshopManufacturingEnabled: false }, question);
+    expect(noEntitlement).toContain("workshopManufacturing entitlement");
+    expect(noEntitlement).toContain("/dashboard/shop/billing");
+    for (const text of [modeOff, noEntitlement]) {
+      expect(text).not.toMatch(/\?view=(production|transfers|recovery|settings)/);
+      expect(text).not.toMatch(/Pro Plus|Pro\+|Enterprise/);
+    }
+    expect(formatWorkshopOperationalReply({ workshopMode: true, workshopManufacturingEnabled: null }, question)).toContain("could not verify");
+  });
+
   it("gives the next safe workshop action without claiming fixed plan names", () => {
     const enabled = {
       workshopMode: true,
@@ -180,10 +210,43 @@ describe("workshop chat context", () => {
       formatWorkshopOperationalReply(enabled, "Why can't I delete this karigar job?"),
     ).toContain("terminal for production");
     expect(
-      formatWorkshopOperationalReply(enabled, "How are wages settled?"),
-    ).toContain("separate from the physical-metal return");
+      formatWorkshopOperationalReply(enabled, "How do I create a manufacturing job?"),
+    ).toContain("Supply Chain → Jobs");
     expect(
-      formatWorkshopOperationalReply(enabled, "How do I procure bullion?"),
-    ).toContain("does not create a supplier bill");
+      formatWorkshopOperationalReply(enabled, "How do I create a manufacturing job?"),
+    ).toContain("+ Create Job");
+    expect(
+      formatWorkshopOperationalReply(enabled, "How do I create a transfer?"),
+    ).toContain("Supply Chain → Transfers");
+    expect(
+      formatWorkshopOperationalReply(enabled, "How do I create a transfer?"),
+    ).toContain("+ New Transfer");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Do I need an assay for my recovery bag?"),
+    ).toContain("optional");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Do I need an assay for my recovery bag?"),
+    ).toContain("scale-confirmed physical recovery result");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Capture vs Confirm?"),
+    ).toContain("Capture");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Capture vs Confirm?"),
+    ).toContain("Confirm");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Where do I configure routes?"),
+    ).toContain("Supply Chain → Factory Settings → Routes");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Recommended vs Actual?"),
+    ).toContain("Recommended");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Recommended vs Actual?"),
+    ).toContain("Actual");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I close this run?"),
+    ).toContain("Total Input");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I close this run?"),
+    ).toContain("Total Output");
   });
 });

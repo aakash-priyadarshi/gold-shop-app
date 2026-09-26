@@ -14,7 +14,7 @@ import {
   Prisma,
   WorkshopLedgerVersion,
 } from "@prisma/client";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import {
   KARIGAR_STAGES,
   WORKSHOP_GOLD_995_MATERIAL_KEY,
@@ -33,6 +33,7 @@ import {
   AdvanceKarigarFloorDto,
   CreateCastingTreeDto,
   CreateKarigarJobDto,
+  CreateKarigarWorkshopDto,
   CreateKarigarMovementDto,
   InspectKarigarQcDto,
   ReceiveKarigarFgDto,
@@ -95,6 +96,17 @@ export class KarigarService {
     private planLimits: PlanLimitsService,
     private accounting: AccountingService,
   ) {}
+
+  async createWorkshop(shopId: string, dto: CreateKarigarWorkshopDto) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    if (!dto.name.trim() || !dto.artisan.trim()) {
+      throw new BadRequestException("Workshop and artisan names are required");
+    }
+    // Add identity only. Balances and wages start at the model's zero defaults.
+    return this.prisma.karigarWorkshop.create({
+      data: { id: `ws-${randomUUID()}`, shopId, name: dto.name.trim(), artisan: dto.artisan.trim() },
+    });
+  }
 
   async getSnapshot(shopId: string) {
     if (!shopId) {

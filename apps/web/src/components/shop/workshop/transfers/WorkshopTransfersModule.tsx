@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { ScaleCapturePanel } from "../shared/ScaleCapturePanel";
+import { WorkshopDomainTooltip } from "../shared/WorkshopDomainTooltip";
 
 export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: boolean }) {
   const t = useT();
@@ -163,9 +164,10 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
               size="sm"
               className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
               onClick={() => setShowPrepareModal(true)}
+              data-tour="workshop-transfer-create"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
-              <T>Prepare Transfer</T>
+              <T>New Transfer</T>
             </Button>
             <Button variant="outline" size="sm" onClick={loadData} className="text-xs h-8">
               <RefreshCw className="h-3.5 w-3.5 mr-1" />
@@ -223,7 +225,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
       )}
 
       {/* 3. Transfers Queue Table */}
-      <Card className="border-border">
+      <Card className="border-border" data-tour="workshop-transfer-list">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex min-h-[240px] items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -231,8 +233,16 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
               <T>Loading department transfers…</T>
             </div>
           ) : transfers.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground">
-              <T>No material transfers recorded yet. Prepare a transfer between departments above.</T>
+            <div className="p-8 text-center text-xs text-muted-foreground space-y-3">
+              <p><T>No material transfers recorded yet. Move physical material between departments with dispatch and receipt weighing.</T></p>
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
+                onClick={() => setShowPrepareModal(true)}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                <T>New Transfer</T>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -244,7 +254,12 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                     <th className="py-3 px-3"><T>Material</T></th>
                     <th className="py-3 px-3"><T>Dispatch Weight</T></th>
                     <th className="py-3 px-3"><T>Receive Weight</T></th>
-                    <th className="py-3 px-3"><T>Difference / Tol</T></th>
+                    <th className="py-3 px-3">
+                      <div className="flex items-center gap-1">
+                        <T>Difference / Tol</T>
+                        <WorkshopDomainTooltip term="transferVariance" />
+                      </div>
+                    </th>
                     <th className="py-3 px-3"><T>Status</T></th>
                     <th className="py-3 px-4 text-right"><T>Workflow Action</T></th>
                   </tr>
@@ -285,7 +300,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                             <span className="text-muted-foreground italic"><T>Pending weigh-in</T></span>
                           )}
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="py-3 px-3" data-tour="workshop-transfer-variance">
                           {tr.differenceGrams ? (
                             <span
                               className={`font-bold ${
@@ -328,6 +343,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                                 setActiveTransferForWeighing(tr);
                                 setWeighingAction("TRANSFER_DISPATCH");
                               }}
+                              data-tour="workshop-transfer-dispatch"
                             >
                               <Scale className="h-3.5 w-3.5 mr-1" />
                               <T>Weigh Dispatch</T>
@@ -341,6 +357,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                                 setActiveTransferForWeighing(tr);
                                 setWeighingAction("TRANSFER_RECEIPT");
                               }}
+                              data-tour="workshop-transfer-receive"
                             >
                               <Scale className="h-3.5 w-3.5 mr-1" />
                               <T>Weigh Receipt</T>

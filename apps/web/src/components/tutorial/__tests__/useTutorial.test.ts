@@ -100,6 +100,34 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("workshop-reports");
   });
 
+  test("has tour steps for all eleven Workshop subkeys and actions", () => {
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-overview"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-jobs"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-job"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-production"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-metal"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-transfers"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-recovery"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-qc"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-reports"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-settings"');
+    expect(sourceFile).toContain('"/dashboard/shop/supply-chain#workshop-locked"');
+    expect(sourceFile).toContain("workshop-navigation");
+    expect(sourceFile).toContain("workshop-quick-actions");
+    expect(sourceFile).toContain("workshop-jobs-create");
+    expect(sourceFile).toContain("workshop-transfer-create");
+    expect(sourceFile).toContain("workshop-recovery-create");
+    expect(sourceFile).toContain("workshop-settings-tabs");
+  });
+
+  test("Factory Settings tour uses only always-mounted tab navigation targets", () => {
+    const settingsTour = sourceFile.split("const WORKSHOP_SETTINGS_STEPS")[1].split("const TOUR_STEPS")[0];
+    expect(settingsTour).toContain("SUPPLY_CHAIN_NAV_STEP");
+    const targets = [...settingsTour.matchAll(/element: "([^\"]+)"/g)].map((match) => match[1]);
+    expect(targets.length).toBe(5);
+    expect(new Set(targets)).toEqual(new Set(["[data-tour='workshop-settings-tabs']"]));
+  });
+
   test("Supply Chain factory tours do not claim Tower replaces the karigar book", () => {
     expect(sourceFile).not.toContain(
       "This replaces Supply Chain when Workshop mode is on",

@@ -942,6 +942,51 @@ export class AiChatbotService {
    * cosine similarity. Returns "" gracefully if the table is empty or
    * the API key is missing.
    */
+
+  formatWorkshopRouteContext(rawPath?: string, access?: Pick<LiveWorkshopAccess, "workshopMode" | "workshopManufacturingEnabled">): string | null {
+    if (!rawPath) return null;
+    try {
+      const url = new URL(rawPath, "https://orivraa.com");
+      if (!url.pathname.includes("supply-chain")) return null;
+      const view = url.searchParams.get("view");
+      const VIEW_NAMES: Record<string, string> = {
+        book: "Karigar Book (Traditional Artisan Ledger)",
+        overview: "Overview (Factory Control Tower)",
+        tower: "Overview (Factory Control Tower)",
+        jobs: "Jobs (Manufacturing Work Orders & Create Job)",
+        job: "Job Detail (Theoretical, Recommended, Actual, Route, Reconciliation)",
+        production: "Production Floor (Bench Operations, Scale Capture & Confirm)",
+        floor: "Production Floor (Bench Operations, Scale Capture & Confirm)",
+        metal: "Metal Ledger (Gold 995, Purity & Immutable Journal)",
+        transfers: "Transfers (Inter-Department Physical Custody & Variance)",
+        recovery: "Recovery (Floor Sweeps, Refining & Settlement)",
+        qc: "QC (Quality Inspection & Approval)",
+        reports: "Reports (Traceable Loss & Yield Accounting)",
+        settings: "Factory Settings (Scales, Materials, Routes & Staff)",
+      };
+      if (view && VIEW_NAMES[view]) {
+        if (view === "book") return `Supply Chain / ${VIEW_NAMES[view]}`;
+        return `Supply Chain / Workshop / ${VIEW_NAMES[view]}`;
+      }
+      return access?.workshopMode && access.workshopManufacturingEnabled === true
+        ? "Supply Chain / Workshop / Overview"
+        : "Supply Chain / Karigar Book";
+    } catch {
+      return null;
+    }
+  }
+
+  buildContextualRetrievalQuery(message: string, currentPath?: string, access?: Pick<LiveWorkshopAccess, "workshopMode" | "workshopManufacturingEnabled">): string {
+    const workshopContext = this.formatWorkshopRouteContext(currentPath, access);
+    if (workshopContext) {
+      return `User question:\n${message}\n\nCurrent page:\n${workshopContext}`;
+    }
+    if (currentPath) {
+      return `User question:\n${message}\n\nCurrent page:\n${currentPath}`;
+    }
+    return message;
+  }
+
   private async searchKnowledge(query: string): Promise<string> {
     if (!this.apiKey) return "";
     try {
@@ -1082,7 +1127,7 @@ KEY FEATURES:
 9. AI sales agents (beta) — 24/7 voice agents in 42 languages, follow-up automation
 10. CA / accountant share links — securely share tax documents (PRO_PLUS+)
 11. Old-gold exchange — correct GST treatment on exchange transactions
-12. Karigar & Bullion Supply Chain — one page at /dashboard/shop/supply-chain with seven tabs. Karigar book (default) is the artisan ledger. Factory tabs (Tower, Jobs, Floor, Metal, QC, Reports) appear only when BOTH are true: (a) the shop's live plan JSON has workshopManufacturing enabled, and (b) the shopkeeper turns on Workshop mode at Shop Settings → Preferences (desktop /dashboard/shop/settings?tab=preferences) or Store Settings (mobile /m/settings). Which plans include that flag is DYNAMIC — an admin can add or remove it on any plan. For guests, use LIVE WORKSHOP PLAN CATALOG below. For a signed-in seller, use LIVE WORKSHOP ACCESS in seller context. Never say "typically Pro+" or guess from the public price page.
+12. Karigar & Bullion Supply Chain — one page at /dashboard/shop/supply-chain. Karigar book is the artisan ledger and the default when factory access is off. Overview is the default when factory access is on. Factory tabs (Overview, Jobs, Production, Metal, Transfers, Recovery, QC, Reports, Factory Settings) appear only when BOTH are true: (a) the shop's live plan JSON has workshopManufacturing enabled, and (b) the shopkeeper turns on Workshop mode at Shop Settings → Preferences (desktop /dashboard/shop/settings?tab=preferences) or Store Settings (mobile /m/settings). Which plans include that flag is DYNAMIC — an admin can add or remove it on any plan. For guests, use LIVE WORKSHOP PLAN CATALOG below. For a signed-in seller, use LIVE WORKSHOP ACCESS in seller context. Never say "typically Pro+" or guess from the public price page.
 13. Stock Ledger — finished goods catalogued stock table searchable by HUID or barcode, physical transfers between showcases and strongroom vault, and live vault fiat valuations
 14. Repairs & service tracking — log repair/service jobs (resizing, polishing, soldering, stone setting, plating), photos, charges, status, and WhatsApp ready-notifications (PRO+ in all countries incl. India & Nepal)
 15. Gold savings & instalment schemes — track customer monthly deposits / committee / chitti plans, accrued gold/value, maturity and redemption, with WhatsApp due reminders (PRO+ in all countries incl. India & Nepal)
@@ -1547,7 +1592,7 @@ Preferred language: ${snapshot.preferredLanguage ?? "Unavailable"}
 Shop id: ${snapshot.shopId}
 Shop name: ${snapshot.shopName}
 Shop country: ${snapshot.country}
-Current dashboard route: ${snapshot.currentPath ?? "Unavailable"}
+Current dashboard route: ${snapshot.currentPath ?? "Unavailable"}${this.formatWorkshopRouteContext(snapshot.currentPath, snapshot) ? `\nCurrent workshop view: ${this.formatWorkshopRouteContext(snapshot.currentPath, snapshot)}` : ""}
 Dashboard mode: ${snapshot.dashboardMode ?? "Unavailable"} (EASY = Counter Mode, ADVANCED = Full ERP Mode)
 Reporting period: ${snapshot.currentMonthLabel}
 Invoices this month: ${snapshot.monthlyInvoiceCount}
@@ -1870,7 +1915,7 @@ SELLER RESPONSE RULES:
       )
     ) {
       return {
-        reply: `Karigar & Supply Chain is at /dashboard/shop/supply-chain. Karigar book is the default tab for artisan ledgers, vault bullion, custom materials, and jobs.${snapshot.workshopMode && snapshot.workshopManufacturingEnabled ? " Factory tabs (Tower, Jobs, Floor, Metal, QC, Reports) are on the same page." : " Factory tabs appear when your plan includes workshop manufacturing and Workshop mode is on in Settings → Preferences."}`,
+        reply: `Karigar & Supply Chain is at /dashboard/shop/supply-chain. Karigar book contains artisan ledgers, vault bullion, custom materials, and jobs.${snapshot.workshopMode && snapshot.workshopManufacturingEnabled ? " Overview is your default view. Factory tabs (Overview, Jobs, Production, Metal, Transfers, Recovery, QC, Reports, Factory Settings) are on the same page." : " Karigar book is your default view. Factory tabs appear when your plan includes workshop manufacturing and Workshop mode is on in Settings → Preferences."}`,
         shouldEscalate: false,
         confidence: 0.9,
       };
@@ -2480,7 +2525,8 @@ SELLER RESPONSE RULES:
         return this.fallbackSellerResponse(seller);
       }
 
-      const knowledgeContext = await this.searchKnowledge(message);
+      const retrievalQuery = this.buildContextualRetrievalQuery(message, currentPath, seller);
+      const knowledgeContext = await this.searchKnowledge(retrievalQuery);
       const systemPrompt = `${this.buildSystemPrompt(knowledgeContext || undefined, { botName, userName: seller.sellerName, authenticatedEmail: seller.sellerEmail }, "SHOPKEEPER", formatWorkshopPlanCatalog(this.workshopCatalogFromSnapshot(seller)))}\n\n${this.buildSellerContext(seller)}`;
 
       const contents = this.buildContents(

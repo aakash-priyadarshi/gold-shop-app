@@ -1,4 +1,4 @@
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
   IsArray,
   IsBoolean,
@@ -94,6 +94,20 @@ export class KarigarWorkshopDto {
   @IsOptional()
   @IsNumber()
   wageDue?: number;
+}
+
+export class CreateKarigarWorkshopDto {
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString()
+  @MaxLength(200)
+  @IsNotEmpty()
+  name: string;
+
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString()
+  @MaxLength(200)
+  @IsNotEmpty()
+  artisan: string;
 }
 
 export class KarigarJobDto {

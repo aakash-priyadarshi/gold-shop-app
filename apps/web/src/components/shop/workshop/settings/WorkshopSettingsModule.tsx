@@ -321,7 +321,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
   return (
     <div className="space-y-5">
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1" data-tour="workshop-settings-tabs">
         <div className="flex rounded-lg border bg-muted/40 p-1 text-xs">
           {[
             { id: "SCALES", label: "Scales (Gold & Stone)", icon: Scale },
@@ -355,7 +355,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
 
       {/* 1. Scales Configuration Tab */}
       {activeTab === "SCALES" && (
-        <Card className="border-border">
+        <Card className="border-border" data-tour="workshop-settings-scales">
           <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -407,7 +407,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
 
       {/* 2. Materials Tab with interactive visual composition */}
       {activeTab === "MATERIALS" && (
-        <Card className="border-border">
+        <Card className="border-border" data-tour="workshop-settings-materials">
           <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -456,7 +456,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
 
       {/* 3. Alloy Recipe Builder Tab */}
       {activeTab === "RECIPES" && (
-        <Card className="border-border">
+        <Card className="border-border" data-tour="workshop-settings-recipes">
           <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -508,14 +508,14 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
       {settingsError && <p role="alert" className="text-xs text-destructive">{settingsError}</p>}
 
       {activeTab === "PROCESSES" && (
-        <Card><CardHeader><CardTitle><T>Manufacturing processes</T></CardTitle></CardHeader><CardContent className="space-y-3">
+        <Card data-tour="workshop-settings-processes"><CardHeader><CardTitle><T>Manufacturing processes</T></CardTitle></CardHeader><CardContent className="space-y-3">
           {catalog?.processes.map((process) => <div key={process.id} className="text-xs border-b py-2">{process.name} · {process.department || "—"}</div>)}
           {canApprove && <div className="grid gap-2 sm:grid-cols-3"><Input value={procName} onChange={(e) => setProcName(e.target.value)} placeholder={t("Process name")} /><Input value={procDept} onChange={(e) => setProcDept(e.target.value)} placeholder={t("Department")} /><Button disabled={!procName.trim()} onClick={() => saveSetting(async () => { await workshopApi.createProcess({ name: procName.trim(), department: procDept.trim() || undefined }); setProcName(""); setProcDept(""); })}><T>Add process</T></Button></div>}
         </CardContent></Card>
       )}
 
       {activeTab === "ROUTES" && (
-        <Card className="border-border">
+        <Card className="border-border" data-tour="workshop-settings-routes">
           <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -719,14 +719,14 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
       )}
 
       {activeTab === "WORKSTATIONS" && (
-        <Card><CardHeader><CardTitle><T>Machines and workstations</T></CardTitle></CardHeader><CardContent className="space-y-3">
+        <Card data-tour="workshop-settings-workstations"><CardHeader><CardTitle><T>Machines and workstations</T></CardTitle></CardHeader><CardContent className="space-y-3">
           {catalog?.workstations.map((workstation) => <div key={workstation.id} className="text-xs border-b py-2">{workstation.name} · {workstation.department || "—"}</div>)}
           {canApprove && <div className="grid gap-2 sm:grid-cols-4"><Input value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder={t("Workstation name")} /><Input value={wsDept} onChange={(e) => setWsDept(e.target.value)} placeholder={t("Department")} /><select value={wsDefinitionId} onChange={(e) => setWsDefinitionId(e.target.value)} className="rounded-md border bg-background p-2 text-xs"><option value=""><T>Any process</T></option>{catalog?.processes.filter((p) => p.isActive).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><Button disabled={!wsName.trim()} onClick={() => saveSetting(async () => { await workshopApi.createWorkstation({ name: wsName.trim(), department: wsDept.trim() || undefined, definitionId: wsDefinitionId || undefined }); setWsName(""); setWsDept(""); setWsDefinitionId(""); })}><T>Add workstation</T></Button></div>}
         </CardContent></Card>
       )}
 
       {activeTab === "TOLERANCES" && (
-        <Card><CardHeader><CardTitle><T>Movement tolerances</T></CardTitle></CardHeader><CardContent className="space-y-3">
+        <Card data-tour="workshop-settings-tolerances"><CardHeader><CardTitle><T>Movement tolerances</T></CardTitle></CardHeader><CardContent className="space-y-3">
           {catalog?.tolerances.map((rule) => <div key={rule.id} className="text-xs border-b py-2">{rule.movementKind} · {rule.materialKey || rule.scalePurpose} · {rule.maxDifferenceGrams} g · {rule.policy}</div>)}
           {canApprove && <div className="grid gap-2 sm:grid-cols-3">
             <select value={toleranceKind} onChange={(e) => setToleranceKind(e.target.value)} className="rounded-md border bg-background p-2 text-xs">{["TRANSFER_RECEIPT", "PROCESS_OUTPUT", "RECOVERY_RESULT", "FINISHED_RECEIPT", "STONE_SETTING", "STONE_RETURN"].map((kind) => <option key={kind} value={kind}>{kind}</option>)}</select>
@@ -742,7 +742,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
 
       {/* 4. Staff & Operators Tab */}
       {activeTab === "STAFF" && (
-        <Card className="border-border">
+        <Card className="border-border" data-tour="workshop-settings-staff">
           <CardHeader className="pb-3 border-b">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Users className="h-4 w-4 text-amber-500" />

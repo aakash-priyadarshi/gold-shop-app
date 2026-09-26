@@ -39,6 +39,7 @@ import {
   User,
 } from "lucide-react";
 import { ReconciliationSummary } from "../shared/ReconciliationSummary";
+import { WorkshopDomainTooltip } from "../shared/WorkshopDomainTooltip";
 
 export interface WorkshopJobDetailViewProps {
   jobId: string;
@@ -245,11 +246,14 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
       {/* 2. CAD Expected vs Weighed Physical Material Issue */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* CAD / Expected */}
-        <Card className="border-border">
+        <Card className="border-border" data-tour="workshop-job-theoretical">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-blue-500" />
-              <CardTitle className="text-sm font-semibold"><T>Theoretical CAD Specifications</T></CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-blue-500" />
+                <CardTitle className="text-sm font-semibold"><T>Theoretical CAD Specifications</T></CardTitle>
+              </div>
+              <WorkshopDomainTooltip term="theoretical" />
             </div>
             <CardDescription className="text-xs">
               <T>Design reference weights from 3D CAD modeling</T>
@@ -283,9 +287,15 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
         {/* Material Issue: Recommended vs Actual Scale */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Coins className="h-4 w-4 text-amber-500" />
-              <CardTitle className="text-sm font-semibold"><T>Physical Material Issue</T></CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-sm font-semibold"><T>Physical Material Issue</T></CardTitle>
+              </div>
+              <div className="flex items-center gap-1">
+                <WorkshopDomainTooltip term="recommended" />
+                <WorkshopDomainTooltip term="actual" />
+              </div>
             </div>
             <CardDescription className="text-xs">
               <T>Recommended alloy ratio vs Authoritative Gold Scale input</T>
@@ -293,7 +303,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
           </CardHeader>
           <CardContent className="space-y-3 text-xs font-mono">
             <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              <div className="flex justify-between items-center text-muted-foreground">
+              <div className="flex justify-between items-center text-muted-foreground" data-tour="workshop-job-actual">
                 <span><T>Total Actual Issued Input</T></span>
                 <span className="font-bold text-foreground">
                   {reconciliation?.actualInputGrams || "0.000000"} g
@@ -301,7 +311,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
               </div>
 
               {/* Gold 995 comparison */}
-              <div className="pt-2 border-t space-y-1">
+              <div className="pt-2 border-t space-y-1" data-tour="workshop-job-recommended">
                 <div className="flex justify-between text-muted-foreground">
                   <span><T>Recommended Gold 995</T>:</span>
                   <span>{reconciliation?.recommendedInputsByMaterial?.goldGrains995 || "0.000"} g</span>
@@ -329,7 +339,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
       </div>
 
       {/* 3. Dynamic Production Route & Process Timeline */}
-      <Card className="border-border">
+      <Card className="border-border" data-tour="workshop-job-route">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -466,17 +476,19 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
 
       {/* 5. Mass Balance Reconciliation */}
       {reconciliation && (
-        <ReconciliationSummary
-          totalInputGrams={reconciliation.actualInputGrams}
-          forwardWipGrams={reconciliation.outstandingWipGrams}
-          unclassifiedGrams={reconciliation.unclassifiedGrams}
-          reconciliationState={reconciliation.reconciliationState}
-          varianceGrams={reconciliation.dispositions?.PROCESS_VARIANCE || "0"}
-          reusableGrams={reconciliation.dispositions?.REUSABLE || "0"}
-          scrapGrams={reconciliation.dispositions?.SCRAP || "0"}
-          recoveryPendingGrams={reconciliation.dispositions?.RECOVERY_PENDING || "0"}
-          refineryGrams={reconciliation.dispositions?.REFINERY || "0"}
-        />
+        <div data-tour="workshop-job-reconciliation">
+          <ReconciliationSummary
+            totalInputGrams={reconciliation.actualInputGrams}
+            forwardWipGrams={reconciliation.outstandingWipGrams}
+            unclassifiedGrams={reconciliation.unclassifiedGrams}
+            reconciliationState={reconciliation.reconciliationState}
+            varianceGrams={reconciliation.dispositions?.PROCESS_VARIANCE || "0"}
+            reusableGrams={reconciliation.dispositions?.REUSABLE || "0"}
+            scrapGrams={reconciliation.dispositions?.SCRAP || "0"}
+            recoveryPendingGrams={reconciliation.dispositions?.RECOVERY_PENDING || "0"}
+            refineryGrams={reconciliation.dispositions?.REFINERY || "0"}
+          />
+        </div>
       )}
 
       {/* Add Batch Child Modal */}

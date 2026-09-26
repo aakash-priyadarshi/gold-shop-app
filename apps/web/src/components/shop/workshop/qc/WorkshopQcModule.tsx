@@ -31,6 +31,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { WorkshopFinishedReceiptDialog } from "../finished/WorkshopFinishedReceiptDialog";
+import Link from "next/link";
+import { supplyChainHref } from "@/lib/workshop-route";
 
 export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }) {
   const t = useT();
@@ -180,7 +182,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
       </Card>
 
       {/* QC Queue Grid */}
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="workshop-qc-queue">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-purple-500" />
           <T>Manufacturing Jobs Awaiting Inspection</T>
@@ -192,8 +194,19 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
             <T>Loading QC queue…</T>
           </div>
         ) : qcQueue.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-center text-xs text-muted-foreground">
-            <T>No jobs pending QC inspection.</T>
+          <div className="rounded-xl border border-dashed p-10 text-center space-y-3">
+            <div className="mx-auto h-12 w-12 rounded-full bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-foreground"><T>Nothing is waiting for QC</T></h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                <T>Jobs appear here after production reaches the QC stage.</T>
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="text-xs" asChild>
+              <Link href={supplyChainHref("production")}><T>Open Production</T></Link>
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -227,24 +240,26 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
                     </div>
 
                     {/* Blockers vs Ready Indicator */}
-                    {blockers.length > 0 ? (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 space-y-1 text-[11px] text-amber-900 dark:text-amber-200">
-                        <div className="font-semibold flex items-center gap-1 text-amber-700 dark:text-amber-400">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          <span><T>Approval Blocked</T></span>
+                    <div data-tour="workshop-qc-blockers">
+                      {blockers.length > 0 ? (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 space-y-1 text-[11px] text-amber-900 dark:text-amber-200">
+                          <div className="font-semibold flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                            <span><T>Approval Blocked</T></span>
+                          </div>
+                          <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground text-[10px]">
+                            {blockers.map((b, i) => (
+                              <li key={i}>{b}</li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground text-[10px]">
-                          {blockers.map((b, i) => (
-                            <li key={i}>{b}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 p-2.5 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                        <span><T>All processes reconciled. Ready for QC decision.</T></span>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 p-2.5 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                          <span><T>All processes reconciled. Ready for QC decision.</T></span>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Actions */}
                     <div className="pt-2 flex items-center gap-2">
@@ -258,6 +273,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
                             setQcReason("");
                             setQcError(null);
                           }}
+                          data-tour="workshop-qc-action"
                         >
                           <ShieldCheck className="h-3.5 w-3.5 mr-1" />
                           <T>Inspect & Decide</T>

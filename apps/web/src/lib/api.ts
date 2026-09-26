@@ -559,6 +559,8 @@ export const chitApi = {
 // Karigar / supply-chain API
 export const karigarApi = {
   getSnapshot: () => api.get("/karigar/snapshot"),
+  createWorkshop: (data: { name: string; artisan: string }) =>
+    api.post<{ id: string; name: string; artisan: string }>("/karigar/workshops", data),
   saveSnapshot: (data: {
     vaultReserves: Record<string, number>;
     workshops: any[];

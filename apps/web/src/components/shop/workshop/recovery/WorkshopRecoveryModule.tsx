@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { ScaleCapturePanel } from "../shared/ScaleCapturePanel";
+import { WorkshopDomainTooltip } from "../shared/WorkshopDomainTooltip";
 
 export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boolean }) {
   const t = useT();
@@ -192,9 +193,10 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
               size="sm"
               className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
               onClick={() => setShowCreateBagModal(true)}
+              data-tour="workshop-recovery-create"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
-              <T>Open New Recovery Bag</T>
+              <T>New Recovery Bag</T>
             </Button>
             <Button variant="outline" size="sm" onClick={loadData} className="text-xs h-8">
               <RefreshCw className="h-3.5 w-3.5 mr-1" />
@@ -205,11 +207,14 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
       </Card>
 
       {/* Recovery Bags Grid */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <T>Tracked Recovery Bags</T>
-        </h3>
+      <div className="space-y-3" data-tour="workshop-recovery-bags">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Flame className="h-4 w-4 text-orange-500" />
+            <T>Tracked Recovery Bags</T>
+            <WorkshopDomainTooltip term="recoveryPending" />
+          </h3>
+        </div>
 
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -217,8 +222,16 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
             <T>Loading recovery bags…</T>
           </div>
         ) : bags.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-center text-xs text-muted-foreground">
-            <T>No recovery bags created yet. Open a bag when collecting cutting or polishing residue.</T>
+          <div className="rounded-xl border border-dashed p-8 text-center text-xs text-muted-foreground space-y-3">
+            <p><T>No recovery bags created yet. Open a tracked bag to collect cutting, filing, or polishing residue before refinery dispatch.</T></p>
+            <Button
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
+              onClick={() => setShowCreateBagModal(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              <T>New Recovery Bag</T>
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -267,6 +280,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                           className="w-full text-xs h-7 border-orange-300 text-orange-700 hover:bg-orange-50"
                           onClick={() => handleCloseAndSend(bag.id)}
                           disabled={sendLoading}
+                          data-tour="workshop-recovery-send"
                         >
                           <Flame className="h-3 w-3 mr-1 text-orange-600" />
                           <T>Close & Send to Refinery</T>
@@ -313,6 +327,10 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
             </div>
 
             <div className="space-y-3 text-xs">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 p-2.5 text-[11px] text-amber-900 dark:text-amber-300">
+                <T>Physical recovery result from scale is required before final settlement. Laboratory assay is optional.</T>
+              </div>
+
               <div className="grid grid-cols-2 gap-2 font-mono rounded-lg border bg-muted/20 p-3">
                 <div>
                   <span className="text-muted-foreground block text-[11px]"><T>Physical Sent Weight</T></span>
@@ -326,9 +344,12 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
 
               {activeEvent.assays && activeEvent.assays.length > 0 && (
                 <div className="space-y-1">
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                    <T>Assay Results</T>
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                      <T>Assay Results (Optional)</T>
+                    </span>
+                    <WorkshopDomainTooltip term="assay" />
+                  </div>
                   {activeEvent.assays.map((a) => (
                     <div key={a.id} className="rounded border p-2 flex justify-between font-mono">
                       <span><T>Source:</T> {a.source}</span>
@@ -352,7 +373,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
               )}
 
               {activeEvent.status === "SENT" && (
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="workshop-recovery-result">
                   <Label><T>Recovered result material and destination</T></Label>
                   <select value={resultMaterialKey} onChange={(e) => setResultMaterialKey(e.target.value)} className="w-full rounded-md border bg-background p-2 text-xs">
                     {materials.filter((m) => m.scalePurpose === "GOLD").map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
@@ -380,7 +401,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
               )}
 
               {activeEvent.status === "SENT" && canApprove && activeEvent.journals.some((j) => j.referenceType === "RECOVERY_RESULT" && !j.reversedById && !j.reversalOfId) && (
-                <div className="space-y-2 pt-2 border-t">
+                <div className="space-y-2 pt-2 border-t" data-tour="workshop-recovery-settlement">
                   <Label className="text-xs"><T>Final Settlement Variance Reason</T></Label>
                   <Input
                     placeholder={t("Verified assay fine gold yield and recovery loss")}

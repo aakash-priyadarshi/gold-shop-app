@@ -29,8 +29,10 @@ import {
   Cpu,
   Flame,
   GitBranch,
+  Hammer,
   Layers,
   Loader2,
+  Plus,
   RefreshCw,
   Scale,
   ShieldAlert,
@@ -41,10 +43,12 @@ import {
 import { MaterialBalanceCard } from "../shared/MaterialBalanceCard";
 import { ExceptionBanner, type WorkshopException } from "../shared/ExceptionBanner";
 import { WorkshopOnboardingChecklist, type WorkshopSetupStatus } from "../onboarding/WorkshopOnboardingChecklist";
+import { WorkshopCreateJobDialog } from "../jobs/WorkshopCreateJobDialog";
 
 export function WorkshopOverview() {
   const t = useT();
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [jobs, setJobs] = useState<WorkshopJob[]>([]);
   const [accounts, setAccounts] = useState<WorkshopAccount[]>([]);
   const [transfers, setTransfers] = useState<WorkshopTransfer[]>([]);
@@ -279,11 +283,66 @@ export function WorkshopOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Quick Actions Row */}
+      <div
+        data-tour="workshop-quick-actions"
+        className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+      >
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-foreground">
+              <T>Manufacturing Control Tower</T>
+            </h2>
+            <Badge variant="outline" className="text-[11px] font-mono">
+              <T>Live Factory OS</T>
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <T>Direct operational shortcuts to create jobs, run fabrication processes, and move physical metal.</T>
+          </p>
+        </div>
+
+        <div
+          data-tour="workshop-overview-actions"
+          className="flex items-center gap-2 flex-wrap"
+        >
+          <Button
+            size="sm"
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            <T>Create Job</T>
+          </Button>
+
+          <Button variant="outline" size="sm" className="text-xs h-8" asChild>
+            <Link href={supplyChainHref("production")}>
+              <Activity className="h-3.5 w-3.5 mr-1 text-amber-500" />
+              <T>Open Production</T>
+            </Link>
+          </Button>
+
+          <Button variant="outline" size="sm" className="text-xs h-8" asChild>
+            <Link href={supplyChainHref("transfers")}>
+              <Truck className="h-3.5 w-3.5 mr-1 text-cyan-500" />
+              <T>New Transfer</T>
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="sm" onClick={loadData} className="text-xs h-8">
+            <RefreshCw className="h-3.5 w-3.5 mr-1" />
+            <T>Refresh</T>
+          </Button>
+        </div>
+      </div>
+
       {/* Onboarding Checklist if setup is incomplete */}
-      <WorkshopOnboardingChecklist status={setupStatus} />
+      <div data-tour="workshop-overview-setup">
+        <WorkshopOnboardingChecklist status={setupStatus} />
+      </div>
 
       {/* Top Operating KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div data-tour="workshop-overview-kpis" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card className="border-border">
           <CardContent className="p-3.5 space-y-1">
             <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
@@ -361,7 +420,7 @@ export function WorkshopOverview() {
       <ExceptionBanner exceptions={exceptions} />
 
       {/* Production Pipeline Visualization */}
-      <Card className="border-border">
+      <Card data-tour="workshop-overview-pipeline" className="border-border">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -416,7 +475,7 @@ export function WorkshopOverview() {
       </Card>
 
       {/* Traceable Physical Metal Position Summary */}
-      <div className="space-y-3">
+      <div data-tour="workshop-overview-metal" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -453,6 +512,13 @@ export function WorkshopOverview() {
           )}
         </div>
       </div>
+
+      {/* Create Job Modal from Quick Actions */}
+      <WorkshopCreateJobDialog
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onJobCreated={loadData}
+      />
     </div>
   );
 }

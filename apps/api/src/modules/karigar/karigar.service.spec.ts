@@ -1,5 +1,9 @@
 import { BadRequestException } from "@nestjs/common";
 import { KarigarService } from "./karigar.service";
+import { KarigarController } from "./karigar.controller";
+import { CreateKarigarWorkshopDto } from "./dto/karigar.dto";
+import { plainToInstance } from "class-transformer";
+import { validate } from "class-validator";
 
 describe("KarigarService workshop safeguards", () => {
   let prisma: any;
@@ -16,7 +20,7 @@ describe("KarigarService workshop safeguards", () => {
         update: jest.fn(),
       },
       karigarVaultReserve: { findUnique: jest.fn(), upsert: jest.fn() },
-      karigarWorkshop: { findFirst: jest.fn(), update: jest.fn() },
+      karigarWorkshop: { findFirst: jest.fn(), update: jest.fn(), create: jest.fn(({ data }) => Promise.resolve(data)) },
       karigarCastingTree: { findFirst: jest.fn(), create: jest.fn() },
       karigarMetalMovement: { create: jest.fn() },
       karigarFinancialEntry: { findMany: jest.fn().mockResolvedValue([]) },
@@ -51,6 +55,34 @@ describe("KarigarService workshop safeguards", () => {
     currentStage: "CASTING",
   };
   const cancelledJob = { ...activeJob, status: "CANCELLED" };
+
+  it("adds only a new Karigar in the authenticated shop without replaying balances or jobs", async () => {
+    const controller = new KarigarController(service);
+    const result = await controller.createWorkshop("shop-1", {
+      name: " New Workshop ", artisan: " New Artisan ",
+      shopId: "other-shop", id: "existing-workshop", vaultReserves: { goldGrains24k: 1 },
+      jobs: [{ id: "existing-job" }], metalIssued: 999, wageDue: 999,
+    } as any);
+    expect(result).toEqual({ id: expect.stringMatching(/^ws-/), shopId: "shop-1", name: "New Workshop", artisan: "New Artisan" });
+    expect(prisma.karigarWorkshop.create).toHaveBeenCalledTimes(1);
+    expect(prisma.karigarWorkshop.update).not.toHaveBeenCalled();
+    expect(prisma.karigarVaultReserve.upsert).not.toHaveBeenCalled();
+    expect(prisma.karigarJob.update).not.toHaveBeenCalled();
+    expect(prisma.karigarMetalMovement.create).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses additive creation without an authenticated shop", async () => {
+    await expect(new KarigarController(service).createWorkshop("", { name: "Workshop", artisan: "Artisan" })).rejects.toThrow("No active shop");
+    expect(prisma.karigarWorkshop.create).not.toHaveBeenCalled();
+  });
+
+  it("validates names using workshop limits and refuses non-identity fields", async () => {
+    const dto = plainToInstance(CreateKarigarWorkshopDto, { name: "   ", artisan: "a".repeat(201), vaultReserves: {} });
+    const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
+    expect(errors.map((error) => error.property)).toEqual(expect.arrayContaining(["name", "artisan", "vaultReserves"]));
+    expect(await validate(plainToInstance(CreateKarigarWorkshopDto, { name: " Workshop ", artisan: " Artisan " }))).toHaveLength(0);
+  });
 
   it("requires an approved QC stage before receiving finished goods", async () => {
     (service as any).requireWorkshopShop = jest.fn().mockResolvedValue({});

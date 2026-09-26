@@ -8,11 +8,11 @@ import { translateTourSteps } from "./translate-tour-steps";
 import { useTourContext } from "./useTourContext";
 
 const SUPPLY_CHAIN_NAV_STEP: DriveStep = {
-  element: "[data-tour='supply-chain-nav']",
+  element: "[data-tour='workshop-navigation'], [data-tour='supply-chain-nav']",
   popover: {
-    title: "Seven views on one page",
+    title: "Workshop & Karigar Navigation",
     description:
-      "Karigar book is the artisan ledger. With Workshop mode on, the same Supply Chain page also has Tower, Jobs, Floor, Metal, QC, and Reports. These are tabs here — not extra sidebar pages.",
+      "Karigar Book is the traditional artisan ledger. Factory Operations (Overview, Jobs, Production, Metal, Transfers, Recovery, QC, Reports) track traceable manufacturing. Factory Settings configures scales, materials, and processes.",
     side: "bottom",
     align: "start",
   },
@@ -133,6 +133,467 @@ const INVOICE_DETAIL_TOUR_STEPS: DriveStep[] = [
         "Opens POS Hardware. Pair a wireless thermal, pick USB, or (in Desktop) tap an installed thermal from Windows/macOS. Shop Settings → Preferences also has this link.",
       side: "top",
       align: "start",
+    },
+  },
+];
+
+
+const WORKSHOP_OVERVIEW_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='supply-nav-tower'], [data-tour='supply-nav-overview']",
+    popover: {
+      title: "Control Tower",
+      description:
+        "Factory operations and live status on this same Supply Chain page. It does not replace the Karigar book — switch back with that tab.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-quick-actions']",
+    popover: {
+      title: "Quick Actions",
+      description:
+        "Fast operational shortcuts: create a job, jump straight to the production floor, or initiate inter-department material transfers.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-overview-kpis']",
+    popover: {
+      title: "Live Operations KPIs",
+      description:
+        "Real-time pulse of your factory: active jobs, running processes, pending transfers, recovery batches, and pending QC inspections.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-overview-pipeline']",
+    popover: {
+      title: "Production Pipeline",
+      description:
+        "Visual queue of work orders moving through dynamically configured manufacturing processes from casting to finishing.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-overview-metal']",
+    popover: {
+      title: "Physical Metal Position",
+      description:
+        "Traceable metal custody across vault, WIP benches, reusable scrap, recovery pending, refinery batches, and finished goods.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-overview-setup']",
+    popover: {
+      title: "Factory Setup Checklist",
+      description:
+        "Track configuration of scales, materials, recipes, processes, routes, and staff permissions to unlock full factory automation.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+];
+
+const WORKSHOP_JOBS_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-jobs-create']",
+    popover: {
+      title: "Create Manufacturing Job",
+      description:
+        "This is the canonical place to create a factory work order. Specify the product, assign an artisan, set quantity, priority, and due date.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-jobs-filters']",
+    popover: {
+      title: "Search & Filter Jobs",
+      description:
+        "Filter work orders by status (Active, In QC, Completed) or search by job number, product name, or assigned karigar.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-jobs-list']",
+    popover: {
+      title: "Jobs Directory & State",
+      description:
+        "Review current active stage, target purity, quantities, and due dates. Cancel/archive a job if cancelled. Click any row or View Details to inspect the complete manufacturing breakdown.",
+      side: "top",
+      align: "center",
+    },
+  },
+];
+
+const WORKSHOP_JOB_DETAIL_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-job-theoretical']",
+    popover: {
+      title: "Theoretical CAD Weight",
+      description:
+        "The ideal design target weight from CAD/design specifications. This is an informational reference and does not move stock.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-job-recommended']",
+    popover: {
+      title: "Recommended Recipe Quantity",
+      description:
+        "Calculated material required based on configured factory recipe ratios. Guides the operator without altering physical inventory.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-job-actual']",
+    popover: {
+      title: "Actual Scale-Confirmed Metal",
+      description:
+        "Physical weight confirmed on certified hardware scales. This directly updates the double-entry workshop ledger and balance sheet.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-job-route']",
+    popover: {
+      title: "Configured Production Route",
+      description:
+        "The sequence of manufacturing operations assigned to this job. Supports skipping, repeating, or rework passes when permitted.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-job-reconciliation']",
+    popover: {
+      title: "Stage Reconciliation",
+      description:
+        "Every gram of metal input plus additions must be balanced by finished pieces, reusable scrap, recoverable dust, or accounted variance.",
+      side: "top",
+      align: "center",
+    },
+  },
+];
+
+const WORKSHOP_PRODUCTION_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-floor-depts'], [data-tour='workshop-production-queue']",
+    popover: {
+      title: "Department Queues",
+      description:
+        "Choose the active manufacturing work order and departmental queue (Casting, Filing, Setting, Polishing) ready for physical work.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-production-process']",
+    popover: {
+      title: "Start Process Operation",
+      description:
+        "Initiate a timed run on the designated workstation. The configured recipe defines required material inputs and expected recovery.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-production-material']",
+    popover: {
+      title: "Physical Material Input",
+      description:
+        "Verify the specific metal lot or casting tree allocated to this process before placing material on the scale.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-production-scale']",
+    popover: {
+      title: "Scale Stable NET & Capture",
+      description:
+        "Zero container tare on the physical scale. Once Stable NET is verified, Capture reads the weight without posting to inventory.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-production-remainder']",
+    popover: {
+      title: "Classify Remainder & Scrap",
+      description:
+        "Allocate post-process material into traceable classifications: WIP piece, reusable sprue, scrap, or recovery dust bag.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-production-close']",
+    popover: {
+      title: "Reconcile & Close Process",
+      description:
+        "Confirm posted weights to the immutable ledger. When inputs and outputs match within configured tolerance, close the process run.",
+      side: "top",
+      align: "end",
+    },
+  },
+];
+
+const WORKSHOP_METAL_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-metal-balances']",
+    popover: {
+      title: "Physical Metal Balances (Gold 995)",
+      description:
+        "Real-time physical balances tracked at 0.995 fine gold purity. Distinct from theoretical retail pricing or legacy 24K valuations.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-metal-form'], [data-tour='workshop-metal-journal']",
+    popover: {
+      title: "Immutable Movement Journal",
+      description:
+        "Every scale capture, material issue, department transfer, and scrap return is recorded in an audit-grade double-entry journal.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-metal-corrections']",
+    popover: {
+      title: "Corrections & Reversals",
+      description:
+        "Historical journal entries are never deleted. Administrative corrections create an immutable reversal entry and a replacement transaction.",
+      side: "top",
+      align: "end",
+    },
+  },
+];
+
+const WORKSHOP_TRANSFERS_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-transfer-create']",
+    popover: {
+      title: "New Inter-Department Transfer",
+      description:
+        "Initiate a physical material transfer between factory departments or vaults with custodial tracking.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-transfer-dispatch']",
+    popover: {
+      title: "Dispatch Weighing",
+      description:
+        "The dispatching department captures the gross, tare, and net weights on a certified scale before sending material.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-transfer-receive']",
+    popover: {
+      title: "Receipt Verification",
+      description:
+        "The receiving department independently re-weighs the incoming batch to confirm custody before accepting the transfer.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-transfer-variance']",
+    popover: {
+      title: "Transfer Variance & Reconciliation",
+      description:
+        "Weight discrepancies between dispatch and receipt are highlighted against allowed tolerances rather than assumed as immediate loss.",
+      side: "top",
+      align: "end",
+    },
+  },
+];
+
+const WORKSHOP_RECOVERY_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-recovery-create']",
+    popover: {
+      title: "New Recovery Bag",
+      description:
+        "Create a serialized bag to collect floor sweeps, filing dust, ultrasonic sludge, or polishing residue for refining.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-recovery-bags']",
+    popover: {
+      title: "Track Recovery Batches",
+      description:
+        "Monitor accumulated weight and department source lineage. Residue is held in 'Recovery Pending' status rather than booked as loss.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-recovery-send']",
+    popover: {
+      title: "Send to Refinery",
+      description:
+        "Dispatch accumulated recovery bags to internal or external refining partners with documented gross and net weights.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-recovery-result']",
+    popover: {
+      title: "Record Physical Recovery Result",
+      description:
+        "Log the physical fine gold bar returned by the refinery. A scale-confirmed physical result is required prior to final settlement.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-recovery-settlement']",
+    popover: {
+      title: "Settlement & Optional Assay",
+      description:
+        "Record an optional metallurgical assay purity certificate. Settle the batch to credit recovered bullion back into your vault ledger.",
+      side: "top",
+      align: "end",
+    },
+  },
+];
+
+const WORKSHOP_QC_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-qc-queue']",
+    popover: {
+      title: "QC Inspection Queue",
+      description:
+        "Work orders awaiting quality inspection arrive here automatically after completing their production route. No manual job creation needed.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-qc-blockers']",
+    popover: {
+      title: "Inspection Checklist & Blockers",
+      description:
+        "Verify prongs, finish, symmetry, and weight conformity. Any manufacturing defect flags the piece for corrective rework.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-qc-action']",
+    popover: {
+      title: "Approve, Rework, or Reject",
+      description:
+        "Approve is the required next step before receiving finished goods into showroom inventory. Send back with rework notes or reject damaged pieces.",
+      side: "top",
+      align: "end",
+    },
+  },
+];
+
+const WORKSHOP_REPORTS_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-reports-filters']",
+    popover: {
+      title: "Report Categories & Time Range",
+      description:
+        "Filter by material stock, process variance, transfer variance, recovery yield, or audit corrections across customizable date ranges.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-reports-results']",
+    popover: {
+      title: "Traceable Material Accounting",
+      description:
+        "Answers exactly 'Where did these grams go?'. Compare issued gold against finished yield, sprue returns, and recoverable dust with drilldown.",
+      side: "top",
+      align: "center",
+    },
+  },
+];
+
+const WORKSHOP_SETTINGS_STEPS: DriveStep[] = [
+  SUPPLY_CHAIN_NAV_STEP,
+  {
+    element: "[data-tour='workshop-settings-tabs']",
+    popover: {
+      title: "Factory Configuration Sequence",
+      description:
+        "Configure your factory in order: 1. Scales -> 2. Materials -> 3. Recipes -> 4. Processes -> 5. Routes -> 6. Workstations -> 7. Tolerances -> 8. Staff.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-settings-tabs']",
+    popover: {
+      title: "Hardware Scales",
+      description:
+        "Select Scales to connect digital scales via the Desktop bridge. Set precision to 0.01g for gold and 0.001g for diamonds.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-settings-tabs']",
+    popover: {
+      title: "Factory Materials",
+      description:
+        "Select Materials to define tracked metals (e.g. Gold 995, Sterling Silver), master alloys, and casting consumables used in production.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-settings-tabs']",
+    popover: {
+      title: "Processes & Routes",
+      description:
+        "Select Processes to set up manufacturing stages (Casting, Filing, Setting, Polishing), then Routes to link them into production routes.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    element: "[data-tour='workshop-settings-tabs']",
+    popover: {
+      title: "Loss Tolerances & Permissions",
+      description:
+        "Select Tolerances to set maximum differences in grams per process. Select Staff to configure scale capture and supervisor approval permissions.",
+      side: "top",
+      align: "end",
     },
   },
 ];
@@ -733,9 +1194,9 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='workshop-locked']",
       popover: {
-        title: "Factory views are locked",
+        title: "Factory Views are Locked",
         description:
-          "Tower, Jobs, Floor, Metal, QC, and Reports need Workshop mode on in Shop Settings, plus workshopManufacturing on your plan. Use Karigar book until both are on.",
+          "Traceable manufacturing requires Workshop mode enabled in Shop Settings, plus an active workshopManufacturing plan entitlement. Karigar Book remains accessible at all times.",
         side: "bottom",
         align: "start",
       },
@@ -743,315 +1204,26 @@ const TOUR_STEPS: Record<string, DriveStep[]> = {
     {
       element: "[data-tour='supply-nav-book']",
       popover: {
-        title: "Open Karigar book",
+        title: "Open Karigar Book",
         description:
-          "This tab always stays available. It is the vault, artisan float, jobs, and gold-loss ledger.",
+          "Traditional artisan ledger for goldsmith metal float, issue/return vouchers, wages, and job tracking remains fully available here.",
         side: "bottom",
         align: "start",
       },
     },
   ],
-  "/dashboard/shop/supply-chain#workshop-tower": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='supply-nav-tower']",
-      popover: {
-        title: "Tower",
-        description:
-          "Factory exceptions on this same Supply Chain page. It does not replace the Karigar book — switch back with that tab.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-tower']",
-      popover: {
-        title: "Control tower",
-        description:
-          "Overdue work, department bottlenecks, gold-loss breaches, QC, and vault gold. This is factory status, not the artisan balance sheet.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-overdue']",
-      popover: {
-        title: "Overdue jobs",
-        description:
-          "Start here. Open a job to see its card. Then check waiting-on-next, loss-limit, and unreceived finished goods.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-waiting']",
-      popover: {
-        title: "Waiting on next department",
-        description:
-          "Jobs finished in one stage but not yet advanced. Floor is where you enter gold out and tap Advance.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-loss']",
-      popover: {
-        title: "Loss-limit breaches",
-        description:
-          "Physical workshop metal above the allowed %. This is not invoice jarti. Open Reports for the full gold-loss table.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-qc']",
-      popover: {
-        title: "QC pending",
-        description:
-          "Jobs waiting for inspect. The QC tab is where you Approve, Rework, or Reject — that does not write invoices.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-load']",
-      popover: {
-        title: "Department load",
-        description:
-          "Open jobs by current stage. Tap a badge to open Floor with that department filter. Departments are filters, not extra sidebar pages.",
-        side: "top",
-        align: "start",
-      },
-    },
-  ],
-  "/dashboard/shop/supply-chain#workshop-jobs": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='supply-nav-jobs']",
-      popover: {
-        title: "Jobs",
-        description:
-          "Factory work orders. The Karigar book also lists jobs; this tab is for due date, priority, qty, and the job card.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-jobs']",
-      popover: {
-        title: "Work orders",
-        description:
-          "Manufacturing jobs assigned to a karigar. Floor only advances the current stage — it does not create jobs.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-jobs-create']",
-      popover: {
-        title: "New job",
-        description:
-          "Requires a karigar. Set product, due date, priority, and qty. Issue metal from the Metal tab after you create it.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-jobs-list']",
-      popover: {
-        title: "Job list",
-        description:
-          "Open a product name for the job card: casting tree, stage weights, and Receive finished goods into inventory.",
-        side: "top",
-        align: "center",
-      },
-    },
-  ],
-  "/dashboard/shop/supply-chain#workshop-job": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='workshop-job-card']",
-      popover: {
-        title: "Job card",
-        description:
-          "One work order: artisan, stage, due date, size, purity, and notes. Use All jobs to return to the Jobs tab.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='supply-casting-tree']",
-      popover: {
-        title: "Casting tree",
-        description:
-          "Enter issued gold, finished pieces, sprue/button, and recoverable scrap. Actual loss and unexplained loss (above the allowed %) calculate here.",
-        side: "top",
-        align: "center",
-      },
-    },
-    {
-      element: "[data-tour='workshop-receive-fg']",
-      popover: {
-        title: "Receive finished goods",
-        description:
-          "After QC approves the work, receive the finished goods into inventory. This creates or updates stock and can keep an optional SKU; it does not create a customer invoice or price the item for sale.",
-        side: "top",
-        align: "start",
-      },
-    },
-  ],
-  "/dashboard/shop/supply-chain#workshop-floor": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='supply-nav-floor']",
-      popover: {
-        title: "Floor",
-        description:
-          "Department queues on this page. Casting, filing, setting, polish, and QC are filters — not separate routes.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-floor']",
-      popover: {
-        title: "Floor queues",
-        description:
-          "Advance a job by transferring a gold-out weight to the next department. Do not tick checkboxes — enter grams and tap Advance.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-floor-depts']",
-      popover: {
-        title: "Department filters",
-        description:
-          "All, or one stage. The URL uses ?view=floor&dept= so you can bookmark a bench. Tower load badges open the same filters.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-floor-queue']",
-      popover: {
-        title: "Gold out and Advance",
-        description:
-          "Gold in is what this stage received. Type gold out, then Advance. That weight becomes the next stage's gold in.",
-        side: "top",
-        align: "center",
-      },
-    },
-  ],
-  "/dashboard/shop/supply-chain#workshop-metal": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='supply-nav-metal']",
-      popover: {
-        title: "Metal",
-        description:
-          "Factory metal movements. Same physical vault as the Karigar book — unexplained loss never returns to the vault.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-metal']",
-      popover: {
-        title: "Metal ledger",
-        description:
-          "Issue, return finished or sprue, scrap, dust, or adjust inbound bullion. Optional lot id starts genealogy later.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-metal-vault']",
-      popover: {
-        title: "Vault balances",
-        description:
-          "Grams on hand by metal key. Karigar book valuation uses live rates; this grid is the physical weight.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-metal-form']",
-      popover: {
-        title: "Record movement",
-        description:
-          "Pick type, weight in grams, karigar, and optional job. Post movement writes the same ledger the Karigar book uses.",
-        side: "top",
-        align: "start",
-      },
-    },
-  ],
-  "/dashboard/shop/supply-chain#workshop-qc": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='supply-nav-qc']",
-      popover: {
-        title: "QC",
-        description:
-          "Inspect queue for jobs in the QC stage. Approve, rework, or reject — this is not Create Invoice.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-qc-page']",
-      popover: {
-        title: "QC inspect",
-        description:
-          "Approve is the required next step before receiving finished goods. Rework sends the job back to filing; Reject ends the job without creating an invoice. None of these write customer invoices.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-qc-queue']",
-      popover: {
-        title: "Approve, Rework, Reject",
-        description:
-          "Add a reason for rework or reject. Open the product name for the full job card if you need the casting tree.",
-        side: "top",
-        align: "center",
-      },
-    },
-  ],
-  "/dashboard/shop/supply-chain#workshop-reports": [
-    SUPPLY_CHAIN_NAV_STEP,
-    {
-      element: "[data-tour='supply-nav-reports']",
-      popover: {
-        title: "Reports",
-        description:
-          "Workshop gold-loss tables. The Karigar book also shows this report at the bottom of that tab.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='workshop-reports']",
-      popover: {
-        title: "Workshop reports",
-        description:
-          "Gold loss by job, tree, and karigar. Yield, wages, and ageing reports come later. This is workshop metal, not invoice jarti.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: "[data-tour='supply-gold-loss']",
-      popover: {
-        title: "Gold loss table",
-        description:
-          "Issued vs finished vs sprue vs recoverable. Unexplained is anything above the allowed %. Print from the Karigar book card if you need a walkthrough sheet.",
-        side: "top",
-        align: "center",
-      },
-    },
-  ],
+  "/dashboard/shop/supply-chain#workshop-overview": WORKSHOP_OVERVIEW_STEPS,
+  "/dashboard/shop/supply-chain#workshop-tower": WORKSHOP_OVERVIEW_STEPS,
+  "/dashboard/shop/supply-chain#workshop-jobs": WORKSHOP_JOBS_STEPS,
+  "/dashboard/shop/supply-chain#workshop-job": WORKSHOP_JOB_DETAIL_STEPS,
+  "/dashboard/shop/supply-chain#workshop-production": WORKSHOP_PRODUCTION_STEPS,
+  "/dashboard/shop/supply-chain#workshop-floor": WORKSHOP_PRODUCTION_STEPS,
+  "/dashboard/shop/supply-chain#workshop-metal": WORKSHOP_METAL_STEPS,
+  "/dashboard/shop/supply-chain#workshop-transfers": WORKSHOP_TRANSFERS_STEPS,
+  "/dashboard/shop/supply-chain#workshop-recovery": WORKSHOP_RECOVERY_STEPS,
+  "/dashboard/shop/supply-chain#workshop-qc": WORKSHOP_QC_STEPS,
+  "/dashboard/shop/supply-chain#workshop-reports": WORKSHOP_REPORTS_STEPS,
+  "/dashboard/shop/supply-chain#workshop-settings": WORKSHOP_SETTINGS_STEPS,
   "/dashboard/shop/catalogues": [
     {
       element: "[data-tour='catalogues-create']",

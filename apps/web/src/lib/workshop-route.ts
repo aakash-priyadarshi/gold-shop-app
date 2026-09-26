@@ -49,6 +49,14 @@ export function parseWorkshopView(value: string | null): WorkshopView {
   return WORKSHOP_VIEWS.has(normalized) ? (normalized as WorkshopView) : "overview";
 }
 
+export function resolveWorkshopView(
+  value: string | null,
+  workshopMode: boolean,
+  workshopManufacturingEnabled: boolean,
+): WorkshopView {
+  return value ? parseWorkshopView(value) : workshopMode && workshopManufacturingEnabled ? "overview" : "book";
+}
+
 export function supplyChainHref(
   view?: WorkshopView,
   params: Record<string, string | null | undefined> = {},
