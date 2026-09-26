@@ -28,6 +28,8 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Coins,
   Cpu,
   Edit3,
@@ -92,6 +94,11 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
   const [showAddProcessModal, setShowAddProcessModal] = useState(false);
   const [procName, setProcName] = useState("");
   const [procDept, setProcDept] = useState("");
+
+  // Route builder state
+  const [routeName, setRouteName] = useState("");
+  const [routeDefinitionIds, setRouteDefinitionIds] = useState<string[]>([]);
+  const [selectedProcessToAdd, setSelectedProcessToAdd] = useState("");
 
   const [showAddWorkstationModal, setShowAddWorkstationModal] = useState(false);
   const [wsName, setWsName] = useState("");
@@ -294,6 +301,9 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
     try {
       await save();
       await loadCatalog();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("workshop-catalog-updated"));
+      }
     } catch (err: any) {
       setSettingsError(err?.response?.data?.message || err?.message || t("Unable to save workshop setting"));
     }
@@ -318,6 +328,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
             { id: "MATERIALS", label: "Materials", icon: Coins },
             { id: "RECIPES", label: "Alloy Recipes", icon: Sparkles },
             { id: "PROCESSES", label: "Processes", icon: GitBranch },
+            { id: "ROUTES", label: "Routes", icon: Layers },
             { id: "WORKSTATIONS", label: "Machines", icon: Cpu },
             { id: "TOLERANCES", label: "Tolerances", icon: Sliders },
             { id: "STAFF", label: "Staff & Operators", icon: Users },
@@ -501,6 +512,210 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
           {catalog?.processes.map((process) => <div key={process.id} className="text-xs border-b py-2">{process.name} · {process.department || "—"}</div>)}
           {canApprove && <div className="grid gap-2 sm:grid-cols-3"><Input value={procName} onChange={(e) => setProcName(e.target.value)} placeholder={t("Process name")} /><Input value={procDept} onChange={(e) => setProcDept(e.target.value)} placeholder={t("Department")} /><Button disabled={!procName.trim()} onClick={() => saveSetting(async () => { await workshopApi.createProcess({ name: procName.trim(), department: procDept.trim() || undefined }); setProcName(""); setProcDept(""); })}><T>Add process</T></Button></div>}
         </CardContent></Card>
+      )}
+
+      {activeTab === "ROUTES" && (
+        <Card className="border-border">
+          <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Layers className="h-4 w-4 text-amber-500" />
+                <T>Standard Manufacturing Routes</T>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                <T>Ordered sequences of manufacturing processes for job fabrication routing</T>
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            {/* Existing Active Routes List */}
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold block"><T>Configured Routes</T></Label>
+              {(!catalog?.routes || catalog.routes.length === 0) ? (
+                <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
+                  <T>No fabrication routes configured. Create a route below to complete setup.</T>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {catalog.routes.map((route) => (
+                    <div key={route.id} className="rounded-xl border p-3.5 bg-muted/20 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-foreground">{route.name}</span>
+                        <Badge variant={route.isActive ? "default" : "secondary"} className="text-[10px]">
+                          {route.isActive ? <T>Active</T> : <T>Inactive</T>}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[11px] text-muted-foreground"><T>Process Sequence:</T></span>
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          {(route.steps || []).map((step, idx) => {
+                            const defName =
+                              step.definition?.name ||
+                              catalog.processes.find((p) => p.id === step.definitionId)?.name ||
+                              `${step.position + 1}`;
+                            return (
+                              <div key={step.id || idx} className="flex items-center gap-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-background border text-[11px] font-medium">
+                                  {step.position + 1}. {defName}
+                                </span>
+                                {idx < (route.steps?.length || 0) - 1 && (
+                                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Create Route Builder Form */}
+            {canApprove && (
+              <div className="rounded-xl border p-4 bg-muted/10 space-y-3 text-xs">
+                <h4 className="text-xs font-bold text-foreground"><T>Create Route Template</T></h4>
+                <div className="space-y-2 max-w-md">
+                  <div>
+                    <Label className="text-xs mb-1 block"><T>Route Name</T></Label>
+                    <Input
+                      value={routeName}
+                      onChange={(e) => setRouteName(e.target.value)}
+                      placeholder={t("e.g. Standard Ring Fabrication (Casting to Polishing)")}
+                      className="text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs mb-1 block"><T>Add Process Step</T></Label>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedProcessToAdd}
+                        onChange={(e) => setSelectedProcessToAdd(e.target.value)}
+                        className="flex-1 rounded-md border bg-background p-2 text-xs"
+                      >
+                        <option value="">{t("Select process to add...")}</option>
+                        {catalog?.processes
+                          .filter((p) => p.isActive)
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} {p.department ? `(${p.department})` : ""}
+                            </option>
+                          ))}
+                      </select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!selectedProcessToAdd}
+                        onClick={() => {
+                          if (selectedProcessToAdd) {
+                            setRouteDefinitionIds((prev) => [...prev, selectedProcessToAdd]);
+                            setSelectedProcessToAdd("");
+                          }
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        <T>Add Step</T>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {routeDefinitionIds.length > 0 && (
+                    <div className="space-y-1.5 pt-2">
+                      <Label className="text-xs font-semibold block">
+                        <T>Ordered Steps</T> ({routeDefinitionIds.length})
+                      </Label>
+                      <div className="space-y-1">
+                        {routeDefinitionIds.map((defId, idx) => {
+                          const def = catalog?.processes.find((p) => p.id === defId);
+                          return (
+                            <div key={idx} className="flex items-center justify-between rounded border bg-background p-2 text-xs">
+                              <span className="font-medium">
+                                {idx + 1}. {def?.name || defId}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  disabled={idx === 0}
+                                  onClick={() => {
+                                    setRouteDefinitionIds((prev) => {
+                                      const next = [...prev];
+                                      const tmp = next[idx - 1];
+                                      next[idx - 1] = next[idx];
+                                      next[idx] = tmp;
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  disabled={idx === routeDefinitionIds.length - 1}
+                                  onClick={() => {
+                                    setRouteDefinitionIds((prev) => {
+                                      const next = [...prev];
+                                      const tmp = next[idx + 1];
+                                      next[idx + 1] = next[idx];
+                                      next[idx] = tmp;
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setRouteDefinitionIds((prev) => prev.filter((_, i) => i !== idx));
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      disabled={!routeName.trim() || routeDefinitionIds.length === 0}
+                      onClick={() =>
+                        saveSetting(async () => {
+                          await workshopApi.createRoute({
+                            name: routeName.trim(),
+                            definitionIds: routeDefinitionIds,
+                          });
+                          setRouteName("");
+                          setRouteDefinitionIds([]);
+                        })
+                      }
+                    >
+                      <T>Create Route</T>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {activeTab === "WORKSTATIONS" && (

@@ -146,4 +146,62 @@ describe("Mass Balance Reconciliation & Dedicated Correction Workflow", () => {
       expect(onSuccess).toHaveBeenCalled();
     });
   });
+
+  it("resets all form state and idempotency when switching from journal A to journal B", () => {
+    const journalA: WorkshopJournalEntry = {
+      id: "j-a",
+      entryNumber: 1,
+      status: "POSTED",
+      referenceType: "PROCESS_INPUT",
+      referenceId: "run-a",
+      idempotencyKey: "idemp-a",
+      weightGrams: "100.000",
+      materialKey: "goldGrains995",
+      postedAt: new Date().toISOString(),
+      lines: [],
+    };
+    const journalB: WorkshopJournalEntry = {
+      id: "j-b",
+      entryNumber: 2,
+      status: "POSTED",
+      referenceType: "PROCESS_OUTPUT",
+      referenceId: "run-b",
+      idempotencyKey: "idemp-b",
+      weightGrams: "95.000",
+      materialKey: "goldGrains995",
+      postedAt: new Date().toISOString(),
+      lines: [],
+    };
+
+    const { rerender } = render(
+      <TransactionCorrectionDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        journal={journalA}
+      />
+    );
+
+    const reasonInput = screen.getByPlaceholderText(/Scale reading recalibration/) as HTMLInputElement;
+    const weightInput = screen.getByPlaceholderText("0.000") as HTMLInputElement;
+    fireEvent.change(reasonInput, { target: { value: "Dirty crucible on journal A" } });
+    fireEvent.change(weightInput, { target: { value: "99.200" } });
+    expect(reasonInput.value).toBe("Dirty crucible on journal A");
+    expect(weightInput.value).toBe("99.200");
+
+    // Switch to journal B
+    rerender(
+      <TransactionCorrectionDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        journal={journalB}
+      />
+    );
+
+    const newReasonInput = screen.getByPlaceholderText(/Scale reading recalibration/) as HTMLInputElement;
+    const newWeightInput = screen.getByPlaceholderText("0.000") as HTMLInputElement;
+    expect(newReasonInput.value).toBe("");
+    expect(newWeightInput.value).toBe("");
+  });
 });

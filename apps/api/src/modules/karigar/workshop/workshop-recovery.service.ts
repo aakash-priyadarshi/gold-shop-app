@@ -83,8 +83,14 @@ export class WorkshopRecoveryService {
     const material = await this.prisma.workshopMaterial.findFirst({ where: { id: dto.materialId, shopId } });
     if (!material) throw new NotFoundException("Workshop material not found");
     if (dto.recoveryEventId) {
-      const event = await this.prisma.workshopRecoveryEvent.findFirst({ where: { id: dto.recoveryEventId, shopId } });
+      const event = await this.prisma.workshopRecoveryEvent.findFirst({
+        where: { id: dto.recoveryEventId, shopId },
+        include: { container: true },
+      });
       if (!event || event.status === "OPEN") throw new BadRequestException("Assay requires a sent recovery event in this shop");
+      if (material.key !== event.container.materialKey) {
+        throw new BadRequestException("Assay material must match the recovery container physical material");
+      }
     }
     const purity = new Prisma.Decimal(dto.fineGoldFraction);
     if (purity.lt(0) || purity.gt(1)) throw new BadRequestException("Assay purity must be between zero and one");
@@ -125,7 +131,11 @@ export class WorkshopRecoveryService {
       }
 
       const latestAssay = await tx.workshopMaterialAssay.findFirst({
-        where: { shopId, recoveryEventId: id },
+        where: {
+          shopId,
+          recoveryEventId: id,
+          material: { key: event.container.materialKey },
+        },
         orderBy: { assayedAt: "desc" },
       });
 

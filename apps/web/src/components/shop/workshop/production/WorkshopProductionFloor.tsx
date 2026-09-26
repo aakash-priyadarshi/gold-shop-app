@@ -81,6 +81,31 @@ export function WorkshopProductionFloor({
     setClassificationReason("");
   }, [selectedJobId]);
 
+  const expectedPurpose = ["STONE_SETTING", "STONE_RETURN"].includes(activeMovementKind) ? "STONE" : "GOLD";
+  const activeMovementMaterials = useMemo(
+    () => materials.filter((m) => m.isActive && m.scalePurpose === expectedPurpose),
+    [materials, expectedPurpose]
+  );
+
+  useEffect(() => {
+    if (activeMovementMaterials.length > 0) {
+      if (!activeMovementMaterials.some((m) => m.key === selectedMaterialKey)) {
+        setSelectedMaterialKey(activeMovementMaterials[0].key);
+      }
+    } else {
+      setSelectedMaterialKey("");
+    }
+  }, [activeMovementMaterials, selectedMaterialKey]);
+
+  useEffect(() => {
+    if (selectedRecoveryBagId) {
+      const currentBag = recoveryBags.find((b) => b.id === selectedRecoveryBagId);
+      if (!currentBag || currentBag.materialKey !== selectedMaterialKey) {
+        setSelectedRecoveryBagId("");
+      }
+    }
+  }, [selectedMaterialKey, selectedRecoveryBagId, recoveryBags]);
+
   const loadFloorData = useCallback(async () => {
     setLoading(true);
     try {
@@ -229,7 +254,9 @@ export function WorkshopProductionFloor({
   };
 
   const needsRun = ["ADDITIONAL_ISSUE", "PROCESS_INPUT", "PROCESS_OUTPUT", "MIXED_OUTPUT", "RECOVERY_DEPOSIT"].includes(activeMovementKind);
-  const selectedBag = recoveryBags.find((bag) => bag.id === selectedRecoveryBagId && bag.status === "OPEN");
+  const selectedBag = recoveryBags.find(
+    (bag) => bag.id === selectedRecoveryBagId && bag.status === "OPEN" && bag.materialKey === selectedMaterialKey
+  );
   const movementMaterialKey = activeMovementKind === "MIXED_OUTPUT" && selectedRun
     ? `mix_${selectedRun.id.replace(/-/g, "")}` : selectedMaterialKey;
   const manualBuckets = (() => {
@@ -520,26 +547,49 @@ export function WorkshopProductionFloor({
               {/* Material Key Selector */}
               <div>
                 <Label className="text-xs font-semibold block mb-1.5"><T>Physical Material</T></Label>
-                <select
-                  value={selectedMaterialKey}
-                  onChange={(e) => setSelectedMaterialKey(e.target.value)}
-                  disabled={activeMovementKind === "MIXED_OUTPUT"}
-                  className="w-full text-xs rounded-md border border-input bg-background p-2 font-mono"
-                >
-                  {materials.filter((m) => m.isActive && m.scalePurpose === (["STONE_SETTING", "STONE_RETURN"].includes(activeMovementKind) ? "STONE" : "GOLD")).map((m) => (
-                    <option key={m.id} value={m.key}>
-                      {m.name} ({m.key})
-                    </option>
-                  ))}
-                </select>
+                {activeMovementMaterials.length === 0 && activeMovementKind !== "MIXED_OUTPUT" ? (
+                  <p className="text-xs text-amber-600 py-1"><T>No active materials available for this movement.</T></p>
+                ) : (
+                  <select
+                    value={selectedMaterialKey}
+                    onChange={(e) => {
+                      const newKey = e.target.value;
+                      setSelectedMaterialKey(newKey);
+                      const currentBag = recoveryBags.find((b) => b.id === selectedRecoveryBagId);
+                      if (!currentBag || currentBag.materialKey !== newKey) {
+                        setSelectedRecoveryBagId("");
+                      }
+                    }}
+                    disabled={activeMovementKind === "MIXED_OUTPUT"}
+                    className="w-full text-xs rounded-md border border-input bg-background p-2 font-mono"
+                  >
+                    {activeMovementMaterials.map((m) => (
+                      <option key={m.id} value={m.key}>
+                        {m.name} ({m.key})
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {activeMovementKind === "MIXED_OUTPUT" && <p className="text-xs text-muted-foreground font-mono">{movementMaterialKey}</p>}
               </div>
 
               {activeMovementKind === "RECOVERY_DEPOSIT" && (
-                <div><Label><T>Recovery bag</T></Label><select value={selectedRecoveryBagId} onChange={(e) => setSelectedRecoveryBagId(e.target.value)} className="w-full rounded-md border bg-background p-2 text-xs"><option value=""><T>Select open bag</T></option>{recoveryBags.filter((bag) => bag.status === "OPEN" && bag.materialKey === selectedMaterialKey).map((bag) => <option key={bag.id} value={bag.id}>{bag.code}</option>)}</select></div>
+                <div>
+                  <Label><T>Recovery bag</T></Label>
+                  <select
+                    value={selectedRecoveryBagId}
+                    onChange={(e) => setSelectedRecoveryBagId(e.target.value)}
+                    className="w-full rounded-md border bg-background p-2 text-xs"
+                  >
+                    <option value=""><T>Select open bag</T></option>
+                    {recoveryBags.filter((bag) => bag.status === "OPEN" && bag.materialKey === selectedMaterialKey).map((bag) => (
+                      <option key={bag.id} value={bag.id}>{bag.code}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
-              {(!primaryTree || (needsRun && !selectedRun) || (activeMovementKind === "RECOVERY_DEPOSIT" && !selectedBag) || (activeMovementKind === "MIXED_OUTPUT" && !selectedRun?.recipeId)) ? (
+              {(!primaryTree || (needsRun && !selectedRun) || (activeMovementKind === "RECOVERY_DEPOSIT" && !selectedBag) || (activeMovementKind === "MIXED_OUTPUT" && !selectedRun?.recipeId) || (activeMovementKind !== "MIXED_OUTPUT" && (!selectedMaterialKey || !activeMovementMaterials.some((m) => m.key === selectedMaterialKey)))) ? (
                 <p className="text-xs text-amber-700"><T>Select a matching casting tree, active process run, recipe or recovery bag before weighing.</T></p>
               ) : (
               <ScaleCapturePanel

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,15 @@ export function TransactionCorrectionDialog({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const retry = useRef<WorkshopRetryKey | null>(null);
+
+  useEffect(() => {
+    retry.current = null;
+    setCorrectionMode("REPLACE");
+    setReplacementWeight("");
+    setReason("");
+    setLoading(false);
+    setErrorMessage(null);
+  }, [journal?.id]);
 
   if (!isOpen || !journal) return null;
 

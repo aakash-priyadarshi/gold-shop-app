@@ -91,6 +91,16 @@ export function WorkshopOverview() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const handleCatalogUpdated = () => {
+      loadData();
+    };
+    window.addEventListener("workshop-catalog-updated", handleCatalogUpdated);
+    return () => {
+      window.removeEventListener("workshop-catalog-updated", handleCatalogUpdated);
+    };
+  }, [loadData]);
+
   // Derive KPIs
   const activeJobs = useMemo(
     () => jobs.filter((j) => !["Completed", "CANCELLED", "REJECTED"].includes(j.status)),

@@ -112,6 +112,19 @@ export class WorkshopControlService {
           return this.journal.serializeEntry(original.replacedBy, true);
         }
         if (!dto.replacementWeightGrams && original.reversedBy?.idempotencyKey === `reversal:${dto.idempotencyKey}` && !original.replacedBy) {
+          if (original.referenceType === WorkshopMetalJournalReferenceType.FINISHED_RECEIPT) {
+            const item = await tx.inventoryItem.findFirst({
+              where: { workshopReceiptJournalId: original.id, shopId },
+              select: { id: true },
+            });
+            return {
+              id: original.id,
+              status: "REVERSED",
+              voided: true,
+              idempotent: true,
+              voidedInventoryItemId: item?.id ?? null,
+            };
+          }
           return { id: original.id, status: "REVERSED", voided: true, idempotent: true };
         }
         throw new ConflictException("This journal has already been corrected");

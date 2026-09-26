@@ -75,21 +75,31 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
       }
       if (catRes.status === "fulfilled") {
         setDefinitions(catRes.value.data?.processes || []);
-        setMaterials(catRes.value.data?.materials.filter((m) => m.isActive) || []);
+        const activeMats = catRes.value.data?.materials.filter((m) => m.isActive) || [];
+        setMaterials(activeMats);
+        if (activeMats.length > 0 && !activeMats.some((m) => m.key === materialKey)) {
+          setMaterialKey(activeMats[0].key);
+        }
       }
     } catch {
       // handled
     } finally {
       setLoading(false);
     }
-  }, [selectedTreeId]);
+  }, [selectedTreeId, materialKey]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (materials.length > 0 && !materials.some((m) => m.key === materialKey)) {
+      setMaterialKey(materials[0].key);
+    }
+  }, [materials, materialKey]);
+
   const handlePrepareTransfer = async () => {
-    if (!selectedTreeId || !fromDept || !toDept) return;
+    if (!selectedTreeId || !fromDept || !toDept || materials.length === 0 || !materials.some((m) => m.key === materialKey)) return;
     setSubmittingPrepare(true);
     try {
       await workshopApi.prepareTransfer({
@@ -395,13 +405,17 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
 
               <div>
                 <Label className="text-xs mb-1 block"><T>Material</T></Label>
-                <select
-                  value={materialKey}
-                  onChange={(e) => setMaterialKey(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background p-2 font-mono"
-                >
-                  {materials.map((material) => <option key={material.id} value={material.key}>{material.name}</option>)}
-                </select>
+                {materials.length === 0 ? (
+                  <p className="text-xs text-amber-600 py-1"><T>No active materials available for transfer</T></p>
+                ) : (
+                  <select
+                    value={materialKey}
+                    onChange={(e) => setMaterialKey(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background p-2 font-mono"
+                  >
+                    {materials.map((material) => <option key={material.id} value={material.key}>{material.name}</option>)}
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -432,7 +446,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={handlePrepareTransfer}
-                disabled={submittingPrepare || !selectedTreeId}
+                disabled={submittingPrepare || !selectedTreeId || materials.length === 0}
               >
                 {submittingPrepare ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <T>Prepare Transfer</T>}
               </Button>

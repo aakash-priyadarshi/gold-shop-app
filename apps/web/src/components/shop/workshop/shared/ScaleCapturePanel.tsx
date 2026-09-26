@@ -390,7 +390,7 @@ export function ScaleCapturePanel({
 
           {readingId && !externalConfirm && (
             <Button variant="outline" disabled={loading || !canApprove || confirmed} onClick={handleConfirm}>
-              <T>{confirmed ? "Confirmed" : "Confirm movement"}</T>
+              {confirmed ? <T>Confirmed</T> : <T>Confirm movement</T>}
             </Button>
           )}
 

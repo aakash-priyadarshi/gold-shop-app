@@ -61,6 +61,23 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
   const [resultDestination, setResultDestination] = useState<"VAULT" | "REUSABLE" | "SCRAP" | "REFINERY">("VAULT");
   const [reconcilingLoading, setReconcilingLoading] = useState(false);
 
+  const activeGoldMaterials = useMemo(
+    () => materials.filter((m) => m.isActive && m.scalePurpose === "GOLD"),
+    [materials]
+  );
+
+  useEffect(() => {
+    if (activeGoldMaterials.length > 0 && !activeGoldMaterials.some((m) => m.key === materialKey)) {
+      setMaterialKey(activeGoldMaterials[0].key);
+    }
+  }, [activeGoldMaterials, materialKey]);
+
+  useEffect(() => {
+    if (activeGoldMaterials.length > 0 && !activeGoldMaterials.some((m) => m.key === resultMaterialKey)) {
+      setResultMaterialKey(activeGoldMaterials[0].key);
+    }
+  }, [activeGoldMaterials, resultMaterialKey]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -87,7 +104,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
   }, [loadData]);
 
   const handleCreateBag = async () => {
-    if (!bagCode.trim()) return;
+    if (!bagCode.trim() || activeGoldMaterials.length === 0 || !activeGoldMaterials.some((m) => m.key === materialKey)) return;
     setSubmittingBag(true);
     try {
       await workshopApi.createRecoveryBag({
@@ -341,7 +358,10 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                     {materials.filter((m) => m.scalePurpose === "GOLD").map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
                   </select>
                   <select value={resultDestination} onChange={(e) => setResultDestination(e.target.value as typeof resultDestination)} className="w-full rounded-md border bg-background p-2 text-xs">
-                    {["VAULT", "REUSABLE", "SCRAP", "REFINERY"].map((bucket) => <option key={bucket} value={bucket}>{bucket}</option>)}
+                    <option value="VAULT">{t("Vault Storage")}</option>
+                    <option value="REUSABLE">{t("Reusable Stock")}</option>
+                    <option value="SCRAP">{t("Scrap Balance")}</option>
+                    <option value="REFINERY">{t("Refinery Balance")}</option>
                   </select>
                   {!activeEvent.journals.some((j) => j.referenceType === "RECOVERY_RESULT" && !j.reversedById && !j.reversalOfId) && (
                     <ScaleCapturePanel
@@ -401,13 +421,17 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
 
               <div>
                 <Label className="text-xs mb-1 block"><T>Material Kind</T></Label>
-                <select
-                  value={materialKey}
-                  onChange={(e) => setMaterialKey(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background p-2 font-mono"
-                >
-                  {materials.filter((m) => m.scalePurpose === "GOLD").map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
-                </select>
+                {activeGoldMaterials.length === 0 ? (
+                  <p className="text-xs text-amber-600 py-1"><T>No active gold materials available in factory catalog</T></p>
+                ) : (
+                  <select
+                    value={materialKey}
+                    onChange={(e) => setMaterialKey(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background p-2 font-mono"
+                  >
+                    {activeGoldMaterials.map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
+                  </select>
+                )}
               </div>
 
               <div>
@@ -433,7 +457,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={handleCreateBag}
-                disabled={submittingBag || !bagCode.trim()}
+                disabled={submittingBag || !bagCode.trim() || activeGoldMaterials.length === 0}
               >
                 {submittingBag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <T>Open Bag</T>}
               </Button>

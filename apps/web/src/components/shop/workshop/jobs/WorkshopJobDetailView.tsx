@@ -492,9 +492,9 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                   onChange={(e: any) => setChildKind(e.target.value)}
                   className="w-full rounded-md border border-input bg-background p-2"
                 >
-                  <option value="DESIGN_GROUP"><T>Design Group</T></option>
-                  <option value="ORDER_GROUP"><T>Order Group</T></option>
-                  <option value="PIECE"><T>Individual Piece (Qty: 1)</T></option>
+                  <option value="DESIGN_GROUP">{t("Design Group")}</option>
+                  <option value="ORDER_GROUP">{t("Order Group")}</option>
+                  <option value="PIECE">{t("Individual Piece (Qty: 1)")}</option>
                 </select>
               </div>
 

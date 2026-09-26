@@ -14,6 +14,7 @@ describe("WorkshopControlService authoritative exceptions", () => {
       karigarCastingTree: { findFirst: jest.fn().mockResolvedValue({ id: "tree-1", jobId: "job-1" }) },
       workshopProcessRun: { findFirst: jest.fn().mockResolvedValue({ id: "run-1", jobId: "job-1", treeId: "tree-1" }) },
       workshopMetalJournal: { findFirst: jest.fn() },
+      inventoryItem: { findFirst: jest.fn().mockResolvedValue(null) },
       auditLog: { create: jest.fn().mockResolvedValue({}) },
     };
     journal = {
@@ -108,6 +109,28 @@ describe("WorkshopControlService authoritative exceptions", () => {
       reason: "Verified void", idempotencyKey: "retry-1",
     });
     expect(result).toEqual({ id: "journal-1", status: "REVERSED", voided: true, idempotent: true });
+    expect(journal.postEntry).not.toHaveBeenCalled();
+  });
+
+  it("replays a finished-receipt reversal-only correction with the linked voidedInventoryItemId", async () => {
+    tx.workshopMetalJournal.findFirst.mockResolvedValue({
+      id: "journal-fr-1",
+      referenceType: "FINISHED_RECEIPT",
+      reversedBy: { id: "reversal-fr-1", idempotencyKey: "reversal:retry-fr-1" },
+      replacedBy: null,
+    });
+    tx.inventoryItem.findFirst = jest.fn().mockResolvedValue({ id: "item-voided-1" });
+    const result = await service.correctJournal("shop-1", "owner-1", "journal-fr-1", {
+      reason: "Void finished receipt",
+      idempotencyKey: "retry-fr-1",
+    });
+    expect(result).toEqual({
+      id: "journal-fr-1",
+      status: "REVERSED",
+      voided: true,
+      idempotent: true,
+      voidedInventoryItemId: "item-voided-1",
+    });
     expect(journal.postEntry).not.toHaveBeenCalled();
   });
 
