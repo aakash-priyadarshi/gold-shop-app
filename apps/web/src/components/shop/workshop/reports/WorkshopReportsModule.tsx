@@ -140,12 +140,12 @@ export function WorkshopReportsModule() {
                   {reports.materialStock.map((st, i) => (
                     <tr key={i} className="hover:bg-muted/30">
                       <td className="py-3 px-4 font-semibold text-foreground font-sans">
-                        {st.materialKey === "goldGrains995" ? "Gold 995" : st.materialKey}
+                        {st.materialKey === "goldGrains995" ? <T>Gold 995</T> : st.materialKey}
                       </td>
                       <td className="py-3 px-3">
-                        <Badge variant="outline" className="text-[10px]">{st.bucket}</Badge>
+                        <Badge variant="outline" className="text-[10px]"><T>{st.bucket}</T></Badge>
                       </td>
-                      <td className="py-3 px-3 text-muted-foreground">{st.scopeId || "Shop / Global"}</td>
+                      <td className="py-3 px-3 text-muted-foreground">{st.scopeId || <T>Shop / Global</T>}</td>
                       <td className="py-3 px-3 text-muted-foreground">{st.purity || "—"}</td>
                       <td className="py-3 px-4 text-right font-bold text-foreground">
                         {parseFloat(st.balanceGrams).toFixed(4)} g
@@ -199,7 +199,7 @@ export function WorkshopReportsModule() {
                         <td className="py-3 px-3 text-muted-foreground">
                           {new Date(pv.classifiedAt).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 font-sans text-muted-foreground">{pv.approverUserId || "System / Supervisor"}</td>
+                        <td className="py-3 px-4 font-sans text-muted-foreground">{pv.approverUserId || <T>System / Supervisor</T>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -258,7 +258,7 @@ export function WorkshopReportsModule() {
                           {tv.differenceGrams ? parseFloat(tv.differenceGrams).toFixed(3) : "—"}
                         </td>
                         <td className="py-3 px-3 font-sans">
-                          <Badge variant="outline" className="text-[10px]">{tv.status}</Badge>
+                          <Badge variant="outline" className="text-[10px]"><T>{tv.status}</T></Badge>
                         </td>
                         <td className="py-3 px-4 font-sans text-muted-foreground text-[11px]">
                           {tv.exceptionReason || "—"}
@@ -308,18 +308,18 @@ export function WorkshopReportsModule() {
                     {reports.scaleAudit.map((sa) => (
                       <tr key={sa.id} className="hover:bg-muted/30">
                         <td className="py-3 px-4 font-bold text-foreground">#{sa.id.slice(0, 8)}</td>
-                        <td className="py-3 px-3 font-sans text-muted-foreground">{sa.deviceName} ({sa.adapterKind})</td>
+                        <td className="py-3 px-3 font-sans text-muted-foreground">{sa.deviceName} (<T>{sa.adapterKind}</T>)</td>
                         <td className="py-3 px-3 font-bold text-foreground">{parseFloat(sa.weightGrams).toFixed(3)} g</td>
                         <td className="py-3 px-3 text-[11px] text-muted-foreground/80 truncate max-w-xs">{sa.rawFrame}</td>
                         <td className="py-3 px-3">
                           <Badge variant={sa.stable ? "default" : "destructive"} className="text-[10px]">
-                            {sa.stable ? "STABLE" : "UNSTABLE"}
+                            <T>{sa.stable ? "STABLE" : "UNSTABLE"}</T>
                           </Badge>
                         </td>
                         <td className="py-3 px-3">
                           {sa.journalId ? (
                             <Badge variant="outline" className="text-[10px]">
-                              {sa.referenceType || "JOURNAL"} #{sa.journalId.slice(0, 6)}
+                              <T>{sa.referenceType || "JOURNAL"}</T> #{sa.journalId.slice(0, 6)}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground italic"><T>Unposted session</T></span>
@@ -371,7 +371,7 @@ export function WorkshopReportsModule() {
                       <tr key={ch.id} className="hover:bg-muted/30">
                         <td className="py-3 px-4 font-bold text-foreground">#{ch.entryNumber}</td>
                         <td className="py-3 px-3 font-sans">
-                          <Badge variant="outline" className="text-[10px]">{ch.referenceType}</Badge>
+                          <Badge variant="outline" className="text-[10px]"><T>{ch.referenceType}</T></Badge>
                         </td>
                         <td className="py-3 px-3 font-bold text-foreground">{parseFloat(ch.weightGrams).toFixed(4)} g</td>
                         <td className="py-3 px-3 text-muted-foreground">{ch.materialKey}</td>
@@ -431,7 +431,7 @@ export function WorkshopReportsModule() {
                         <td className="py-3 px-3 text-muted-foreground">{fg.sku}</td>
                         <td className="py-3 px-3 font-bold text-foreground">{fg.totalWeightGrams.toFixed(3)} g</td>
                         <td className="py-3 px-3 font-sans">
-                          <Badge variant="outline" className="text-[10px]">{fg.visibility}</Badge>
+                          <Badge variant="outline" className="text-[10px]"><T>{fg.visibility}</T></Badge>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground">
                           {fg.workshopReceiptJournalId ? `#${fg.workshopReceiptJournalId.slice(0, 8)}` : "—"}
@@ -481,7 +481,7 @@ export function WorkshopReportsModule() {
                           {parseFloat(rb.expectedBalanceGrams).toFixed(3)} g
                         </td>
                         <td className="py-3 px-3 font-sans">
-                          <Badge variant="outline" className="text-[10px]">{rb.status}</Badge>
+                          <Badge variant="outline" className="text-[10px]"><T>{rb.status}</T></Badge>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground">
                           {rb.events?.length || 0} <T>event(s)</T>

@@ -112,7 +112,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
       setShowPrepareModal(false);
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to prepare transfer");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to prepare transfer"));
     } finally {
       setSubmittingPrepare(false);
     }
@@ -127,7 +127,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
       setApprovalReason("");
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Approval failed");
+      alert(t(err?.response?.data?.message || err?.message || "Approval failed"));
     } finally {
       setApprovingLoading(false);
     }
@@ -201,6 +201,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
               size="icon"
               className="h-7 w-7"
               onClick={() => setActiveTransferForWeighing(null)}
+              aria-label={t("Close")}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -331,7 +332,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                             }
                             className="text-[10px] font-mono capitalize"
                           >
-                            {tr.status}
+                            <T>{tr.status}</T>
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -413,7 +414,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                   {jobs.flatMap((j) =>
                     (j.trees || []).map((t) => (
                       <option key={t.id} value={t.id}>
-                        {j.product} · {t.label} (#{t.id.slice(0, 6)})
+                        {j.product} · {/* i18n-user-content: operator-entered casting tree label */ t.label} (#{t.id.slice(0, 6)})
                       </option>
                     ))
                   )}

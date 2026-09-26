@@ -71,11 +71,11 @@ export function WorkshopFinishedReceiptDialog({
 
   const handleConfirmFinishedReceipt = async () => {
     if (!readingId || !sessionId) {
-      setErrorMessage(t("Please capture an authoritative Gold Scale reading first"));
+      setErrorMessage("Please capture an authoritative Gold Scale reading first");
       return;
     }
     if (!primaryTree) {
-      setErrorMessage(t("Job has no casting tree"));
+      setErrorMessage("Job has no casting tree");
       return;
     }
 
@@ -86,7 +86,7 @@ export function WorkshopFinishedReceiptDialog({
         readingId,
         finishedGoods: { nameEn: productName.trim() || job.product, jewelleryType },
       });
-      if ("requiresApproval" in confirmRes.data) throw new Error(t("Finished receipt unexpectedly requires transfer approval"));
+      if ("requiresApproval" in confirmRes.data) throw new Error("Finished receipt unexpectedly requires transfer approval");
 
       const newItemId = confirmRes.data.inventoryItem?.id;
       if (newItemId) {
@@ -95,7 +95,7 @@ export function WorkshopFinishedReceiptDialog({
       }
     } catch (err: any) {
       setErrorMessage(
-        err?.response?.data?.message || err?.message || t("Finished receipt confirmation failed")
+        err?.response?.data?.message || err?.message || "Finished receipt confirmation failed"
       );
     } finally {
       setSubmitting(false);
@@ -120,7 +120,7 @@ export function WorkshopFinishedReceiptDialog({
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8" aria-label={t("Close")}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -234,7 +234,7 @@ export function WorkshopFinishedReceiptDialog({
               {errorMessage && (
                 <div className="rounded-md bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>{errorMessage}</span>
+                  <span><T>{errorMessage}</T></span>
                 </div>
               )}
             </>

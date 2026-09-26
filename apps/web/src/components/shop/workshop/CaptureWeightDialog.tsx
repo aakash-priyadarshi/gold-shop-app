@@ -115,7 +115,7 @@ export function CaptureWeightDialog() {
         ) {
           nextTrees.push({
             id: tree.id,
-            label: tree.label || "Tree",
+            label: tree.label || "",
             jobId: job.id,
             jobProduct: job.product,
             expectedGrams: (tree.lines ?? []).reduce(
@@ -342,7 +342,7 @@ export function CaptureWeightDialog() {
               {trees.map((tree) => (
                 <SelectItem key={tree.id} value={tree.id}>
                   <span dir="auto">
-                    {tree.jobProduct} — {tree.label}
+                    {tree.jobProduct} — {/* i18n-user-content: operator-entered casting tree label */ tree.label || <T>Tree</T>}
                   </span>
                 </SelectItem>
               ))}
@@ -423,7 +423,7 @@ export function CaptureWeightDialog() {
               <T>Actual</T> <bdi>{captured.weightGrams}</bdi> g
             </p>
             <p dir="auto">
-              <T>Batch / tree</T>: {captured.jobProduct} — {captured.treeLabel}
+              <T>Batch / tree</T>: {captured.jobProduct} — {/* i18n-user-content: captured operator-entered tree label */ captured.treeLabel || <T>Tree</T>}
             </p>
             <p>
               <T>Scale</T> {captured.deviceId} · <T>Gold</T>

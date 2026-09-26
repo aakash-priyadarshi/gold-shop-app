@@ -14,11 +14,13 @@ export type ExtractedGeminiResponse = {
   finishReason?: string;
   blockReason?: string;
   usageMetadata?: GeminiUsageMetadata;
+  interrupted?: boolean;
 };
 
-/** Appended once on truncation retry — keeps user question, nudges concise answer. */
-export const GEMINI_TRUNCATION_RETRY_SUFFIX =
-  "\n\n[Reply in 2–4 complete sentences under 350 characters. No bullet lists. Finish the answer.]";
+export const MAX_CONTINUATIONS = 2;
+export const SUPPORT_GENERATION_TIMEOUT_MS = 60000;
+export const GEMINI_CONTINUATION_INSTRUCTION =
+  "Continue the previous answer exactly where it stopped. Do not repeat earlier content or restart the answer. Complete the remaining answer, including any unfinished Markdown table or code fence. Include any whitespace or newline needed at the join. Return only the continuation, without a preamble or tool calls.";
 
 const TRUNCATION_FINISH_REASONS = new Set(["MAX_TOKENS", "LENGTH"]);
 
@@ -29,10 +31,16 @@ const TRUNCATION_FINISH_REASONS = new Set(["MAX_TOKENS", "LENGTH"]);
 export function buildGeminiSupportGenerationConfig(
   audience: ChatAudience,
   temperature = 0.3,
+  request = "",
 ): Record<string, unknown> {
+  // A short turn gets a modest budget; comparisons, walkthroughs and substantial
+  // questions can use the audience ceiling. These are maxima, not length targets.
+  const detailed = request.length > 240 ||
+    /\b(compare|comparison|table|detail(?:ed)?|step.by.step|explain|features|workflow|summary|report)\b/i.test(request);
+  const budget = detailed ? CHAT_LIMITS[audience].maxOutputTokens : request.length > 100 ? 1536 : 768;
   return {
     temperature,
-    maxOutputTokens: CHAT_LIMITS[audience].maxOutputTokens,
+    maxOutputTokens: Math.min(budget, CHAT_LIMITS[audience].maxOutputTokens),
     topP: 0.8,
     thinkingConfig: {
       thinkingBudget: 0,
@@ -81,8 +89,7 @@ export function extractGeminiResponseParts(data: unknown): ExtractedGeminiRespon
   const text = parts
     .filter((part) => !part?.thought && typeof part?.text === "string")
     .map((part) => part.text as string)
-    .join("")
-    .trim();
+    .join(""); // Continuations may begin/end inside a word, table row or code fence.
 
   return { functionCall, text, finishReason, blockReason, usageMetadata };
 }
@@ -114,46 +121,46 @@ export function formatGeminiDiagnostics(
 
 export function isTruncationFinishReason(finishReason?: string): boolean {
   if (!finishReason) return false;
-  return TRUNCATION_FINISH_REASONS.has(finishReason);
+  return TRUNCATION_FINISH_REASONS.has(finishReason.toUpperCase());
 }
 
 /**
- * Detect incomplete visible answers that should not ship as high-confidence replies.
+ * Only provider metadata establishes output-limit truncation. In particular a
+ * normal STOP on a short label, list or table is not an interrupted sentence.
  */
 export function isTruncatedGeminiResponse(
-  text: string,
+  _text: string,
   finishReason?: string,
 ): boolean {
-  if (isTruncationFinishReason(finishReason)) return true;
-
-  const trimmed = (text || "").trim();
-  if (!trimmed) return true;
-
-  // Very short answers that do not end a sentence are almost always cut mid-generation.
-  if (trimmed.length < 60) {
-    return !/[.!?](['"])?$/.test(trimmed);
-  }
-
-  // Mid-word / mid-parenthesis endings with no terminal punctuation.
-  if (trimmed.length < 160 && /[\w(']$/.test(trimmed)) {
-    return !/[.!?](['"])?$/.test(trimmed);
-  }
-
-  return false;
+  return isTruncationFinishReason(finishReason);
 }
 
-export function appendTruncationRetrySuffix(
-  contents: Array<{ role?: string; parts?: Array<{ text?: string }> }>,
-): Array<{ role?: string; parts?: Array<{ text?: string }> }> {
-  const copy = contents.map((entry) => ({
-    ...entry,
-    parts: entry.parts?.map((part) => ({ ...part })),
-  }));
-  const lastUser = [...copy].reverse().find((entry) => entry.role === "user");
-  if (!lastUser?.parts?.length) return copy;
-  const lastPart = lastUser.parts[lastUser.parts.length - 1];
-  if (typeof lastPart.text === "string") {
-    lastPart.text = `${lastPart.text}${GEMINI_TRUNCATION_RETRY_SUFFIX}`;
+/** Remove obvious repeated suffixes, never small incidental word overlaps. */
+export function mergeGeminiContinuation(previous: string, continuation: string): string {
+  // Models sometimes restart a paragraph after leading blank lines. Ignore only
+  // boundary whitespace while looking for overlap; preserve raw text otherwise.
+  const before = previous.trimEnd();
+  const after = continuation.trimStart();
+  const appendRemainder = (remainder: string) => {
+    // Preserve the original trailing spaces (Markdown hard breaks/indentation),
+    // removing only identical whitespace repeated by the continuation.
+    const leadingWhitespace = remainder.match(/^\s*/)?.[0] || "";
+    for (let size = Math.min(previous.length - before.length, leadingWhitespace.length); size > 0; size--) {
+      if (previous.endsWith(leadingWhitespace.slice(0, size))) {
+        return previous + remainder.slice(size);
+      }
+    }
+    return previous + remainder;
+  };
+  if (after.length >= 24 && before.endsWith(after)) return previous;
+  for (let length = Math.min(before.length, after.length, 4096); length >= 24; length--) {
+    if (before.endsWith(after.slice(0, length))) {
+      return appendRemainder(after.slice(length));
+    }
   }
-  return copy;
+  const lastLine = before.split("\n").at(-1) || "";
+  if (lastLine.length >= 8 && /^(?:#{1,6} |\*\*)/.test(lastLine) && after.startsWith(lastLine)) {
+    return appendRemainder(after.slice(lastLine.length));
+  }
+  return previous + continuation;
 }

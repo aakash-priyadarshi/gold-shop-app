@@ -173,7 +173,7 @@ export function WorkshopProductionFloor({
       setClassificationReason("");
       refreshRunReport();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || t("Unable to classify process remainder"));
+      alert(t(err?.response?.data?.message || err?.message || "Unable to classify process remainder"));
     } finally {
       setClassifying(false);
     }
@@ -233,10 +233,10 @@ export function WorkshopProductionFloor({
       });
       loadFloorData();
       setSelectedRunId(res.data.id);
-      setActionSuccess(t("Process run started successfully"));
+      setActionSuccess("Process run started successfully");
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to start run");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to start run"));
     }
   };
 
@@ -249,10 +249,10 @@ export function WorkshopProductionFloor({
       setSelectedRunId("");
       setCloseNotes("");
       loadFloorData();
-      setActionSuccess(t("Process run completed & reconciled successfully"));
+      setActionSuccess("Process run completed & reconciled successfully");
       setTimeout(() => setActionSuccess(null), 3500);
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Cannot close run. Resolve remainder first.");
+      alert(t(err?.response?.data?.message || err?.message || "Cannot close run. Resolve remainder first."));
     } finally {
       setClosingRun(false);
     }
@@ -306,7 +306,7 @@ export function WorkshopProductionFloor({
       {actionSuccess && (
         <div className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span>{actionSuccess}</span>
+          <span><T>{actionSuccess}</T></span>
         </div>
       )}
 
@@ -354,7 +354,7 @@ export function WorkshopProductionFloor({
                   <Plus className="h-3 w-3 mr-0.5" />
                   <T>Job</T>
                 </Button>
-                <Button variant="ghost" size="sm" onClick={loadFloorData} className="h-6 w-6 p-0">
+                <Button variant="ghost" size="sm" onClick={loadFloorData} className="h-6 w-6 p-0" aria-label={t("Refresh")}>
                   <RefreshCw className="h-3 w-3 text-muted-foreground" />
                 </Button>
               </div>
@@ -423,7 +423,7 @@ export function WorkshopProductionFloor({
                       </CardDescription>
                     </div>
                     <Badge variant="outline" className="font-mono text-xs capitalize">
-                      {selectedJob.status}
+                      <T>{selectedJob.status}</T>
                     </Badge>
                   </div>
                 </CardHeader>
@@ -461,7 +461,7 @@ export function WorkshopProductionFloor({
                               <span>{run.definition?.name || run.department}</span>
                             </div>
                             <Badge variant="outline" className="text-[10px] font-mono">
-                              {run.status}
+                              <T>{run.status}</T>
                             </Badge>
                           </div>
                         ))}
@@ -513,7 +513,7 @@ export function WorkshopProductionFloor({
                           variant={runReport.reconciliationState === "RECONCILED" ? "default" : "destructive"}
                           className="text-[10px] font-mono"
                         >
-                          {runReport.reconciliationState}
+                          <T>{runReport.reconciliationState}</T>
                         </Badge>
                       </div>
 
@@ -684,7 +684,7 @@ export function WorkshopProductionFloor({
                   allowManualOverride={!staffMode && canApprove && !!manualBuckets}
                   canApprove={canApprove}
                   onConfirmed={() => {
-                    setActionSuccess(t("Physical weight confirmed and posted to ledger"));
+                    setActionSuccess("Physical weight confirmed and posted to ledger");
                     loadFloorData();
                     refreshRunReport();
                     setTimeout(() => setActionSuccess(null), 3500);

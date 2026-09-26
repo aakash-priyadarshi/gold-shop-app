@@ -38,7 +38,7 @@ export function JobCostSummaryModal({
       } catch (err: any) {
         if (mounted) {
           setError(
-            err.response?.data?.message || t("Failed to load job cost breakdown"),
+            String(err.response?.data?.message || "Failed to load job cost breakdown"),
           );
         }
       } finally {
@@ -51,7 +51,7 @@ export function JobCostSummaryModal({
     return () => {
       mounted = false;
     };
-  }, [jobId, t]);
+  }, [jobId]);
 
   const activeCurrency = data?.currency || currency;
 
@@ -83,7 +83,7 @@ export function JobCostSummaryModal({
               </h3>
               {data?.status && (
                 <Badge variant="outline" className="text-xs">
-                  {data.status}
+                  <T>{data.status}</T>
                 </Badge>
               )}
             </div>
@@ -113,7 +113,7 @@ export function JobCostSummaryModal({
           ) : error ? (
             <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-sm flex items-center gap-3">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
+              <span><T>{error}</T></span>
             </div>
           ) : data ? (
             <>
@@ -275,7 +275,7 @@ export function JobCostSummaryModal({
                               ) : (
                                 <T>Settlement payment</T>
                               )}
-                              {alloc.paymentMethod ? ` · ${alloc.paymentMethod}` : ""}{" "}
+                              {alloc.paymentMethod && <> · <T>{alloc.paymentMethod.replace(/_/g, " ")}</T></>}{" "}
                               {alloc.reference ? `(${alloc.reference})` : ""}
                             </span>
                             <span className="text-slate-400 text-[11px]">

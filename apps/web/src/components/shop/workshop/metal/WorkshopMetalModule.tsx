@@ -91,7 +91,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
       setOpeningReason("");
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to post opening balance");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to post opening balance"));
     } finally {
       setOpeningSubmitting(false);
     }
@@ -118,7 +118,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                   variant={cutover?.workshopLedgerVersion === "TRACEABLE" ? "default" : "outline"}
                   className="text-xs font-mono"
                 >
-                  {cutover?.workshopLedgerVersion || "TRACEABLE"}
+                  <T>{cutover?.workshopLedgerVersion || "TRACEABLE"}</T>
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -234,7 +234,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                             variant={isReversed ? "destructive" : "outline"}
                             className="text-[10px] font-mono"
                           >
-                            {entry.referenceType}
+                            <T>{entry.referenceType}</T>
                           </Badge>
                         </td>
                         <td className="py-3 px-3 text-foreground">{entry.materialKey}</td>

@@ -156,7 +156,7 @@ function CastingTreeEditor({
   return (
     <div className="rounded-lg border border-amber-100 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 space-y-2">
       <p className="text-[11px] font-semibold uppercase text-amber-700">
-        {tree?.label ? tree.label : traceableGold995Tree ? <T>New Gold 995 casting tree</T> : <T>New casting tree</T>}
+        {tree?.label ? /* i18n-user-content: stored casting tree name */ tree.label : traceableGold995Tree ? <T>New Gold 995 casting tree</T> : <T>New casting tree</T>}
       </p>
       {!tree && traceableGold995Tree && (
         <p className="text-[11px] text-gray-500">
@@ -193,7 +193,7 @@ function CastingTreeEditor({
         <ul className="text-[11px] text-gray-600 space-y-0.5">
           {tree.lines.map((line) => (
             <li key={line.id}>
-              {line.label}: {grams(line.weightGrams)} g
+              {/* i18n-user-content: stored CAD piece name */ line.label}: {grams(line.weightGrams)} g
             </li>
           ))}
         </ul>
@@ -228,6 +228,7 @@ export function KarigarJobGoldCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const t = useT();
   const { selectedCurrency } = useMarket();
   const currency = currencyProp || selectedCurrency || "NPR";
   const trees = job.trees ?? [];
@@ -275,7 +276,7 @@ export function KarigarJobGoldCard({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700">
-            {job.status}
+            <T>{job.status}</T>
           </span>
           <button
             type="button"
@@ -366,7 +367,7 @@ export function KarigarJobGoldCard({
           return (
             <div key={stage} className="rounded-lg border dark:border-gray-800 p-2 space-y-1">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold">{KARIGAR_STAGE_LABELS[stage]}</p>
+                <p className="text-xs font-semibold"><T>{KARIGAR_STAGE_LABELS[stage]}</T></p>
                 {row?.goldLoss && row.goldLoss.unexplained > 0 && (
                   <span className="text-[10px] text-rose-600">
                     {grams(row.goldLoss.unexplained)} g <T>unexplained</T>
@@ -378,7 +379,8 @@ export function KarigarJobGoldCard({
                   <Input
                     key={field}
                     className="h-7 text-[11px]"
-                    placeholder={field}
+                    placeholder={t(field)}
+                    aria-label={`${t(KARIGAR_STAGE_LABELS[stage])}: ${t(field)} (g)`}
                     value={draft[field]}
                     disabled={archived}
                     onChange={(e) =>

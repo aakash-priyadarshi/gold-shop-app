@@ -13,27 +13,27 @@ export const CHAT_LIMITS: Record<
 > = {
   public: {
     maxInput: 500,
-    maxReply: 400,
+    // Emergency output guard, not a stylistic target. Token budgets bound normal replies.
+    maxReply: 48000,
     maxHistory: 8,
-    historyItemChars: 400,
-    // Enough for ~400 visible chars after disabling Gemini 2.5 Flash thinking budget.
-    maxOutputTokens: 256,
+    historyItemChars: 6000,
+    maxOutputTokens: 2048,
     hourlyMessages: 20,
   },
   dashboard: {
     maxInput: 1500,
-    maxReply: 1200,
+    maxReply: 64000,
     maxHistory: 12,
-    historyItemChars: 800,
-    maxOutputTokens: 500,
+    historyItemChars: 8000,
+    maxOutputTokens: 4096,
     hourlyMessages: 60,
   },
   admin: {
     maxInput: 2000,
-    maxReply: 1800,
+    maxReply: 64000,
     maxHistory: 16,
-    historyItemChars: 1000,
-    maxOutputTokens: 700,
+    historyItemChars: 8000,
+    maxOutputTokens: 4096,
     hourlyMessages: 120,
   },
 };

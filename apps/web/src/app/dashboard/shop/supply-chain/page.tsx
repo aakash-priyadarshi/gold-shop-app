@@ -72,7 +72,7 @@ import {
   X,
 } from "lucide-react";
 import { KarigarAccountDrawer } from "@/components/shop/karigar/KarigarAccountDrawer";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 // ── Types ──
 interface Workshop {
@@ -363,7 +363,7 @@ function SupplyChainRouteContent() {
               <CardTitle>
                 <T>Could not verify workshop access</T>
               </CardTitle>
-              <CardDescription>{error}</CardDescription>
+              <CardDescription><T>{error}</T></CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={() => void refresh()}>
@@ -533,11 +533,11 @@ function KarigarSupplyChainLedger() {
 
   // ── Toast notification ──
   const [toastMsg, setToastMsg] = useState<{
-    message: string;
+    message: ReactNode;
     type: "success" | "error";
   } | null>(null);
   const showToast = (
-    message: string,
+    message: ReactNode,
     type: "success" | "error" = "success",
   ) => {
     setToastMsg({ message, type });
@@ -726,7 +726,7 @@ function KarigarSupplyChainLedger() {
       });
     } catch (err) {
       console.error("Failed to persist supply chain state to database:", err);
-      showToast(t("Failed to save changes to database!"), "error");
+      showToast(<T>Failed to save changes to database!</T>, "error");
     } finally {
       setSaving(false);
     }
@@ -779,7 +779,7 @@ function KarigarSupplyChainLedger() {
   // ── Add Karigar ──
   const handleAddKarigar = async () => {
     if (!karigarForm.artisan.trim() || !karigarForm.name.trim()) {
-      showToast(t("Please fill in the artisan and workshop names!"), "error");
+      showToast(<T>Please fill in the artisan and workshop names!</T>, "error");
       return;
     }
     const limit = parseFloat(karigarForm.wastageLimit) || 1.0;
@@ -815,7 +815,7 @@ function KarigarSupplyChainLedger() {
       wageRatePerGram: "200",
     });
     showToast(
-      `${t("Karigar")} "${newKarigar.artisan}" ${t("registered successfully!")}`,
+      <><T>Karigar</T> "{newKarigar.artisan}" <T>registered successfully!</T></>,
     );
     await persistState(vaultReserves, updatedWorkshops, jobs);
   };
@@ -829,7 +829,7 @@ function KarigarSupplyChainLedger() {
     setWorkshops(updatedWorkshops);
     setEditKarigarModalOpen(false);
     setEditKarigarForm(null);
-    showToast(t("Karigar details updated successfully!"));
+    showToast(<T>Karigar details updated successfully!</T>);
     await persistState(vaultReserves, updatedWorkshops, jobs);
   };
 
@@ -838,11 +838,11 @@ function KarigarSupplyChainLedger() {
     try {
       await karigarApi.deleteWorkshop(id);
       setDeleteKarigarId(null);
-      showToast(t("Karigar removed from ledger."));
+      showToast(<T>Karigar removed from ledger.</T>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(err?.response?.data?.message || "Could not remove karigar"),
+        <T>{String(err?.response?.data?.message || "Could not remove karigar")}</T>,
         "error",
       );
     }
@@ -852,11 +852,11 @@ function KarigarSupplyChainLedger() {
   const handleAllot = async () => {
     const wt = parseFloat(allotForm.weight);
     if (isNaN(wt) || wt <= 0) {
-      showToast(t("Please enter a valid weight to issue."), "error");
+      showToast(<T>Please enter a valid weight to issue.</T>, "error");
       return;
     }
     if (!allotForm.workshopId) {
-      showToast(t("Select a karigar before issuing metal."), "error");
+      showToast(<T>Select a karigar before issuing metal.</T>, "error");
       return;
     }
 
@@ -870,14 +870,14 @@ function KarigarSupplyChainLedger() {
       });
       setAllotForm((prev) => ({ ...prev, weight: "" }));
       setAllotModalOpen(false);
-      showToast(`${t("Issued")} ${wt}g ${t("to workshop successfully!")}`);
+      showToast(<><T>Issued</T> {wt}g <T>to workshop successfully!</T></>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(
+        <T>{String(
           err?.response?.data?.message ||
             "Insufficient reserves in vault for this material!",
-        ),
+        )}</T>,
         "error",
       );
     }
@@ -887,7 +887,7 @@ function KarigarSupplyChainLedger() {
   const handleProcure = async () => {
     const wt = parseFloat(procureForm.weight);
     if (isNaN(wt) || wt <= 0) {
-      showToast(t("Please enter a valid weight to procure."), "error");
+      showToast(<T>Please enter a valid weight to procure.</T>, "error");
       return;
     }
 
@@ -901,11 +901,11 @@ function KarigarSupplyChainLedger() {
       });
       setProcureForm((prev) => ({ ...prev, weight: "" }));
       setProcureModalOpen(false);
-      showToast(`${t("Procured")} ${wt}g ${t("into vault reserves!")}`);
+      showToast(<><T>Procured</T> {wt}g <T>into vault reserves!</T></>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(err?.response?.data?.message || "Could not procure bullion"),
+        <T>{String(err?.response?.data?.message || "Could not procure bullion")}</T>,
         "error",
       );
     }
@@ -915,14 +915,14 @@ function KarigarSupplyChainLedger() {
   const handleAddMaterial = async () => {
     const label = newMaterialForm.label.trim();
     if (!label) {
-      showToast(t("Please enter a material name!"), "error");
+      showToast(<T>Please enter a material name!</T>, "error");
       return;
     }
     const vaultKey = "custom_" + label.toLowerCase().replace(/[^a-z0-9]/g, "_");
     const key = "CUSTOM_" + label.toUpperCase().replace(/[^A-Z0-9]/g, "_");
 
     if (allMetals.find((m) => m.key === key)) {
-      showToast(t("This material type already exists!"), "error");
+      showToast(<T>This material type already exists!</T>, "error");
       return;
     }
 
@@ -934,7 +934,7 @@ function KarigarSupplyChainLedger() {
     setVaultReserves(updatedReserves);
     setAddMaterialModalOpen(false);
     setNewMaterialForm({ label: "", key: "" });
-    showToast(`${t("Material")} "${label}" ${t("added to vault!")}`);
+    showToast(<><T>Material</T> "{/* i18n-user-content: material name entered by the shop */ label}" <T>added to vault!</T></>);
     await persistState(
       updatedReserves,
       workshops,
@@ -947,14 +947,14 @@ function KarigarSupplyChainLedger() {
   const handleAddJob = async () => {
     if (!jobForm.product.trim() || !jobForm.workshopId) {
       showToast(
-        t("Please fill in the product name and select a karigar."),
+        <T>Please fill in the product name and select a karigar.</T>,
         "error",
       );
       return;
     }
     const workshop = workshops.find((w) => w.id === jobForm.workshopId);
     if (!workshop) {
-      showToast(t("Select a karigar for this job."), "error");
+      showToast(<T>Select a karigar for this job.</T>, "error");
       return;
     }
     try {
@@ -967,11 +967,11 @@ function KarigarSupplyChainLedger() {
       });
       setAddJobModalOpen(false);
       setJobForm({ product: "", workshopId: "", grossWeight: "", metalKey: "goldGrains24k" });
-      showToast(`${t("Job")} "${jobForm.product}" ${t("created!")}`);
+      showToast(<><T>Job</T> "{jobForm.product}" <T>created!</T></>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(err?.response?.data?.message || "Could not create job"),
+        <T>{String(err?.response?.data?.message || "Could not create job")}</T>,
         "error",
       );
     }
@@ -989,11 +989,11 @@ function KarigarSupplyChainLedger() {
       });
       setEditJobModalOpen(false);
       setEditJobForm(null);
-      showToast(t("Job details updated!"));
+      showToast(<T>Job details updated!</T>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(err?.response?.data?.message || "Could not update job"),
+        <T>{String(err?.response?.data?.message || "Could not update job")}</T>,
         "error",
       );
     }
@@ -1003,11 +1003,11 @@ function KarigarSupplyChainLedger() {
     try {
       await karigarApi.deleteJob(id);
       setDeleteJobId(null);
-      showToast(t("Job cancelled and kept in job history."));
+      showToast(<T>Job cancelled and kept in job history.</T>);
       await loadDatabaseConfig();
     } catch (err: any) {
       showToast(
-        t(err?.response?.data?.message || "Could not cancel job"),
+        <T>{String(err?.response?.data?.message || "Could not cancel job")}</T>,
         "error",
       );
     }
@@ -1030,7 +1030,7 @@ function KarigarSupplyChainLedger() {
               : "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/90 dark:border-rose-800 dark:text-rose-200"
           }`}
         >
-          <p className="text-sm font-semibold">{toastMsg.message}</p>
+          <p className="text-sm font-semibold">{/* i18n-user-content: ReactNode composed of T elements and preserved user names or weights */ toastMsg.message}</p>
           <button
             onClick={() => setToastMsg(null)}
             className="ms-2 text-current opacity-60 hover:opacity-100"
@@ -1161,7 +1161,7 @@ function KarigarSupplyChainLedger() {
             className="border-blue-500/30 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20 bg-white dark:bg-gray-900"
             onClick={() => {
               if (workshops.length === 0) {
-                showToast(t("Add a karigar before creating a job."), "error");
+                showToast(<T>Add a karigar before creating a job.</T>, "error");
                 return;
               }
               setJobForm((p) => ({
@@ -1188,16 +1188,14 @@ function KarigarSupplyChainLedger() {
               try {
                 await karigarApi.loadSampleJob();
                 showToast(
-                  t(
-                    "Persistent demo 1 kg job added. Its workshop, job, vault and metal-ledger records remain in this shop until reconciled through the ledger workflow.",
-                  ),
+                  <T>Persistent demo 1 kg job added. Its workshop, job, vault and metal-ledger records remain in this shop until reconciled through the ledger workflow.</T>,
                 );
                 await loadDatabaseConfig();
               } catch (err: any) {
                 showToast(
-                  t(
+                  <T>{String(
                     err?.response?.data?.message || "Could not load demo job",
-                  ),
+                  )}</T>,
                   "error",
                 );
               }
@@ -1210,7 +1208,7 @@ function KarigarSupplyChainLedger() {
             className="bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
             onClick={() => {
               if (workshops.length === 0) {
-                showToast(t("Add a karigar before issuing metal."), "error");
+                showToast(<T>Add a karigar before issuing metal.</T>, "error");
                 return;
               }
               setAllotForm((p) => ({
@@ -1398,7 +1396,7 @@ function KarigarSupplyChainLedger() {
                       >
                         <div>
                           <p className="text-xs text-muted-foreground font-medium">
-                            <T>{mat.label}</T>
+                            {/* i18n-user-content: custom material name entered by the shop */ mat.label}
                           </p>
                           <p className="text-lg font-bold mt-1 text-amber-500">
                             {(vaultReserves[mat.vaultKey] || 0).toFixed(2)} g
@@ -1779,6 +1777,7 @@ function KarigarSupplyChainLedger() {
               </h3>
               <button
                 onClick={() => setAllotModalOpen(false)}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -1831,7 +1830,7 @@ function KarigarSupplyChainLedger() {
                   <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     {allMetals.map((m) => (
                       <SelectItem key={m.key} value={m.key}>
-                        <T>{m.label}</T>
+                        {BUILT_IN_METALS.includes(m) ? <T>{m.label}</T> : /* i18n-user-content: this branch is a custom material name */ m.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1844,7 +1843,7 @@ function KarigarSupplyChainLedger() {
                 </Label>
                 <Input
                   type="number"
-                  placeholder="e.g. 50"
+                  placeholder={`${t("e.g.")} 50`}
                   value={allotForm.weight}
                   onChange={(e) =>
                     setAllotForm((p) => ({ ...p, weight: e.target.value }))
@@ -1886,6 +1885,7 @@ function KarigarSupplyChainLedger() {
               </h3>
               <button
                 onClick={() => setProcureModalOpen(false)}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -1918,7 +1918,7 @@ function KarigarSupplyChainLedger() {
                   <SelectContent className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
                     {allMetals.map((m) => (
                       <SelectItem key={m.key} value={m.key}>
-                        <T>{m.label}</T>
+                        {BUILT_IN_METALS.includes(m) ? <T>{m.label}</T> : /* i18n-user-content: this branch is a custom material name */ m.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1931,7 +1931,7 @@ function KarigarSupplyChainLedger() {
                 </Label>
                 <Input
                   type="number"
-                  placeholder="e.g. 100"
+                  placeholder={`${t("e.g.")} 100`}
                   value={procureForm.weight}
                   onChange={(e) =>
                     setProcureForm((p) => ({ ...p, weight: e.target.value }))
@@ -1972,6 +1972,7 @@ function KarigarSupplyChainLedger() {
               </h3>
               <button
                 onClick={() => setAddMaterialModalOpen(false)}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -2033,6 +2034,7 @@ function KarigarSupplyChainLedger() {
               </h3>
               <button
                 onClick={() => setAddKarigarModalOpen(false)}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -2200,6 +2202,7 @@ function KarigarSupplyChainLedger() {
                   setEditKarigarModalOpen(false);
                   setEditKarigarForm(null);
                 }}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -2404,6 +2407,7 @@ function KarigarSupplyChainLedger() {
               </h3>
               <button
                 onClick={() => setAddJobModalOpen(false)}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -2462,7 +2466,7 @@ function KarigarSupplyChainLedger() {
                 </Label>
                 <Input
                   type="number"
-                  placeholder="e.g. 45.5"
+                  placeholder={`${t("e.g.")} 45.5`}
                   value={jobForm.grossWeight}
                   onChange={(e) =>
                     setJobForm((p) => ({ ...p, grossWeight: e.target.value }))
@@ -2521,6 +2525,7 @@ function KarigarSupplyChainLedger() {
                   setEditJobModalOpen(false);
                   setEditJobForm(null);
                 }}
+                aria-label={t("Close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />

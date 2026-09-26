@@ -33,7 +33,7 @@ export default function WorkshopReportsPage() {
       </p>
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 p-3 text-sm text-red-600 dark:text-red-400">
-          {error}
+          <T>{error}</T>
         </div>
       )}
       <GoldLossReport report={report} />
