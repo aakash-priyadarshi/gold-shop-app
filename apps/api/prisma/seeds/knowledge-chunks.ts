@@ -276,12 +276,87 @@ const CHUNKS: { topic: string; content: string }[] = [
   {
     topic: "workshop_manufacturing_mode",
     content:
-      "Workshop manufacturing is the optional factory workflow inside /dashboard/shop/supply-chain, not a replacement for the Karigar book. Enable Workshop mode in shop settings and ensure the live plan has the admin-configurable workshopManufacturing feature; never assume a particular plan name. On Metal (?view=metal), switch to TRACEABLE and complete the controlled physical Gold 995 opening balance before production. Gold 995 is 0.995 and distinct from legacy 24K/999. In TRACEABLE mode, the Factory workstation records Gold and Stone Scale readings; select job/tree, physical movement and matching scale, read stable NET weight after physical TARE, capture, then confirm the stored reading. Do not type normal authoritative grams. Owner/Admin may record a reasoned opening, manual override or reversal/replacement correction. Recipes show recommended Gold 995 and alloy, while only actual scale issues affect stock. Process routes, runs, piece/group children, transfers, recovery bags, assay, finished receipt and reconciliation are accessible in the same Metal factory workbench. Unclassified differences stay pending until approved/classified. Finished inventory from a scale receipt is hidden and unpriced until reviewed. Accepted staff can use their assigned shop from the separate Workshop staff station; operators capture and supervisors approve according to permission. Legacy shops retain the old Karigar book and typed 24K flow. Legacy /dashboard/shop/workshop/* URLs redirect to Supply Chain.",
+      "Workshop manufacturing is the optional factory workflow inside /dashboard/shop/supply-chain, not a replacement for the Karigar book. Enable Workshop mode in shop settings and ensure the live plan has the admin-configurable workshopManufacturing feature; never assume a particular plan name. On Metal (?view=metal), review Gold 995 physical balances and double-entry movements before production. Gold 995 is 0.995 and distinct from legacy retail 24K/999 or customer billing wastage. Factory workstations record hardware scale readings directly; read stable NET weight after physical TARE on the balance, tap Capture, then Confirm to post. Do not type manual authoritative grams. Owner/Admin may record reasoned adjustments or immutable reversal/replacement corrections. Recipes show recommended Gold 995 and alloy, while only actual scale-confirmed issues affect stock. Process routes, runs, transfers, recovery bags, assay, finished receipt and reconciliation are managed across dedicated factory tabs. Unclassified differences stay pending until approved/classified. Finished inventory from a scale receipt is hidden and unpriced until reviewed. Staff permissions govern bench operators, supervisors, and admins. Legacy /dashboard/shop/workshop/* URLs redirect to Supply Chain.",
   },
   {
     topic: "supply_chain_workspace_views",
     content:
-      "The desktop Supply Chain workspace is one page: /dashboard/shop/supply-chain. Tabs at the top: Karigar book, Tower, Jobs, Floor, Metal, QC, Reports. Karigar book is the artisan ledger. The other six tabs appear when Workshop mode is on AND the shop's live plan includes workshopManufacturing (admin-editable per plan). Turn Workshop mode on at Shop Settings → Preferences. Floor departments are query filters (?view=floor&dept=), not sidebar items. Job cards are ?view=job&id=. Gold loss on Karigar book and on Reports is physical workshop metal. Billing wastage (jarti) is only on Create Invoice. Old-gold / old-silver exchange is a separate shop tool, not this ledger. In-app help tours on each tab describe the buttons that are actually on that view.",
+      "Supply Chain Information Architecture: /dashboard/shop/supply-chain organizes jewellery production into three clear sections: Traditional (Karigar Book for artisan float, issue/return vouchers, and wages), Factory Operations (Overview control tower, Jobs creation and work orders, Production floor bench execution, Metal physical ledger and Gold 995, Transfers inter-department custody, Recovery dust collection and refining, QC quality inspection, and Reports traceable gram accounting), and Configuration (Factory Settings). Karigar Book is the first visible tab, while Overview is the default operational landing screen when Workshop Mode is enabled.",
+  },
+  {
+    topic: "workshop_manufacturing_overview",
+    content:
+      "Workshop Manufacturing OS on Orivraa provides complete, traceable jewellery factory operations inside /dashboard/shop/supply-chain. It does not replace the traditional Karigar Book, which remains the artisan float and wage ledger. When Workshop mode is enabled and entitled, Supply Chain organizes into three distinct groups: Traditional (Karigar Book), Factory Operations (Overview, Jobs, Production, Metal, Transfers, Recovery, QC, Reports), and Configuration (Factory Settings). The Manufacturing Overview serves as the operational control tower, displaying real-time KPIs (active jobs, in-progress runs, pending transfers, recovery batches, and QC inspections), urgent action-required alerts, a dynamic production pipeline, a physical metal position chart across all stages, setup checklists, and fast Quick Actions.",
+  },
+  {
+    topic: "workshop_getting_started",
+    content:
+      "Getting Started with Orivraa Workshop: 1) Verify that your subscription plan includes the workshopManufacturing entitlement (admin-configurable on any plan). 2) Turn on Workshop mode in Shop Settings → Preferences (desktop: /dashboard/shop/settings?tab=preferences) or Store Settings (mobile: /m/settings). 3) Navigate to Supply Chain at /dashboard/shop/supply-chain, which opens Manufacturing Overview by default. 4) Complete Factory Settings in sequence: connect hardware scales, configure factory materials (e.g. Gold 995), create master recipes, establish process operations, build production routes, configure loss tolerances, and assign staff permissions. 5) Create your first manufacturing job from Jobs → Create Job or Overview Quick Actions.",
+  },
+  {
+    topic: "workshop_jobs",
+    content:
+      "Manufacturing Jobs: Work orders are canonically created on the Jobs page (/dashboard/shop/supply-chain?view=jobs) using the '+ Create Job' primary action, or via Overview Quick Actions or the Production empty state. Creating a work order requires an assigned karigar/artisan, product name, quantity, due date, and priority. If no karigars exist yet, an inline warning guides you to add an artisan first. The Jobs directory displays all jobs, active runs, QC stages, and completed pieces with search and filtering. Clicking 'View Details' opens the job breakdown containing theoretical CAD weights, recommended recipe amounts, actual scale-confirmed metal, configured routes, piece child groupings, and stage reconciliation data.",
+  },
+  {
+    topic: "workshop_gold995_materials_recipes",
+    content:
+      "Workshop Materials, Gold 995 & Recipes: Factory metal accounting is tracked in Gold 995 (0.995 fine gold, 99.5% purity) to reflect international manufacturing standards, distinctly separated from finished retail purities (22K, 18K, 14K) and customer billing wastage (jarti). Master alloys and casting consumables are configured in Factory Settings → Materials. Production recipes define input ratios and expected yields. Crucially, 'Recommended' is a mathematical calculation from the recipe that guides operators without touching physical inventory; only 'Actual' scale-confirmed weights alter the double-entry workshop ledger and balance sheet.",
+  },
+  {
+    topic: "workshop_scale_capture",
+    content:
+      "Scale Integration, Stable NET & Capture vs Confirm: Orivraa interfaces directly with certified digital balances (0.01g precision for gold, 0.001g for gemstones) via WebSerial or the desktop bridge. The scale operator places the container and performs physical TARE on the balance itself. Once the scale signals Stable NET, the operator taps 'Capture'. Capture reads and freezes the physical reading in working memory without posting to inventory. The operator inspects the captured weight and taps 'Confirm' to post the transaction to the immutable ledger. Normal operators cannot type manual authoritative grams.",
+  },
+  {
+    topic: "workshop_production_processes",
+    content:
+      "Production Floor & Process Execution: Located at /dashboard/shop/supply-chain?view=production. Production is where work orders are physically executed across departmental queues (Casting, Filing, Setting, Polishing). The operator selects an active job, chooses the current process step, verifies allocated physical material, reads the scale via Stable NET, captures and confirms weights, and classifies post-operation remainders into WIP pieces, reusable sprues, scrap, or recovery dust bags. Once all inputs and outputs are reconciled within allowable tolerance, the process run is formally closed.",
+  },
+  {
+    topic: "workshop_reconciliation",
+    content:
+      "Process Reconciliation & Remainder Classification: Double-entry metal accounting mandates that Total Input (initial issue plus any added metal/alloy) must equal Total Output (worked pieces plus classified remainders). Remainders cannot simply vanish or be assumed as loss; they must be classified as WIP next-stage metal, reusable sprue/casting scrap, floor scrap, recovery dust bags, or accounted process variance. If the variance exceeds the process tolerance threshold, supervisor approval is required before the run can be closed.",
+  },
+  {
+    topic: "workshop_transfers",
+    content:
+      "Inter-Department Material Transfers: Located at /dashboard/shop/supply-chain?view=transfers. Move physical metal between factory departments or vaults with custodial tracking. Start a transfer with '+ New Transfer'. The sending department performs dispatch weighing (gross, tare, net) on a certified scale. The receiving department independently re-weighs incoming material upon arrival. Any difference between dispatch and receipt is highlighted as Transfer Variance. Weight differences within configured tolerance are reconciled; significant discrepancies trigger supervisory review.",
+  },
+  {
+    topic: "workshop_recovery",
+    content:
+      "Precious Metal Recovery & Refining: Located at /dashboard/shop/supply-chain?view=recovery. Floor sweeps, filing dust, ultrasonic cleaning sludge, and polishing suction residue are collected into serialized bags using '+ New Recovery Bag'. Dust is held on the balance sheet under 'Recovery Pending' rather than written off as immediate loss. Accumulated bags are dispatched to internal or external refineries. When refined bullion is returned, the physical recovered weight must be confirmed on scale before settlement. A metallurgical laboratory assay is optional; the scale-confirmed physical recovery result is mandatory before settling the batch into vault reserves.",
+  },
+  {
+    topic: "workshop_qc_finished_receipt",
+    content:
+      "Quality Control (QC) & Finished Goods Receipt: Located at /dashboard/shop/supply-chain?view=qc. Work orders arrive in the QC queue automatically after completing their manufacturing route; there is no manual create button. Inspectors review pieces against specification checklists and either Approve, request Rework (with mandatory notes sending the job back to the bench), or Reject damaged pieces. Successful QC approval unlocks Finished Goods receipt into showroom inventory (with optional SKU assignment), which keeps pieces unpriced until commercial review.",
+  },
+  {
+    topic: "workshop_corrections",
+    content:
+      "Audit Corrections, Reversals & Immutability: The Workshop ledger is append-only and audit-grade. Historical entries, scale readings, and material issues can never be edited or deleted. If an error occurs, an authorized Owner or Admin executes an immutable reversal transaction that negates the faulty entry, followed by a replacement transaction with correct details and a mandatory administrative audit reason note. Both the original, reversal, and replacement remain permanently visible in the audit journal.",
+  },
+  {
+    topic: "workshop_staff_permissions",
+    content:
+      "Workshop Staff Roles & Bench Stations: Staff access is governed by permission flags configured in Factory Settings → Staff and Admin roles. Bench operators can run production benches, capture scale readings, and record departmental movements, but cannot perform manual weight overrides, configure tolerances, or delete jobs. Supervisors hold clearance to classify remainders, approve transfer discrepancies, and grant variance clearances. Platform Owners/Admins have full authority over factory configuration, hardware scales, recipes, and ledger corrections.",
+  },
+  {
+    topic: "workshop_reports",
+    content:
+      "Traceable Manufacturing Reports: Located at /dashboard/shop/supply-chain?view=reports. Workshop reports answer the core manufacturing question: 'Where did these grams go?'. Filter by date range, job, department, karigar, or material to view real-time tables of material stock, stage reconciliation, process variances, inter-department transfer variances, recovery yields, scale audit logs, and finished goods receipts. Distinct from customer invoice jarti or Karigar Book wage slips.",
+  },
+  {
+    topic: "workshop_factory_settings",
+    content:
+      "Factory Settings & Configuration: Located at /dashboard/shop/supply-chain?view=settings. Dedicated configuration tabs expose contextual actions: 1) Hardware Scales (add/connect digital balances, set 0.01g gold or 0.001g stone precision), 2) Materials (define Gold 995, silver, alloys), 3) Recipes (create component formulas), 4) Processes (define bench stages), 5) Routes (build stage sequences), 6) Workstations (register benches), 7) Tolerances (set process loss thresholds), and 8) Staff (configure role permissions).",
+  },
+  {
+    topic: "workshop_troubleshooting",
+    content:
+      "Workshop Troubleshooting FAQ: 1) 'Why can't I see factory tabs?' Ensure Workshop mode is ON in Shop Settings → Preferences and your subscription plan has the workshopManufacturing entitlement. 2) 'How do I create a job?' Go to Supply Chain → Jobs and click '+ Create Job'. 3) 'Why can't I close a production run?' Check that Total Input equals Total Output and all remainder metal is classified. 4) 'Why is Finished Goods receipt disabled?' The job must be approved in Supply Chain → QC first. 5) 'How do I fix a wrong scale entry?' Use the audit correction reversal/replacement workflow on the Metal tab.",
   },
   {
     topic: "product_gross_weight_and_pos_customer",
@@ -389,6 +464,21 @@ async function main() {
     "ai_product_photo_enhancement",
     "workshop_manufacturing_mode",
     "supply_chain_workspace_views",
+    "workshop_manufacturing_overview",
+    "workshop_getting_started",
+    "workshop_jobs",
+    "workshop_gold995_materials_recipes",
+    "workshop_scale_capture",
+    "workshop_production_processes",
+    "workshop_reconciliation",
+    "workshop_transfers",
+    "workshop_recovery",
+    "workshop_qc_finished_receipt",
+    "workshop_corrections",
+    "workshop_staff_permissions",
+    "workshop_reports",
+    "workshop_factory_settings",
+    "workshop_troubleshooting",
     "karigar_gold_loss_ledger",
     "product_gross_weight_and_pos_customer",
     "seller_referral_programme",

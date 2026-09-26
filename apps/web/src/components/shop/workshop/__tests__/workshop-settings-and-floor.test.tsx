@@ -128,8 +128,8 @@ describe("Workshop Settings, Transfers, and Production Material Consistency", ()
 
     render(<WorkshopTransfersModule />);
 
-    await waitFor(() => expect(screen.getByText("Prepare Transfer")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Prepare Transfer"));
+    await waitFor(() => expect(screen.getAllByText("New Transfer").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText("New Transfer")[0]);
 
     // Should indicate no materials available
     expect(screen.getByText("No active materials available for transfer")).toBeInTheDocument();
@@ -159,8 +159,8 @@ describe("Workshop Settings, Transfers, and Production Material Consistency", ()
 
     render(<WorkshopRecoveryModule />);
 
-    await waitFor(() => expect(screen.getByText("Open New Recovery Bag")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Open New Recovery Bag"));
+    await waitFor(() => expect(screen.getAllByText("New Recovery Bag").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText("New Recovery Bag")[0]);
 
     expect(screen.getByText("No active gold materials available in factory catalog")).toBeInTheDocument();
     const openBagButton = screen.getByText("Open Bag").closest("button");

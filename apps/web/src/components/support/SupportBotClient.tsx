@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 
 // SupportBot reads browser storage and creates a browser-tab session ID during
@@ -13,5 +14,9 @@ const SupportBot = dynamic(
 );
 
 export function SupportBotClient() {
-  return <SupportBot />;
+  return (
+    <Suspense fallback={null}>
+      <SupportBot />
+    </Suspense>
+  );
 }

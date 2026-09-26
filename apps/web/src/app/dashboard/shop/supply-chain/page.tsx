@@ -18,6 +18,12 @@ import { useTourContext } from "@/components/tutorial/useTourContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -157,7 +163,16 @@ export default function KarigarSupplyChainPage() {
   );
 }
 
-const FACTORY_VIEWS: Array<{ view: WorkshopView; label: string }> = [
+const TRADITIONAL_VIEWS: Array<{ view: WorkshopView; label: string; tooltip: string }> = [
+  {
+    view: "book",
+    label: "Karigar Book",
+    tooltip:
+      "Traditional artisan ledger for karigar metal float, issue/return, wages and settlements. Factory production uses Overview, Jobs and Production.",
+  },
+];
+
+const FACTORY_OPERATIONS_VIEWS: Array<{ view: WorkshopView; label: string }> = [
   { view: "overview", label: "Overview" },
   { view: "jobs", label: "Jobs" },
   { view: "production", label: "Production" },
@@ -166,8 +181,21 @@ const FACTORY_VIEWS: Array<{ view: WorkshopView; label: string }> = [
   { view: "recovery", label: "Recovery" },
   { view: "qc", label: "QC" },
   { view: "reports", label: "Reports" },
-  { view: "book", label: "Karigar Book" },
-  { view: "settings", label: "Factory Settings" },
+];
+
+const CONFIG_VIEWS: Array<{ view: WorkshopView; label: string; tooltip: string }> = [
+  {
+    view: "settings",
+    label: "Factory Settings",
+    tooltip:
+      "Configure factory scales, materials, recipes, processes, routes, workstations, tolerances and staff.",
+  },
+];
+
+const FACTORY_VIEWS: Array<{ view: WorkshopView; label: string }> = [
+  ...TRADITIONAL_VIEWS,
+  ...FACTORY_OPERATIONS_VIEWS,
+  ...CONFIG_VIEWS,
 ];
 
 function SupplyChainRouteContent() {
@@ -223,30 +251,89 @@ function SupplyChainRouteContent() {
   ]);
 
   const nav = (
-    <div
-      data-tour="supply-chain-nav"
-      className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-2"
-    >
-      {FACTORY_VIEWS.map((item) => (
-        <Button
-          key={item.view}
-          data-tour={`supply-nav-${item.view}`}
-          variant={activeNav === item.view ? "default" : "ghost"}
-          size="sm"
-          asChild
-        >
-          <Link href={supplyChainHref(item.view)}>
-            <T>{item.label}</T>
-          </Link>
-        </Button>
-      ))}
-      <span
-        data-tour="supply-nav-mode"
-        className="ms-auto px-2 text-xs text-muted-foreground"
+    <TooltipProvider delayDuration={200}>
+      <div
+        data-tour="workshop-navigation"
+        data-testid="supply-chain-nav"
+        className="flex flex-wrap items-center gap-1.5 rounded-xl border bg-card p-2"
       >
-        {workshopMode ? <T>Workshop mode on</T> : <T>Workshop mode off</T>}
-      </span>
-    </div>
+        {/* Traditional Artisan Ledger */}
+        <div className="flex items-center gap-1">
+          {TRADITIONAL_VIEWS.map((item) => (
+            <Tooltip key={item.view}>
+              <TooltipTrigger asChild>
+                <Button
+                  data-tour={`supply-nav-${item.view}`}
+                  variant={activeNav === item.view ? "default" : "ghost"}
+                  size="sm"
+                  asChild
+                >
+                  <Link href={supplyChainHref(item.view)}>
+                    <T>{item.label}</T>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs">
+                <T>{item.tooltip}</T>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+
+        {/* Separator between Traditional and Factory Operations */}
+        <div className="hidden h-5 w-px bg-border sm:block mx-1" aria-hidden="true" />
+
+        {/* Factory Operations */}
+        <div className="flex flex-wrap items-center gap-1">
+          {FACTORY_OPERATIONS_VIEWS.map((item) => (
+            <Button
+              key={item.view}
+              data-tour={`supply-nav-${item.view}`}
+              variant={activeNav === item.view ? "default" : "ghost"}
+              size="sm"
+              asChild
+            >
+              <Link href={supplyChainHref(item.view)}>
+                <T>{item.label}</T>
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        {/* Separator between Factory Operations and Configuration */}
+        <div className="hidden h-5 w-px bg-border sm:block mx-1" aria-hidden="true" />
+
+        {/* Configuration / Factory Settings */}
+        <div className="flex items-center gap-1">
+          {CONFIG_VIEWS.map((item) => (
+            <Tooltip key={item.view}>
+              <TooltipTrigger asChild>
+                <Button
+                  data-tour={`supply-nav-${item.view}`}
+                  variant={activeNav === item.view ? "default" : "ghost"}
+                  size="sm"
+                  asChild
+                >
+                  <Link href={supplyChainHref(item.view)}>
+                    <T>{item.label}</T>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs">
+                <T>{item.tooltip}</T>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+
+        <span
+          data-tour="supply-nav-mode"
+          className="ms-auto px-2 text-xs text-muted-foreground"
+        >
+          {workshopMode ? <T>Workshop mode on</T> : <T>Workshop mode off</T>}
+        </span>
+      </div>
+    </TooltipProvider>
   );
 
   // If Workshop Mode is OFF and view is book, render the traditional Karigar Supply Chain experience without factory nav.

@@ -180,10 +180,43 @@ describe("workshop chat context", () => {
       formatWorkshopOperationalReply(enabled, "Why can't I delete this karigar job?"),
     ).toContain("terminal for production");
     expect(
-      formatWorkshopOperationalReply(enabled, "How are wages settled?"),
-    ).toContain("separate from the physical-metal return");
+      formatWorkshopOperationalReply(enabled, "How do I create a manufacturing job?"),
+    ).toContain("Supply Chain → Jobs");
     expect(
-      formatWorkshopOperationalReply(enabled, "How do I procure bullion?"),
-    ).toContain("does not create a supplier bill");
+      formatWorkshopOperationalReply(enabled, "How do I create a manufacturing job?"),
+    ).toContain("+ Create Job");
+    expect(
+      formatWorkshopOperationalReply(enabled, "How do I create a transfer?"),
+    ).toContain("Supply Chain → Transfers");
+    expect(
+      formatWorkshopOperationalReply(enabled, "How do I create a transfer?"),
+    ).toContain("+ New Transfer");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Do I need an assay?"),
+    ).toContain("optional");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Do I need an assay?"),
+    ).toContain("scale-confirmed physical recovery result");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Capture vs Confirm?"),
+    ).toContain("Capture");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Capture vs Confirm?"),
+    ).toContain("Confirm");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Where do I configure routes?"),
+    ).toContain("Supply Chain → Factory Settings → Routes");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Recommended vs Actual?"),
+    ).toContain("Recommended");
+    expect(
+      formatWorkshopOperationalReply(enabled, "What's Recommended vs Actual?"),
+    ).toContain("Actual");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I close this run?"),
+    ).toContain("Total Input");
+    expect(
+      formatWorkshopOperationalReply(enabled, "Why can't I close this run?"),
+    ).toContain("Total Output");
   });
 });

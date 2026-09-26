@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { MaterialBalanceCard } from "../shared/MaterialBalanceCard";
 import { TransactionCorrectionDialog } from "../shared/TransactionCorrectionDialog";
+import { WorkshopDomainTooltip } from "../shared/WorkshopDomainTooltip";
 
 export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolean }) {
   const t = useT();
@@ -109,8 +110,9 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-foreground">
+                <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
                   <T>Physical Gold 995 & Metal Ledger</T>
+                  <WorkshopDomainTooltip term="Gold 995" />
                 </h2>
                 <Badge
                   variant={cutover?.workshopLedgerVersion === "TRACEABLE" ? "default" : "outline"}
@@ -147,7 +149,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
       </Card>
 
       {/* 2. Metal Account Balances Grid */}
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="workshop-metal-balances">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Layers className="h-4 w-4 text-amber-500" />
@@ -180,12 +182,13 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
       </div>
 
       {/* 3. Physical Transactions & Corrections Audit Table */}
-      <Card className="border-border">
+      <Card className="border-border" data-tour="workshop-metal-journal">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <History className="h-4 w-4 text-amber-500" />
               <T>Traceable Transactions & Corrections Audit</T>
+              <WorkshopDomainTooltip term="Correction / Reversal" />
             </CardTitle>
             <CardDescription className="text-xs">
               <T>Immutable physical journal records with reversal and replacement lineage</T>
@@ -207,7 +210,12 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                     <th className="py-3 px-3"><T>Type</T></th>
                     <th className="py-3 px-3"><T>Material</T></th>
                     <th className="py-3 px-3"><T>Physical Weight</T></th>
-                    <th className="py-3 px-3"><T>Scale / Source</T></th>
+                    <th className="py-3 px-3">
+                      <div className="flex items-center gap-1">
+                        <T>Scale / Source</T>
+                        <WorkshopDomainTooltip term="Manual Override" />
+                      </div>
+                    </th>
                     <th className="py-3 px-3"><T>Posted At</T></th>
                     <th className="py-3 px-4 text-right"><T>Action</T></th>
                   </tr>
@@ -239,7 +247,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                         <td className="py-3 px-3 text-muted-foreground">
                           {new Date(entry.postedAt).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-4 text-right" data-tour="workshop-metal-corrections">
                           {canApprove && !isReversed && (
                             <Button
                               variant="ghost"

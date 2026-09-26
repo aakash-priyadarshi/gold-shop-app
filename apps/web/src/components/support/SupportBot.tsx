@@ -23,7 +23,7 @@ import { OPEN_SUPPORT_CHAT_EVENT, useHelpUIStore } from "@/store/help-ui";
 import { usePreferencesStore } from "@/store/preferences";
 import { useT } from "@/providers/translation-provider";
 import { Mail, MessageCircle, Pencil, Phone, Send, Sparkles, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const SUPPORT = {
@@ -87,6 +87,63 @@ const QUICK_ASKS_CUSTOMER = [
   "How do I view my orders?",
   "How do I contact support?",
 ];
+const QUICK_ASKS_WORKSHOP_OVERVIEW = [
+  "What needs my attention?",
+  "Where is my gold?",
+  "How do I finish factory setup?",
+];
+
+const QUICK_ASKS_WORKSHOP_JOBS = [
+  "How do I create a job?",
+  "What's Recommended vs Actual?",
+  "What does reconciliation mean?",
+];
+
+const QUICK_ASKS_WORKSHOP_PRODUCTION = [
+  "How do I start a process?",
+  "What's Capture vs Confirm?",
+  "Why can't I close this run?",
+];
+
+const QUICK_ASKS_WORKSHOP_TRANSFERS = [
+  "How do dispatch and receipt work?",
+  "What is transfer variance?",
+];
+
+const QUICK_ASKS_WORKSHOP_RECOVERY = [
+  "How do recovery bags work?",
+  "Is assay required?",
+  "When can I settle recovery?",
+];
+
+const QUICK_ASKS_WORKSHOP_QC = [
+  "Why is this job blocked?",
+  "How do I receive finished jewellery?",
+];
+
+const QUICK_ASKS_WORKSHOP_SETTINGS = [
+  "What should I configure first?",
+  "How do recipes work?",
+  "How do I connect a scale?",
+];
+
+const QUICK_ASKS_WORKSHOP_METAL = [
+  "What is Gold 995?",
+  "How do ledger reversals work?",
+  "Where is my vault metal?",
+];
+
+const QUICK_ASKS_WORKSHOP_REPORTS = [
+  "Where did these grams go?",
+  "How do I audit process variance?",
+];
+
+const QUICK_ASKS_WORKSHOP_BOOK = [
+  "How do I issue metal to a karigar?",
+  "How do I record finished jewellery return?",
+  "How do gold loss limits work?",
+];
+
 
 const ESCALATION_CTA: { label: string; href: string }[] = [
   { label: `WhatsApp ${SUPPORT.phoneDisplay}`, href: `https://wa.me/${SUPPORT.phone.replace(/\+/g, "")}` },
@@ -289,6 +346,13 @@ function renderMessageContent(text: string) {
 export function SupportBot() {
   const t = useT();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const rawView = pathname.includes("supply-chain") ? searchParams?.get("view") : null;
+  const ALLOWED_WORKSHOP_VIEWS = new Set([
+    "book", "overview", "tower", "jobs", "job", "production", "floor", "metal", "transfers", "recovery", "qc", "reports", "settings"
+  ]);
+  const workshopView = rawView && ALLOWED_WORKSHOP_VIEWS.has(rawView) ? rawView : null;
+  const currentPathWithView = workshopView ? `${pathname}?view=${workshopView}` : pathname;
   const { user } = useAuth();
   const { planName } = useFeatures();
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
@@ -355,7 +419,7 @@ export function SupportBot() {
         state = action.state;
         animation = action.animation;
       } else if (pathname.includes("supply-chain")) {
-        text = "<T>Supply Chain has seven views: Karigar book, Tower, Jobs, Floor, Metal, QC, and Reports. Ask me about any of them.</T>";
+        text = "<T>Supply Chain brings together your traditional Karigar Book and traceable Factory Operations: Overview, Jobs, Production, Metal, Transfers, Recovery, QC, and Reports.</T>";
         state = "gold_bar";
         animation = "spin";
       } else if (pathname.includes("tax") || pathname.includes("vat") || pathname.includes("gst")) {
@@ -547,7 +611,37 @@ export function SupportBot() {
     };
   }, []);
 
-  const QUICK_ASKS = isMobile
+  const getWorkshopQuickAsks = (view: string | null) => {
+    switch (view) {
+      case "jobs":
+        return QUICK_ASKS_WORKSHOP_JOBS;
+      case "production":
+      case "floor":
+        return QUICK_ASKS_WORKSHOP_PRODUCTION;
+      case "transfers":
+        return QUICK_ASKS_WORKSHOP_TRANSFERS;
+      case "recovery":
+        return QUICK_ASKS_WORKSHOP_RECOVERY;
+      case "qc":
+        return QUICK_ASKS_WORKSHOP_QC;
+      case "settings":
+        return QUICK_ASKS_WORKSHOP_SETTINGS;
+      case "metal":
+        return QUICK_ASKS_WORKSHOP_METAL;
+      case "reports":
+        return QUICK_ASKS_WORKSHOP_REPORTS;
+      case "book":
+        return QUICK_ASKS_WORKSHOP_BOOK;
+      case "overview":
+      case "tower":
+      default:
+        return QUICK_ASKS_WORKSHOP_OVERVIEW;
+    }
+  };
+
+  const QUICK_ASKS = pathname.includes("supply-chain")
+    ? getWorkshopQuickAsks(workshopView)
+    : isMobile
     ? QUICK_ASKS_MOBILE
     : isSellerLoggedIn
     ? QUICK_ASKS_SELLER
@@ -673,7 +767,7 @@ export function SupportBot() {
           message: text, 
           history, 
           sessionId: getOrCreateSessionId(), 
-          currentPath: pathname, 
+          currentPath: currentPathWithView, 
           dashboardMode,
           botName: botName || undefined,
           userName: effectiveUserName || undefined,

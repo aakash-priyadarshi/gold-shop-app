@@ -26,6 +26,7 @@ import {
   ShieldAlert,
   Truck,
 } from "lucide-react";
+import { WorkshopDomainTooltip } from "../shared/WorkshopDomainTooltip";
 
 export function WorkshopReportsModule() {
   const t = useT();
@@ -73,7 +74,7 @@ export function WorkshopReportsModule() {
     <div className="space-y-5">
       {/* Top Header & Navigation Tabs */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0" data-tour="workshop-reports-filters">
           <div className="flex rounded-lg border bg-muted/40 p-1 text-xs">
             {[
               { id: "STOCK", label: "Material Stock", icon: Coins },
@@ -110,6 +111,7 @@ export function WorkshopReportsModule() {
         </Button>
       </div>
 
+      <div data-tour="workshop-reports-results" className="space-y-4">
       {/* 1. Material Stock Section */}
       {activeTab === "STOCK" && (
         <Card className="border-border">
@@ -493,6 +495,7 @@ export function WorkshopReportsModule() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }
