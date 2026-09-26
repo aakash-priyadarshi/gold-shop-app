@@ -91,7 +91,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
       setOpeningReason("");
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Failed to post opening balance");
+      alert(t(err?.response?.data?.message || err?.message || "Failed to post opening balance"));
     } finally {
       setOpeningSubmitting(false);
     }
@@ -234,7 +234,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                             variant={isReversed ? "destructive" : "outline"}
                             className="text-[10px] font-mono"
                           >
-                            {entry.referenceType}
+                            {t(entry.referenceType)}
                           </Badge>
                         </td>
                         <td className="py-3 px-3 text-foreground">{entry.materialKey}</td>
