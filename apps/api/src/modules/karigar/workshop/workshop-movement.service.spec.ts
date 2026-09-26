@@ -11,6 +11,7 @@ describe("WorkshopMovementService transfer receipts", () => {
   };
   const transfer = {
     id: "transfer-1", status: "DISPATCHED", dispatchReading: { id: "dispatch-reading", shopId: "shop-1", weightGrams: grams("100.00") },
+    dispatchReadingId: "dispatch-reading",
     approvedAt: null as Date | null,
   };
   const session = {
@@ -36,6 +37,7 @@ describe("WorkshopMovementService transfer receipts", () => {
       workshopWeighingSession: { findFirst: jest.fn().mockResolvedValue(session), update: jest.fn().mockResolvedValue({}) },
       karigarJob: { findFirst: jest.fn().mockResolvedValue({ status: "Casting" }) },
       workshopTransfer: { findFirst: jest.fn().mockImplementation(async () => transfer), update: jest.fn().mockResolvedValue({}) },
+      workshopMetalJournal: { findFirst: jest.fn().mockResolvedValue(null) },
       workshopToleranceRule: { findFirst: jest.fn().mockResolvedValue({ id: "rule-1", maxDifferenceGrams: grams("0.10") }) },
     };
     journal = {

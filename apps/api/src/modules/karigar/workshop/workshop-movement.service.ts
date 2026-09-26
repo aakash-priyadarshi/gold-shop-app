@@ -10,6 +10,7 @@ import { SESSION_TTL_MS, SCALE_PRECISION_GRAMS } from "./workshop-metal.types";
 import { WorkshopCatalogService } from "./workshop-catalog.service";
 import { WorkshopMetalJournalService } from "./workshop-metal-journal.service";
 import { WorkshopScaleService } from "./workshop-scale.service";
+import { effectiveTransferDispatchGrams } from "./workshop-transfer-weight";
 import { ConfirmWorkshopMovementDto, CreateWorkshopMovementSessionDto, WorkshopMovementKind } from "./dto/workshop-movement.dto";
 
 type AccountDestination = { bucket: WorkshopAccountBucket; scopeId: string; materialKey: string };
@@ -444,12 +445,14 @@ export class WorkshopMovementService {
         if (!event || event.status !== expected) throw new ConflictException("Recovery event has advanced since this weighing session was opened");
       }
       let transferExcess: { accountId: string; grams: string } | null = null;
+      let effectiveDispatchWeight: Prisma.Decimal | null = null;
       if (kind === "TRANSFER_RECEIPT") {
         const transfer = currentTransfer;
         if (!transfer?.dispatchReading || !["DISPATCHED", "EXCEPTION"].includes(transfer.status) || transfer.dispatchReading.shopId !== shopId) {
           throw new BadRequestException("Transfer has no valid dispatch reading");
         }
-        const difference = transfer.dispatchReading.weightGrams.minus(session.reading.weightGrams);
+        effectiveDispatchWeight = await effectiveTransferDispatchGrams(tx, shopId, transfer);
+        const difference = effectiveDispatchWeight.minus(session.reading.weightGrams);
         const tolerance = await tx.workshopToleranceRule.findFirst({ where: { shopId, movementKind: "TRANSFER", materialKey: session.materialKey, scalePurpose: session.requiredPurpose, isActive: true } }) ??
           await tx.workshopToleranceRule.findFirst({ where: { shopId, movementKind: "TRANSFER", materialKey: "", scalePurpose: session.requiredPurpose, isActive: true } });
         const max = tolerance?.maxDifferenceGrams ?? new Prisma.Decimal(0);
@@ -480,7 +483,7 @@ export class WorkshopMovementService {
           ...(kind === "FINISHED_RECEIPT" ? { measuredGrossGrams: grossWeight, setStoneGrams: finishedStoneGrams.toFixed(6) } : {}) },
         lines: [
           { accountId: session.destinationAccount.id, debitGrams: weight },
-          { accountId: session.sourceAccount.id, creditGrams: transferExcess ? currentTransfer!.dispatchReading!.weightGrams.toFixed(6) : weight },
+          { accountId: session.sourceAccount.id, creditGrams: transferExcess ? (effectiveDispatchWeight ?? currentTransfer!.dispatchReading!.weightGrams).toFixed(6) : weight },
           ...(transferExcess ? [{ accountId: transferExcess.accountId, creditGrams: transferExcess.grams }] : []),
         ],
       });
@@ -542,7 +545,8 @@ export class WorkshopMovementService {
         await tx.workshopTransfer.update({ where: { id: session.transferId }, data: { status: "DISPATCHED", dispatchReadingId: session.reading.id, dispatchUserId: userId, dispatchedAt: new Date() } });
       }
       if (kind === "TRANSFER_RECEIPT" && session.transferId && currentTransfer?.dispatchReading) {
-        const difference = currentTransfer.dispatchReading.weightGrams.minus(session.reading.weightGrams);
+        const effDispatch = effectiveDispatchWeight ?? currentTransfer.dispatchReading.weightGrams;
+        const difference = effDispatch.minus(session.reading.weightGrams);
         await tx.workshopTransfer.update({ where: { id: session.transferId }, data: { status: difference.isZero() ? "RECONCILED" : "RECEIVED", receiveReadingId: session.reading.id, receiveUserId: userId, receivedAt: new Date(), differenceGrams: difference } });
       }
       if (kind === "RECOVERY_SEND" && session.recoveryEventId) {
@@ -552,4 +556,5 @@ export class WorkshopMovementService {
     });
     return result;
   }
+
 }

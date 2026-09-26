@@ -31,8 +31,8 @@ export interface WorkshopMaterial {
 }
 
 export interface WorkshopRecipeComponent {
-  element: string;
-  percentage: number;
+  materialKey: string;
+  fraction: string;
 }
 
 export interface WorkshopRecipe {
@@ -149,6 +149,8 @@ export interface WorkshopJob {
   artisan: string;
   metalKey?: string;
   status: string;
+  currentStage?: string | null;
+  stages?: Array<{ stage: string; status: string; qcApprovedAt?: string | null }>;
   qty: number;
   inventoryItemId?: string | null;
   trees: WorkshopCastingTree[];
@@ -272,7 +274,7 @@ export interface WorkshopCutoverStatus {
 export interface WorkshopCatalogResponse {
   materials: WorkshopMaterial[];
   recipes: WorkshopRecipe[];
-  definitions: WorkshopProcessDefinition[];
+  processes: WorkshopProcessDefinition[];
   routes: WorkshopRouteTemplate[];
   workstations: WorkshopWorkstation[];
   devices: any[];
@@ -392,24 +394,22 @@ export interface BatchReconciliationResponse {
 }
 
 export interface CreateMovementSessionDto {
-  treeId: string;
+  treeId?: string;
   movementKind: string;
   materialKey: string;
+  deviceId: string;
+  jobId?: string;
   processRunId?: string;
   transferId?: string;
   recoveryContainerId?: string;
   recoveryEventId?: string;
   batchChildId?: string;
-  deviceId?: string;
-  destinationBucket?: string;
+  disposition?: "VAULT" | "WIP" | "REUSABLE" | "SCRAP" | "RECOVERY_PENDING" | "REFINERY" | "FINISHED";
 }
 
 export interface ConfirmMovementSessionDto {
-  readingId?: string;
-  grossWeightGrams?: string;
-  setStoneWeightGrams?: string;
-  jewelleryType?: string;
-  productName?: string;
+  readingId: string;
+  finishedGoods?: { nameEn: string; jewelleryType: string; sku?: string };
   exceptionReason?: string;
   idempotencyKey?: string;
 }
@@ -417,7 +417,7 @@ export interface ConfirmMovementSessionDto {
 export interface CorrectJournalDto {
   replacementWeightGrams?: string;
   reason: string;
-  idempotencyKey?: string;
+  idempotencyKey: string;
 }
 
 export interface ManualMovementDto {
@@ -426,7 +426,7 @@ export interface ManualMovementDto {
   destinationBucket: string;
   weightGrams: string;
   reason: string;
-  idempotencyKey?: string;
+  idempotencyKey: string;
   jobId?: string;
   treeId?: string;
   processRunId?: string;
@@ -442,6 +442,7 @@ export const workshopApi = {
   acceptInvitation: (id: string) => api.post(`${root}/my-invitations/${id}/accept`),
   inviteStaff: (data: { email: string; canCapture: boolean; canApprove: boolean }) =>
     api.post(`${root}/staff/invite`, data),
+  staff: () => api.get<{ id: string }[]>(`${root}/staff`),
 
   // Cutover & Ledger Version
   cutoverStatus: () => api.get<WorkshopCutoverStatus>(`${root}/cutover`),
@@ -462,22 +463,16 @@ export const workshopApi = {
     name: string;
     purpose: "GOLD" | "STONE";
     adapterKind: "SERIAL" | "TCP";
-    port?: string;
-    baudRate?: number;
-    dataBits?: number;
-    stopBits?: number;
-    parity?: string;
-    tcpHost?: string;
-    tcpPort?: number;
-    stableTokens?: string[];
-    unstableTokens?: string[];
-    isPrimary?: boolean;
+    profile: {
+      parser: { kind: "ASCII_LINE"; stableToken: string; unstableToken: string };
+      transport: { port: string; baudRate: number; dataBits: number; stopBits: number; parity: string } | { host: string; port: number };
+    };
   }) => api.post(`${root}/devices`, data),
 
   // Processes, Routes, Workstations, Tolerances
   createProcess: (data: { name: string; department?: string; defaultScrapRate?: number; sequence?: number }) =>
     api.post(`${root}/processes`, data),
-  createRoute: (data: { name: string; stepDefinitionIds: string[] }) =>
+  createRoute: (data: { name: string; definitionIds: string[] }) =>
     api.post(`${root}/routes`, data),
   createWorkstation: (data: { name: string; department?: string; definitionId?: string }) =>
     api.post(`${root}/workstations`, data),
@@ -519,7 +514,7 @@ export const workshopApi = {
   jobs: () => api.get<WorkshopJob[]>(`${root}/jobs`),
   assignRoute: (jobId: string, templateId: string) =>
     api.post(`${root}/jobs/${jobId}/route`, { templateId }),
-  changeRouteStep: (jobId: string, stepId: string, data: { action: "ADD" | "SKIP" | "REORDER"; definitionId?: string; reason: string }) =>
+  changeRouteStep: (jobId: string, stepId: string, data: { action: "ADD" | "SKIP" | "REPEAT" | "REWORK"; definitionId?: string; reason: string }) =>
     api.post(`${root}/jobs/${jobId}/route/${stepId}/change`, data),
   createBatchChild: (data: { treeId: string; treeLineId?: string; kind: "DESIGN_GROUP" | "ORDER_GROUP" | "PIECE"; label: string; quantity: number }) =>
     api.post(`${root}/batch-children`, data),
@@ -578,18 +573,13 @@ export const workshopApi = {
       materialKey: string;
       movementKind: string;
     }>(`${root}/movement-sessions`, data),
-  capture: (id: string, data: { rawFrame: string; weightGrams: string; stable: boolean; sequence?: number; samples?: any[] }) =>
-    api.post<{ id: string; weightGrams: string; stable: boolean }>(`${root}/weighing-sessions/${id}/capture`, data),
+  capture: (id: string, data: { deviceId: string; reading: { rawFrame: string; weightGrams: string; unit: "g"; stable: boolean; sequence: number; readingAt?: string; samples?: Array<{ rawFrame: string; readingAt: string }> } }) =>
+    api.post<{ reading: { id: string; weightGrams: string; stable: boolean } }>(`${root}/weighing-sessions/${id}/capture`, data),
   confirm: (id: string, data: ConfirmMovementSessionDto) =>
     api.post<{
-      journalId: string;
-      inventoryItemId?: string;
-      metalGrams?: string;
-      grossGrams?: number;
-      requiresApproval?: boolean;
-      differenceGrams?: string;
-      toleranceGrams?: string;
-    }>(`${root}/movement-sessions/${id}/confirm`, data),
+      journal: { id: string };
+      inventoryItem?: { id: string } | null;
+    } | { requiresApproval: true; differenceGrams: string; toleranceGrams: string }>(`${root}/movement-sessions/${id}/confirm`, data),
 
   // Control: Manual Overrides & Corrections
   manualMovement: (data: ManualMovementDto) =>

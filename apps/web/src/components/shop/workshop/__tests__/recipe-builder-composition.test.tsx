@@ -30,8 +30,8 @@ describe("Alloy Recipe Builder & Composition Validation", () => {
     vi.mocked(workshopApi.catalog).mockResolvedValue({
       data: {
         materials: [
-          { id: "m-1", key: "goldGrains995", name: "Fine Gold 995", kind: "GOLD", scalePurpose: "GOLD", theoreticalPurity: "0.995000" },
-          { id: "m-2", key: "masterAlloyYellow", name: "Master Alloy 22K Yellow", kind: "ALLOY", scalePurpose: "GOLD" },
+          { id: "m-1", key: "goldGrains995", name: "Fine Gold 995", kind: "GOLD", scalePurpose: "GOLD", theoreticalPurity: "0.995000", isActive: true },
+          { id: "m-2", key: "masterAlloyYellow", name: "Master Alloy 22K Yellow", kind: "ALLOY", scalePurpose: "GOLD", isActive: true },
         ],
         recipes: [],
         definitions: [],
@@ -60,29 +60,31 @@ describe("Alloy Recipe Builder & Composition Validation", () => {
     const recipeNameInput = screen.getByPlaceholderText("e.g. 22K Yellow Gold (Export Grade)");
     fireEvent.change(recipeNameInput, { target: { value: "22K Standard Yellow" } });
 
-    // Verify initial preset loaded has 100%
-    expect(screen.getByText("100.0% / 100%")).toBeInTheDocument();
+    expect(screen.getByText("100.0000% / 100%")).toBeInTheDocument();
+    fireEvent.change(screen.getByText("Select material").closest("select")!, { target: { value: "masterAlloyYellow" } });
 
-    // Change silver share to 60% (making total 105%)
-    const silverPercentInputs = screen.getAllByRole("spinbutton");
-    // First spinbutton in the composition list is Silver (55%)
-    fireEvent.change(silverPercentInputs[0], { target: { value: "60" } });
+    const percentInput = screen.getByRole("spinbutton");
+    fireEvent.change(percentInput, { target: { value: "105" } });
 
     // Now total should be 105% and marked invalid
     await waitFor(() => {
-      expect(screen.getByText("105.0% / 100%")).toBeInTheDocument();
+      expect(screen.getByText("105.0000% / 100%")).toBeInTheDocument();
     });
 
     // Save button should be disabled because 105% !== 100%
     const saveButton = screen.getByText("Save Recipe");
     expect(saveButton).toBeDisabled();
 
-    // Adjust back to 55% so it's exactly 100%
-    fireEvent.change(silverPercentInputs[0], { target: { value: "55" } });
+    fireEvent.change(percentInput, { target: { value: "100" } });
     await waitFor(() => {
-      expect(screen.getByText("100.0% / 100%")).toBeInTheDocument();
+      expect(screen.getByText("100.0000% / 100%")).toBeInTheDocument();
     });
     expect(saveButton).not.toBeDisabled();
+    vi.mocked(workshopApi.createRecipe).mockResolvedValue({ data: {} } as any);
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(workshopApi.createRecipe).toHaveBeenCalledWith(expect.objectContaining({
+      components: [{ materialKey: "masterAlloyYellow", fraction: "1.000000" }],
+    })));
   });
 
   it("applies recipe presets cleanly (Rose Gold, White Gold, Yellow Gold)", async () => {
@@ -107,6 +109,6 @@ describe("Alloy Recipe Builder & Composition Validation", () => {
     expect(purityInput).toBeInTheDocument();
 
     // Total should remain 100% balanced
-    expect(screen.getByText("100.0% / 100%")).toBeInTheDocument();
+    expect(screen.getByText("100.0000% / 100%")).toBeInTheDocument();
   });
 });

@@ -100,6 +100,17 @@ describe("WorkshopControlService authoritative exceptions", () => {
     expect(journal.postEntry).not.toHaveBeenCalled();
   });
 
+  it("replays a reversal-only correction with the same idempotency key", async () => {
+    tx.workshopMetalJournal.findFirst.mockResolvedValue({
+      id: "journal-1", reversedBy: { id: "reversal-1", idempotencyKey: "reversal:retry-1" }, replacedBy: null,
+    });
+    const result = await service.correctJournal("shop-1", "owner-1", "journal-1", {
+      reason: "Verified void", idempotencyKey: "retry-1",
+    });
+    expect(result).toEqual({ id: "journal-1", status: "REVERSED", voided: true, idempotent: true });
+    expect(journal.postEntry).not.toHaveBeenCalled();
+  });
+
   it("blocks a correction after downstream stock has consumed its destination", async () => {
     tx.workshopMetalJournal.findFirst.mockResolvedValueOnce({
       id: "journal-1", status: "POSTED", referenceType: "MATERIAL_ISSUE",

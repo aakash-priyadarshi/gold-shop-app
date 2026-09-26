@@ -182,6 +182,8 @@ function SupplyChainRouteContent() {
   } = useFeatures();
   const searchParams = useSearchParams();
   const requested = searchParams.get("view");
+  const requestedDept = searchParams.get("dept");
+  const initialDept = requestedDept && /^[A-Za-z][A-Za-z0-9 _-]{0,63}$/.test(requestedDept) ? requestedDept : null;
   const workshopMode = !!user?.shop?.workshopMode;
   const workshopEnabled = hasFeature("workshopManufacturing");
 
@@ -302,6 +304,7 @@ function SupplyChainRouteContent() {
             <WorkshopWorkspace
               view={effectiveView}
               jobId={searchParams.get("id")}
+              initialDept={initialDept}
             />
           </FeatureGate>
         </div>
@@ -355,6 +358,7 @@ function SupplyChainRouteContent() {
       <WorkshopWorkspace
         view={effectiveView}
         jobId={searchParams.get("id")}
+        initialDept={initialDept}
       />
     </div>
   );
@@ -363,9 +367,11 @@ function SupplyChainRouteContent() {
 function WorkshopWorkspace({
   view,
   jobId,
+  initialDept,
 }: {
   view: WorkshopView;
   jobId: string | null;
+  initialDept: string | null;
 }) {
   switch (view) {
     case "jobs":
@@ -378,7 +384,7 @@ function WorkshopWorkspace({
       );
     case "production":
     case "floor":
-      return <WorkshopProductionFloor />;
+      return <WorkshopProductionFloor initialDept={initialDept} />;
     case "metal":
     case "procurement":
       return <WorkshopMetalModule />;

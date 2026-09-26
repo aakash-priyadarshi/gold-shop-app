@@ -58,6 +58,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
   const [childLabel, setChildLabel] = useState("");
   const [childQuantity, setChildQuantity] = useState("1");
   const [childSubmitting, setChildSubmitting] = useState(false);
+  const [childError, setChildError] = useState<string | null>(null);
 
   const loadJobData = useCallback(async () => {
     setLoading(true);
@@ -91,6 +92,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
   const handleCreateChild = async () => {
     if (!selectedTreeId || !childLabel.trim()) return;
     setChildSubmitting(true);
+    setChildError(null);
     try {
       await workshopApi.createBatchChild({
         treeId: selectedTreeId,
@@ -102,8 +104,8 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
       setChildLabel("");
       setChildQuantity("1");
       loadJobData();
-    } catch {
-      // ignore
+    } catch (err: any) {
+      setChildError(err?.response?.data?.message || err?.message || t("Unable to create batch child"));
     } finally {
       setChildSubmitting(false);
     }
@@ -194,7 +196,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-                Job #{job.id.slice(0, 8)} · Artisan: {job.artisan} · Qty: {job.qty}
+                <T>Job #</T>{job.id.slice(0, 8)} · <T>Artisan:</T> {job.artisan} · <T>Qty:</T> {job.qty}
               </p>
             </div>
 
@@ -267,7 +269,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
               {primaryTree?.lines && primaryTree.lines.length > 0 ? (
                 primaryTree.lines.map((line, idx) => (
                   <div key={line.id} className="flex justify-between text-muted-foreground font-mono">
-                    <span>Line #{idx + 1}</span>
+                    <span><T>Line #</T>{idx + 1}</span>
                     <span>{line.weightGrams.toFixed(3)} g</span>
                   </div>
                 ))
@@ -385,12 +387,12 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                         </div>
                         {stepRuns.length > 0 && (
                           <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                            {stepRuns.length} run(s) · Last status: {stepRuns[0].status}
+                            {stepRuns.length} <T>run(s) · Last status:</T> {stepRuns[0].status}
                           </div>
                         )}
                         {step.reason && (
                           <div className="text-[10px] text-muted-foreground italic mt-0.5">
-                            Note: {step.reason}
+                            <T>Note:</T> {step.reason}
                           </div>
                         )}
                       </div>
@@ -450,7 +452,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                     <Badge variant="outline" className="text-[10px]">
                       {child.kind}
                     </Badge>
-                    <span className="font-mono text-muted-foreground">Qty: {child.quantity}</span>
+                    <span className="font-mono text-muted-foreground"><T>Qty:</T> {child.quantity}</span>
                   </div>
                   <div className="font-semibold text-foreground truncate mt-1">
                     {child.label}
@@ -490,9 +492,9 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                   onChange={(e: any) => setChildKind(e.target.value)}
                   className="w-full rounded-md border border-input bg-background p-2"
                 >
-                  <option value="DESIGN_GROUP">Design Group</option>
-                  <option value="ORDER_GROUP">Order Group</option>
-                  <option value="PIECE">Individual Piece (Qty: 1)</option>
+                  <option value="DESIGN_GROUP"><T>Design Group</T></option>
+                  <option value="ORDER_GROUP"><T>Order Group</T></option>
+                  <option value="PIECE"><T>Individual Piece (Qty: 1)</T></option>
                 </select>
               </div>
 
@@ -501,7 +503,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                 <input
                   value={childLabel}
                   onChange={(e) => setChildLabel(e.target.value)}
-                  placeholder="e.g. Ring #1 / Solitaire Batch"
+                  placeholder={t("e.g. Ring #1 / Solitaire Batch")}
                   className="w-full rounded-md border border-input bg-background p-2"
                 />
               </div>
@@ -520,6 +522,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
               )}
             </div>
 
+            {childError && <p role="alert" className="text-xs text-destructive">{childError}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={() => setShowChildModal(false)}>
                 <T>Cancel</T>

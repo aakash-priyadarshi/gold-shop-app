@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,12 +11,14 @@ import { useT } from "@/providers/translation-provider";
 import { workshopApi } from "@/lib/workshop-api";
 import { readPhysicalWorkshopScale, type RawScaleFrame, type WorkshopDevice } from "@/lib/workshop-hardware";
 import { GoldScaleSimulator, StoneScaleSimulator } from "@gold-shop/shared";
+import { workshopRetryKey, type WorkshopRetryKey } from "@/lib/workshop-retry-key";
 import { Scale, AlertTriangle, CheckCircle2, RefreshCw, Cpu, ShieldAlert, Sparkles } from "lucide-react";
 
 export interface ScaleCapturePanelProps {
   purpose?: "GOLD" | "STONE";
   materialKey: string;
-  treeId: string;
+  treeId?: string;
+  jobId?: string;
   movementKind: string;
   processRunId?: string;
   transferId?: string;
@@ -24,8 +26,13 @@ export interface ScaleCapturePanelProps {
   recoveryEventId?: string;
   batchChildId?: string;
   destinationBucket?: string;
-  onCaptured?: (readingId: string, weightGrams: string) => void;
+  sourceBucket?: string;
+  sourceScopeId?: string;
+  destinationScopeId?: string;
+  onCaptured?: (sessionId: string | null, readingId: string | null, weightGrams: string | null) => void;
+  externalConfirm?: boolean;
   onConfirmed?: (result: { journalId: string; inventoryItemId?: string; metalGrams?: string; grossGrams?: number }) => void;
+  onRequiresApproval?: () => void;
   allowManualOverride?: boolean;
   canApprove?: boolean;
 }
@@ -34,6 +41,7 @@ export function ScaleCapturePanel({
   purpose = "GOLD",
   materialKey,
   treeId,
+  jobId,
   movementKind,
   processRunId,
   transferId,
@@ -41,24 +49,36 @@ export function ScaleCapturePanel({
   recoveryEventId,
   batchChildId,
   destinationBucket,
+  sourceBucket,
+  sourceScopeId,
+  destinationScopeId,
   onCaptured,
   onConfirmed,
+  onRequiresApproval,
+  externalConfirm = false,
   allowManualOverride = false,
   canApprove = false,
 }: ScaleCapturePanelProps) {
   const t = useT();
   const [devices, setDevices] = useState<WorkshopDevice[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
-  const [simulatorAllowed, setSimulatorAllowed] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [assignedSequence, setAssignedSequence] = useState<number | null>(null);
+  const [samples, setSamples] = useState<RawScaleFrame[] | undefined>();
+  const [readingAt, setReadingAt] = useState<string | undefined>();
+  const retry = useRef<WorkshopRetryKey | null>(null);
+  const onCapturedRef = useRef(onCaptured);
+  onCapturedRef.current = onCaptured;
   const [scaleState, setScaleState] = useState<"disconnected" | "connecting" | "unstable" | "stable" | "captured" | "error">("disconnected");
   const [liveWeight, setLiveWeight] = useState<string>("0.00");
   const [liveRawFrame, setLiveRawFrame] = useState<string>("");
   const [isStable, setIsStable] = useState(false);
   const [readingId, setReadingId] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [capturedWeight, setCapturedWeight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [exceptionReason, setExceptionReason] = useState("");
 
   // Manual Override State (Owner only)
   const [showManualOverride, setShowManualOverride] = useState(false);
@@ -70,25 +90,35 @@ export function ScaleCapturePanel({
     try {
       const res = await workshopApi.catalog();
       const devList = (res.data?.devices || []) as WorkshopDevice[];
-      setDevices(devList.filter((d) => d.purpose === purpose));
-      if (devList.length && !selectedDeviceId) {
-        const primary = devList.find((d) => d.purpose === purpose);
-        if (primary) setSelectedDeviceId(primary.id);
-      }
+      const matching = devList.filter((d) => d.purpose === purpose);
+      setDevices(matching);
+      setSelectedDeviceId((current) => matching.some((d) => d.id === current) ? current : matching[0]?.id || "");
     } catch {
       // ignore
     }
-  }, [purpose, selectedDeviceId]);
+  }, [purpose]);
 
   useEffect(() => {
     loadDevices();
-    setSimulatorAllowed(
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1" ||
-        process.env.NODE_ENV !== "production")
-    );
   }, [loadDevices]);
+
+  useEffect(() => {
+    setSessionId(null);
+    setAssignedSequence(null);
+    setReadingId(null);
+    setConfirmed(false);
+    setCapturedWeight(null);
+    setLiveWeight("0.00");
+    setLiveRawFrame("");
+    setSamples(undefined);
+    setReadingAt(undefined);
+    setIsStable(false);
+    setScaleState("disconnected");
+    setErrorMessage(null);
+    setExceptionReason("");
+    retry.current = null;
+    onCapturedRef.current?.(null, null, null);
+  }, [treeId, jobId, materialKey, movementKind, processRunId, transferId, recoveryContainerId, recoveryEventId, batchChildId, destinationBucket, sourceBucket, sourceScopeId, destinationScopeId, selectedDeviceId]);
 
   // Read scale frames
   const handleReadScale = useCallback(async () => {
@@ -97,7 +127,11 @@ export function ScaleCapturePanel({
 
     const device = devices.find((d) => d.id === selectedDeviceId);
     if (!device) {
-      if (simulatorAllowed) {
+      setScaleState("disconnected");
+      setErrorMessage(t("No active scale device selected. Register or select a scale."));
+      return;
+    }
+    if (device.adapterKind === "SIMULATOR") {
         try {
           setScaleState("unstable");
           const sim = purpose === "STONE" ? new StoneScaleSimulator("5.250") : new GoldScaleSimulator("100.25");
@@ -118,15 +152,13 @@ export function ScaleCapturePanel({
             setLiveWeight(stableReading.weightGrams);
             setIsStable(true);
             setScaleState("stable");
+            setSamples(undefined);
+            setReadingAt(new Date().toISOString());
           }
         } catch (err: any) {
           setScaleState("error");
           setErrorMessage(err?.message || "Simulator error");
         }
-        return;
-      }
-      setScaleState("disconnected");
-      setErrorMessage(t("No active scale device selected. Register or select a scale."));
       return;
     }
 
@@ -134,6 +166,8 @@ export function ScaleCapturePanel({
       setScaleState("unstable");
       const res = await readPhysicalWorkshopScale(device);
       setLiveRawFrame(res.rawFrame);
+      setSamples(res.samples);
+      setReadingAt(res.readingAt);
       setLiveWeight(res.weightGrams);
       setIsStable(res.stable);
       setScaleState(res.stable ? "stable" : "unstable");
@@ -141,12 +175,12 @@ export function ScaleCapturePanel({
       setScaleState("error");
       setErrorMessage(err?.message || t("Scale read failed. Check serial/TCP cable connection."));
     }
-  }, [devices, selectedDeviceId, simulatorAllowed, purpose, t]);
+  }, [devices, selectedDeviceId, purpose, t]);
 
   // Open weighing session and capture reading
   const handleCapture = async () => {
-    if (!treeId || !materialKey || !movementKind) {
-      setErrorMessage(t("Please select job/tree and material before capturing weight"));
+    if (!materialKey || !movementKind || !selectedDeviceId) {
+      setErrorMessage(t("Please select a material and registered scale before capturing weight"));
       return;
     }
     setLoading(true);
@@ -154,9 +188,11 @@ export function ScaleCapturePanel({
     try {
       // 1. Create or reuse movement session
       let currentSessionId = sessionId;
+      let sequence = assignedSequence;
       if (!currentSessionId) {
         const sessionRes = await workshopApi.createSession({
           treeId,
+          jobId,
           movementKind,
           materialKey,
           processRunId,
@@ -164,30 +200,59 @@ export function ScaleCapturePanel({
           recoveryContainerId,
           recoveryEventId,
           batchChildId,
-          destinationBucket,
-          deviceId: selectedDeviceId || undefined,
+          disposition: destinationBucket as "VAULT" | "WIP" | "REUSABLE" | "SCRAP" | "RECOVERY_PENDING" | "REFINERY" | "FINISHED" | undefined,
+          deviceId: selectedDeviceId,
         });
         currentSessionId = sessionRes.data.id;
         setSessionId(currentSessionId);
+        setAssignedSequence(sessionRes.data.assignedSequence);
+        sequence = sessionRes.data.assignedSequence;
       }
 
       // 2. Persist stable scale reading
       const captureRes = await workshopApi.capture(currentSessionId, {
-        rawFrame: liveRawFrame || `ST,+${liveWeight} g`,
-        weightGrams: liveWeight,
-        stable: isStable,
+        deviceId: selectedDeviceId,
+        reading: {
+          rawFrame: liveRawFrame,
+          weightGrams: liveWeight,
+          unit: "g",
+          stable: isStable,
+          sequence: sequence!,
+          readingAt,
+          samples,
+        },
       });
 
-      const newReadingId = captureRes.data.id;
+      const newReadingId = captureRes.data.reading.id;
       setReadingId(newReadingId);
       setCapturedWeight(liveWeight);
       setScaleState("captured");
       if (onCaptured) {
-        onCaptured(newReadingId, liveWeight);
+        onCaptured(currentSessionId, newReadingId, liveWeight);
       }
     } catch (err: any) {
       setErrorMessage(err?.response?.data?.message || err?.message || t("Failed to capture reading"));
       setScaleState("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!sessionId || !readingId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await workshopApi.confirm(sessionId, { readingId, exceptionReason: movementKind === "TRANSFER_RECEIPT" ? exceptionReason.trim() || undefined : undefined });
+      if ("requiresApproval" in res.data) {
+        setErrorMessage(t("Transfer difference requires supervisor approval. Keep this reading and confirm again after approval."));
+        onRequiresApproval?.();
+        return;
+      }
+      setConfirmed(true);
+      onConfirmed?.({ journalId: res.data.journal.id, inventoryItemId: res.data.inventoryItem?.id });
+    } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || err?.message || t("Movement confirmation failed"));
     } finally {
       setLoading(false);
     }
@@ -208,13 +273,20 @@ export function ScaleCapturePanel({
     try {
       const res = await workshopApi.manualMovement({
         materialKey,
-        sourceBucket: "VAULT",
-        destinationBucket: destinationBucket || "WIP",
+        sourceBucket: sourceBucket ?? "VAULT",
+        destinationBucket: destinationBucket ?? "WIP",
+        sourceScopeId,
+        destinationScopeId,
         weightGrams: overrideWeight,
         reason: overrideReason.trim(),
         treeId,
+        jobId,
         processRunId,
+        idempotencyKey: (retry.current = workshopRetryKey(retry.current,
+          { materialKey, sourceBucket, destinationBucket, sourceScopeId, destinationScopeId, overrideWeight, overrideReason, treeId, jobId, processRunId },
+          () => crypto.randomUUID())).key,
       });
+      retry.current = null;
       setShowManualOverride(false);
       if (onConfirmed) {
         onConfirmed({ journalId: res.data.id, metalGrams: overrideWeight });
@@ -273,15 +345,14 @@ export function ScaleCapturePanel({
                   </option>
                 );
               })}
-              {!devices.length && simulatorAllowed && (
-                <option value="">{purpose} Simulator (Virtual Device)</option>
-              )}
+              {!devices.length && <option value=""><T>No registered scale</T></option>}
             </select>
           </div>
           <Button variant="outline" size="sm" onClick={handleReadScale} disabled={loading}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1 ${scaleState === "connecting" ? "animate-spin" : ""}`} />
             <T>Read</T>
           </Button>
+
         </div>
 
         {/* Live Net Weight Digital Display */}
@@ -301,7 +372,7 @@ export function ScaleCapturePanel({
           </div>
           {liveRawFrame && (
             <div className="mt-2 font-mono text-[10px] text-muted-foreground/80 truncate px-2 py-0.5 bg-background/50 rounded">
-              Raw: {liveRawFrame}
+              <T>Raw:</T> {liveRawFrame}
             </div>
           )}
         </div>
@@ -317,6 +388,29 @@ export function ScaleCapturePanel({
             {scaleState === "captured" ? <T>Captured</T> : <T>Capture Scale Weight</T>}
           </Button>
 
+          {readingId && !externalConfirm && (
+            <Button variant="outline" disabled={loading || !canApprove || confirmed} onClick={handleConfirm}>
+              <T>{confirmed ? "Confirmed" : "Confirm movement"}</T>
+            </Button>
+          )}
+
+          {readingId && !confirmed && (
+            <Button variant="ghost" disabled={loading} onClick={() => {
+              setSessionId(null);
+              setAssignedSequence(null);
+              setReadingId(null);
+              setCapturedWeight(null);
+              setLiveRawFrame("");
+              setSamples(undefined);
+              setReadingAt(undefined);
+              setIsStable(false);
+              setScaleState("disconnected");
+              setExceptionReason("");
+              retry.current = null;
+              onCaptured?.(null, null, null);
+            }}><T>Discard reading</T></Button>
+          )}
+
           {allowManualOverride && (
             <Button
               variant="outline"
@@ -329,6 +423,10 @@ export function ScaleCapturePanel({
             </Button>
           )}
         </div>
+
+        {movementKind === "TRANSFER_RECEIPT" && readingId && !confirmed && (
+          <div><Label className="text-xs"><T>Difference reason if outside tolerance</T></Label><Input value={exceptionReason} onChange={(e) => setExceptionReason(e.target.value)} placeholder={t("Verified reason for transfer difference")} /></div>
+        )}
 
         {/* Owner Manual Override Section */}
         {showManualOverride && allowManualOverride && (

@@ -166,7 +166,7 @@ export function ReconciliationSummary({
                     </span>
                     {m.tolerance && (
                       <div className="text-[10px] text-muted-foreground font-mono">
-                        Tol: {parseFloat(m.tolerance.maxDifferenceGrams).toFixed(3)}g (
+                        <T>Tol:</T> {parseFloat(m.tolerance.maxDifferenceGrams).toFixed(3)}g (
                         {m.tolerance.isWithinTolerance ? "Within" : "Exceeded"})
                       </div>
                     )}

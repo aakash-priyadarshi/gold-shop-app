@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import { workshopApi, type WorkshopJournalEntry } from "@/lib/workshop-api";
+import { workshopRetryKey, type WorkshopRetryKey } from "@/lib/workshop-retry-key";
 import {
   AlertTriangle,
   ArrowRight,
@@ -38,10 +39,11 @@ export function TransactionCorrectionDialog({
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const retry = useRef<WorkshopRetryKey | null>(null);
 
   if (!isOpen || !journal) return null;
 
-  const isReversed = !!journal.reversedBy;
+  const isReversed = !!(journal.reversedById || journal.reversedBy);
   const isReplacement = !!journal.replacementForId;
 
   // Determine workflow-specific dependency warnings
@@ -128,7 +130,11 @@ export function TransactionCorrectionDialog({
       const res = await workshopApi.correctJournal(journal.id, {
         reason: reason.trim(),
         replacementWeightGrams: correctionMode === "REPLACE" ? replacementWeight : undefined,
+        idempotencyKey: (retry.current = workshopRetryKey(retry.current,
+          { journalId: journal.id, reason: reason.trim(), correctionMode, replacementWeight },
+          () => crypto.randomUUID())).key,
       });
+      retry.current = null;
       onSuccess(res.data);
       onClose();
     } catch (err: any) {

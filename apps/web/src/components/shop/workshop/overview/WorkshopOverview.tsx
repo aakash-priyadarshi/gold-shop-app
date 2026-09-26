@@ -50,13 +50,15 @@ export function WorkshopOverview() {
   const [transfers, setTransfers] = useState<WorkshopTransfer[]>([]);
   const [bags, setBags] = useState<WorkshopRecoveryContainer[]>([]);
   const [definitions, setDefinitions] = useState<WorkshopProcessDefinition[]>([]);
+  const [catalog, setCatalog] = useState<WorkshopCatalogResponse | null>(null);
   const [reports, setReports] = useState<WorkshopReportsResponse | null>(null);
   const [cutover, setCutover] = useState<any>(null);
+  const [hasStaff, setHasStaff] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [jobsRes, accRes, trRes, bagRes, catRes, repRes, cutRes] = await Promise.allSettled([
+      const [jobsRes, accRes, trRes, bagRes, catRes, repRes, cutRes, staffRes] = await Promise.allSettled([
         workshopApi.jobs(),
         workshopApi.accounts(),
         workshopApi.transfers(),
@@ -64,15 +66,20 @@ export function WorkshopOverview() {
         workshopApi.catalog(),
         workshopApi.reports(),
         workshopApi.cutoverStatus(),
+        workshopApi.staff(),
       ]);
 
       if (jobsRes.status === "fulfilled") setJobs(jobsRes.value.data || []);
       if (accRes.status === "fulfilled") setAccounts(accRes.value.data || []);
       if (trRes.status === "fulfilled") setTransfers(trRes.value.data || []);
       if (bagRes.status === "fulfilled") setBags(bagRes.value.data || []);
-      if (catRes.status === "fulfilled") setDefinitions(catRes.value.data?.definitions || []);
+      if (catRes.status === "fulfilled") {
+        setCatalog(catRes.value.data);
+        setDefinitions(catRes.value.data?.processes || []);
+      }
       if (repRes.status === "fulfilled") setReports(repRes.value.data || null);
       if (cutRes.status === "fulfilled") setCutover(cutRes.value.data || null);
+      setHasStaff(staffRes.status === "fulfilled" && staffRes.value.data.length > 0);
     } catch {
       // handled by individual settle
     } finally {
@@ -105,7 +112,7 @@ export function WorkshopOverview() {
   );
 
   const qcPendingJobs = useMemo(
-    () => jobs.filter((j) => j.status === "QC" || (j.workshopRouteSteps || []).some((s) => s.status === "DONE" && !j.inventoryItemId && j.status !== "Completed")),
+    () => jobs.filter((j) => j.currentStage === "QC" && !j.inventoryItemId),
     [jobs]
   );
 
@@ -239,17 +246,17 @@ export function WorkshopOverview() {
     return {
       isTraceableLedger: cutover?.workshopLedgerVersion === "TRACEABLE",
       hasOpeningBalance: !!cutover?.hasOpeningBalance,
-      hasGoldScale: !!reports?.scaleAudit?.some((s) => s.purpose === "GOLD"),
-      hasStoneScale: !!reports?.scaleAudit?.some((s) => s.purpose === "STONE"),
-      hasMaterials: accounts.length > 0,
-      hasRecipes: true, // populated if catalog has recipes
-      hasProcesses: definitions.length > 0,
-      hasRoutes: true,
-      hasWorkstations: true,
-      hasTolerances: true,
-      hasStaff: true,
+      hasGoldScale: !!catalog?.devices.some((device) => device.isActive && device.purpose === "GOLD"),
+      hasStoneScale: !!catalog?.devices.some((device) => device.isActive && device.purpose === "STONE"),
+      hasMaterials: !!catalog?.materials.some((material) => material.isActive),
+      hasRecipes: !!catalog?.recipes.some((recipe) => recipe.isActive),
+      hasProcesses: !!catalog?.processes.some((process) => process.isActive),
+      hasRoutes: !!catalog?.routes.some((route) => route.isActive),
+      hasWorkstations: !!catalog?.workstations.some((workstation) => workstation.isActive),
+      hasTolerances: !!catalog?.tolerances.some((rule) => rule.isActive),
+      hasStaff,
     };
-  }, [cutover, reports, accounts, definitions]);
+  }, [cutover, catalog, hasStaff]);
 
   if (loading) {
     return (
@@ -380,7 +387,7 @@ export function WorkshopOverview() {
                   className="rounded-xl border p-3 bg-muted/20 hover:bg-muted/50 hover:border-amber-400/60 transition-all text-center group"
                 >
                   <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
-                    Step {idx + 1}
+                    <T>Step</T> {idx + 1}
                   </div>
                   <div className="text-xs font-semibold text-foreground truncate group-hover:text-amber-600 transition-colors">
                     {stage.name}

@@ -105,6 +105,10 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
 
   const handleExecuteQc = async () => {
     if (!selectedJob) return;
+    if (qcAction === "APPROVED" && getBlockersForJob(selectedJob).length > 0) {
+      setQcError(t("Reconcile all process runs, route steps and transfers before QC approval"));
+      return;
+    }
     if (qcAction !== "APPROVED" && !qcReason.trim()) {
       setQcError(t("Rework or rejection requires an explicit reason"));
       return;
@@ -136,7 +140,8 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
   };
 
   const qcQueue = useMemo(() => {
-    return jobs.filter((j) => j.status === "QC" || !["Completed", "CANCELLED", "REJECTED"].includes(j.status));
+    return jobs.filter((j) => j.currentStage === "QC" && !j.inventoryItemId &&
+      !["CANCELLED", "REJECTED"].includes(j.status));
   }, [jobs]);
 
   return (
@@ -217,8 +222,8 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
                     </div>
 
                     <div className="flex justify-between text-xs text-muted-foreground font-mono">
-                      <span>Artisan: {job.artisan}</span>
-                      <span>Qty: {job.qty}</span>
+                      <span><T>Artisan:</T> {job.artisan}</span>
+                      <span><T>Qty:</T> {job.qty}</span>
                     </div>
 
                     {/* Blockers vs Ready Indicator */}
@@ -243,7 +248,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
 
                     {/* Actions */}
                     <div className="pt-2 flex items-center gap-2">
-                      {canApprove && (
+                      {canApprove && !job.stages?.some((stage) => stage.stage === "QC" && !!stage.qcApprovedAt) && (
                         <Button
                           size="sm"
                           className="w-full text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white font-medium"
@@ -263,7 +268,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
                         <Badge variant="outline" className="border-emerald-500 text-emerald-600 text-[10px] shrink-0">
                           <T>Stock Created</T>
                         </Badge>
-                      ) : canApproveJob && (
+                      ) : job.stages?.some((stage) => stage.stage === "QC" && !!stage.qcApprovedAt) && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -355,7 +360,7 @@ export function WorkshopQcModule({ canApprove = true }: { canApprove?: boolean }
                 size="sm"
                 className="bg-purple-600 hover:bg-purple-700 text-white"
                 onClick={handleExecuteQc}
-                disabled={submittingQc}
+                disabled={submittingQc || (qcAction === "APPROVED" && getBlockersForJob(selectedJob).length > 0)}
               >
                 {submittingQc ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
                 <T>Submit Decision</T>

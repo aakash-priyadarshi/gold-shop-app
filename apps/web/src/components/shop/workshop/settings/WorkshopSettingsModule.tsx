@@ -24,7 +24,6 @@ import {
   type RawScaleFrame,
   type WorkshopDevice,
 } from "@/lib/workshop-hardware";
-import { GoldScaleSimulator, StoneScaleSimulator } from "@gold-shop/shared";
 import {
   AlertTriangle,
   ArrowRight,
@@ -85,10 +84,8 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
   const [recipeName, setRecipeName] = useState("");
   const [recipeTargetFineGold, setRecipeTargetFineGold] = useState("0.916667"); // 22K default
   const [recipeAlloyFineGold, setRecipeAlloyFineGold] = useState("0.000000");
-  const [recipeComponents, setRecipeComponents] = useState<Array<{ element: string; percentage: number }>>([
-    { element: "Silver", percentage: 55 },
-    { element: "Copper", percentage: 35 },
-    { element: "Zinc", percentage: 10 },
+  const [recipeComponents, setRecipeComponents] = useState<Array<{ materialKey: string; percentage: string }>>([
+    { materialKey: "", percentage: "100" },
   ]);
 
   // Process & Workstation modals
@@ -99,6 +96,14 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
   const [showAddWorkstationModal, setShowAddWorkstationModal] = useState(false);
   const [wsName, setWsName] = useState("");
   const [wsDept, setWsDept] = useState("");
+  const [wsDefinitionId, setWsDefinitionId] = useState("");
+  const [toleranceKind, setToleranceKind] = useState("TRANSFER_RECEIPT");
+  const [toleranceMaterialKey, setToleranceMaterialKey] = useState("");
+  const [toleranceDefinitionId, setToleranceDefinitionId] = useState("");
+  const [tolerancePurpose, setTolerancePurpose] = useState<"GOLD" | "STONE">("GOLD");
+  const [toleranceGrams, setToleranceGrams] = useState("0.01");
+  const [tolerancePolicy, setTolerancePolicy] = useState<"REQUIRE_CLASSIFICATION" | "ACCEPT_WITHIN_TOLERANCE">("REQUIRE_CLASSIFICATION");
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   // Staff invite
   const [staffEmail, setStaffEmail] = useState("");
@@ -140,7 +145,6 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
     setTestingScale(true);
     setTestResult(null);
     try {
-      if (typeof window !== "undefined" && (window as any).__TAURI__) {
         const dummyDevice: WorkshopDevice = {
           id: "test-device",
           name: scaleName || "Test Scale",
@@ -156,7 +160,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
             transport:
               scaleAdapter === "TCP"
                 ? { host: scaleTcpHost, port: parseInt(scaleTcpPort, 10) || 4001 }
-                : { port: scalePort, baudRate: parseInt(scaleBaud, 10) || 9600 },
+                : { port: scalePort, baudRate: parseInt(scaleBaud, 10) || 9600, dataBits: 8, stopBits: 1, parity: "none" },
           },
         };
         const res = await readPhysicalWorkshopScale(dummyDevice);
@@ -165,20 +169,6 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
           sample: res.rawFrame,
           weight: res.weightGrams,
         });
-      } else {
-        // Fallback simulation for browser testing
-        const sim = scalePurpose === "STONE" ? new StoneScaleSimulator("5.250") : new GoldScaleSimulator("100.25");
-        sim.connect();
-        sim.setStable(true);
-        const reading = sim.read();
-        if (reading) {
-          setTestResult({
-            stable: true,
-            sample: reading.rawFrame,
-            weight: reading.weightGrams,
-          });
-        }
-      }
     } catch (err: any) {
       alert(err?.message || "Scale test failed");
     } finally {
@@ -193,13 +183,12 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
         name: scaleName.trim(),
         purpose: scalePurpose,
         adapterKind: scaleAdapter,
-        port: scaleAdapter === "SERIAL" ? scalePort || undefined : undefined,
-        baudRate: scaleAdapter === "SERIAL" ? parseInt(scaleBaud, 10) || 9600 : undefined,
-        tcpHost: scaleAdapter === "TCP" ? scaleTcpHost || undefined : undefined,
-        tcpPort: scaleAdapter === "TCP" ? parseInt(scaleTcpPort, 10) || 4001 : undefined,
-        stableTokens: [scaleStableToken],
-        unstableTokens: [scaleUnstableToken],
-        isPrimary: true,
+        profile: {
+          parser: { kind: "ASCII_LINE", stableToken: scaleStableToken, unstableToken: scaleUnstableToken },
+          transport: scaleAdapter === "SERIAL"
+            ? { port: scalePort, baudRate: parseInt(scaleBaud, 10) || 9600, dataBits: 8, stopBits: 1, parity: "none" }
+            : { host: scaleTcpHost, port: parseInt(scaleTcpPort, 10) || 4001 },
+        },
       });
       setShowAddScaleModal(false);
       setScaleName("");
@@ -232,13 +221,14 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
   };
 
   // Recipe Component calculations
-  const recipeTotalPercentage = useMemo(() => {
-    return recipeComponents.reduce((sum, c) => sum + (c.percentage || 0), 0);
+  const recipeTotalMicros = useMemo(() => {
+    return recipeComponents.reduce((sum, c) => sum + Math.round(Number(c.percentage || 0) * 10000), 0);
   }, [recipeComponents]);
 
   const handleSaveRecipe = async () => {
     if (!recipeName.trim()) return;
-    if (Math.abs(recipeTotalPercentage - 100) > 0.01) {
+    if (recipeTotalMicros !== 1000000 || recipeComponents.some((c) => !c.materialKey || !Number.isFinite(Number(c.percentage)) || Number(c.percentage) <= 0 || !/^\d+(\.\d{1,4})?$/.test(c.percentage)) ||
+        new Set(recipeComponents.map((c) => c.materialKey)).size !== recipeComponents.length) {
       alert(t("Recipe alloy components must total exactly 100%"));
       return;
     }
@@ -247,7 +237,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
         name: recipeName.trim(),
         targetFineGoldFraction: recipeTargetFineGold,
         alloyFineGoldFraction: recipeAlloyFineGold,
-        components: recipeComponents,
+        components: recipeComponents.map((c) => ({ materialKey: c.materialKey, fraction: (Number(c.percentage) / 100).toFixed(6) })),
       });
       setShowAddRecipeModal(false);
       setRecipeName("");
@@ -259,32 +249,23 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
 
   // Preset recipes
   const applyRecipePreset = (preset: "22K_YELLOW" | "18K_ROSE" | "18K_WHITE") => {
+    const alloyMaterials = catalog?.materials.filter((material) => material.isActive && material.scalePurpose === "GOLD" && material.kind === "ALLOY") || [];
+    const color = preset === "22K_YELLOW" ? "yellow" : preset === "18K_ROSE" ? "rose" : "white";
+    const alloy = alloyMaterials.find((material) => `${material.key} ${material.name}`.toLowerCase().includes(color))
+      || alloyMaterials.find((material) => material.key === "masterAlloy") || alloyMaterials[0];
+    setRecipeComponents([{ materialKey: alloy?.key || "", percentage: "100" }]);
     if (preset === "22K_YELLOW") {
       setRecipeName("22K Yellow Gold (Standard)");
       setRecipeTargetFineGold("0.916667");
       setRecipeAlloyFineGold("0.000000");
-      setRecipeComponents([
-        { element: "Silver", percentage: 55 },
-        { element: "Copper", percentage: 35 },
-        { element: "Zinc", percentage: 10 },
-      ]);
     } else if (preset === "18K_ROSE") {
       setRecipeName("18K Rose Gold");
       setRecipeTargetFineGold("0.750000");
       setRecipeAlloyFineGold("0.000000");
-      setRecipeComponents([
-        { element: "Copper", percentage: 80 },
-        { element: "Silver", percentage: 20 },
-      ]);
     } else if (preset === "18K_WHITE") {
       setRecipeName("18K White Gold");
       setRecipeTargetFineGold("0.750000");
       setRecipeAlloyFineGold("0.000000");
-      setRecipeComponents([
-        { element: "Nickel", percentage: 50 },
-        { element: "Copper", percentage: 35 },
-        { element: "Zinc", percentage: 15 },
-      ]);
     }
   };
 
@@ -305,6 +286,16 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
       alert(err?.response?.data?.message || err?.message || "Failed to invite staff");
     } finally {
       setInvitingStaff(false);
+    }
+  };
+
+  const saveSetting = async (save: () => Promise<unknown>) => {
+    setSettingsError(null);
+    try {
+      await save();
+      await loadCatalog();
+    } catch (err: any) {
+      setSettingsError(err?.response?.data?.message || err?.message || t("Unable to save workshop setting"));
     }
   };
 
@@ -391,9 +382,9 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                       </Badge>
                     </div>
                     <div className="text-muted-foreground font-mono text-[11px] space-y-0.5">
-                      <div>Adapter: {dev.adapterKind}</div>
-                      {dev.port && <div>Port: {dev.port} · Baud: {dev.baudRate || 9600}</div>}
-                      {dev.tcpHost && <div>Host: {dev.tcpHost}:{dev.tcpPort}</div>}
+                      <div><T>Adapter:</T> {dev.adapterKind}</div>
+                      {dev.profile?.transport?.port && dev.adapterKind === "SERIAL" && <div><T>Port:</T> {dev.profile.transport.port} · <T>Baud:</T> {dev.profile.transport.baudRate}</div>}
+                      {dev.profile?.transport?.host && <div><T>Host:</T> {dev.profile.transport.host}:{dev.profile.transport.port}</div>}
                     </div>
                   </div>
                 ))}
@@ -438,11 +429,11 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     </Badge>
                   </div>
                   <div className="text-[11px] font-mono text-muted-foreground">
-                    Key: {mat.key} · Kind: {mat.kind}
+                    <T>Key:</T> {mat.key} · <T>Kind:</T> {mat.kind}
                   </div>
                   {mat.theoreticalPurity && (
                     <div className="text-[11px] font-mono text-amber-600 font-semibold">
-                      Purity: {mat.theoreticalPurity}
+                      <T>Purity:</T> {mat.theoreticalPurity}
                     </div>
                   )}
                 </div>
@@ -492,8 +483,8 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                       </Badge>
                     </div>
                     <div className="font-mono text-[11px] text-muted-foreground space-y-0.5">
-                      <div>Target Fine Gold: {parseFloat(rcp.targetFineGoldFraction).toFixed(4)}</div>
-                      <div>Alloy Fine Gold: {parseFloat(rcp.alloyFineGoldFraction || "0").toFixed(4)}</div>
+                      <div><T>Target Fine Gold:</T> {parseFloat(rcp.targetFineGoldFraction).toFixed(4)}</div>
+                      <div><T>Alloy Fine Gold:</T> {parseFloat(rcp.alloyFineGoldFraction || "0").toFixed(4)}</div>
                     </div>
                   </div>
                 ))}
@@ -501,6 +492,37 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
             )}
           </CardContent>
         </Card>
+      )}
+
+      {settingsError && <p role="alert" className="text-xs text-destructive">{settingsError}</p>}
+
+      {activeTab === "PROCESSES" && (
+        <Card><CardHeader><CardTitle><T>Manufacturing processes</T></CardTitle></CardHeader><CardContent className="space-y-3">
+          {catalog?.processes.map((process) => <div key={process.id} className="text-xs border-b py-2">{process.name} · {process.department || "—"}</div>)}
+          {canApprove && <div className="grid gap-2 sm:grid-cols-3"><Input value={procName} onChange={(e) => setProcName(e.target.value)} placeholder={t("Process name")} /><Input value={procDept} onChange={(e) => setProcDept(e.target.value)} placeholder={t("Department")} /><Button disabled={!procName.trim()} onClick={() => saveSetting(async () => { await workshopApi.createProcess({ name: procName.trim(), department: procDept.trim() || undefined }); setProcName(""); setProcDept(""); })}><T>Add process</T></Button></div>}
+        </CardContent></Card>
+      )}
+
+      {activeTab === "WORKSTATIONS" && (
+        <Card><CardHeader><CardTitle><T>Machines and workstations</T></CardTitle></CardHeader><CardContent className="space-y-3">
+          {catalog?.workstations.map((workstation) => <div key={workstation.id} className="text-xs border-b py-2">{workstation.name} · {workstation.department || "—"}</div>)}
+          {canApprove && <div className="grid gap-2 sm:grid-cols-4"><Input value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder={t("Workstation name")} /><Input value={wsDept} onChange={(e) => setWsDept(e.target.value)} placeholder={t("Department")} /><select value={wsDefinitionId} onChange={(e) => setWsDefinitionId(e.target.value)} className="rounded-md border bg-background p-2 text-xs"><option value=""><T>Any process</T></option>{catalog?.processes.filter((p) => p.isActive).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><Button disabled={!wsName.trim()} onClick={() => saveSetting(async () => { await workshopApi.createWorkstation({ name: wsName.trim(), department: wsDept.trim() || undefined, definitionId: wsDefinitionId || undefined }); setWsName(""); setWsDept(""); setWsDefinitionId(""); })}><T>Add workstation</T></Button></div>}
+        </CardContent></Card>
+      )}
+
+      {activeTab === "TOLERANCES" && (
+        <Card><CardHeader><CardTitle><T>Movement tolerances</T></CardTitle></CardHeader><CardContent className="space-y-3">
+          {catalog?.tolerances.map((rule) => <div key={rule.id} className="text-xs border-b py-2">{rule.movementKind} · {rule.materialKey || rule.scalePurpose} · {rule.maxDifferenceGrams} g · {rule.policy}</div>)}
+          {canApprove && <div className="grid gap-2 sm:grid-cols-3">
+            <select value={toleranceKind} onChange={(e) => setToleranceKind(e.target.value)} className="rounded-md border bg-background p-2 text-xs">{["TRANSFER_RECEIPT", "PROCESS_OUTPUT", "RECOVERY_RESULT", "FINISHED_RECEIPT", "STONE_SETTING", "STONE_RETURN"].map((kind) => <option key={kind} value={kind}>{kind}</option>)}</select>
+            <select value={tolerancePurpose} onChange={(e) => { setTolerancePurpose(e.target.value as "GOLD" | "STONE"); setToleranceMaterialKey(""); }} className="rounded-md border bg-background p-2 text-xs"><option value="GOLD"><T>Gold scale</T></option><option value="STONE"><T>Stone scale</T></option></select>
+            <select value={toleranceDefinitionId} onChange={(e) => setToleranceDefinitionId(e.target.value)} className="rounded-md border bg-background p-2 text-xs"><option value=""><T>All processes</T></option>{catalog?.processes.filter((process) => process.isActive).map((process) => <option key={process.id} value={process.id}>{process.name}</option>)}</select>
+            <select value={toleranceMaterialKey} onChange={(e) => setToleranceMaterialKey(e.target.value)} className="rounded-md border bg-background p-2 text-xs"><option value=""><T>All materials of scale type</T></option>{catalog?.materials.filter((m) => m.isActive && m.scalePurpose === tolerancePurpose).map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}</select>
+            <Input value={toleranceGrams} onChange={(e) => setToleranceGrams(e.target.value)} placeholder={t("Maximum difference in grams")} />
+            <select value={tolerancePolicy} onChange={(e) => setTolerancePolicy(e.target.value as typeof tolerancePolicy)} className="rounded-md border bg-background p-2 text-xs"><option value="REQUIRE_CLASSIFICATION"><T>Require classification</T></option><option value="ACCEPT_WITHIN_TOLERANCE"><T>Accept within tolerance</T></option></select>
+            <Button disabled={!/^\d+(\.\d{1,6})?$/.test(toleranceGrams)} onClick={() => saveSetting(() => workshopApi.configureTolerance({ movementKind: toleranceKind, definitionId: toleranceDefinitionId || undefined, materialKey: toleranceMaterialKey || undefined, scalePurpose: tolerancePurpose, maxDifferenceGrams: toleranceGrams, policy: tolerancePolicy }))}><T>Save tolerance</T></Button>
+          </div>}
+        </CardContent></Card>
       )}
 
       {/* 4. Staff & Operators Tab */}
@@ -521,7 +543,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <Label className="text-xs font-semibold block"><T>Invite Staff Member</T></Label>
                 <div className="space-y-2">
                   <Input
-                    placeholder="operator@workshop.com"
+                    placeholder={t("operator@workshop.com")}
                     value={staffEmail}
                     onChange={(e) => setStaffEmail(e.target.value)}
                     className="text-xs"
@@ -584,7 +606,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <div>
                   <Label className="text-xs mb-1 block"><T>Scale Name</T></Label>
                   <Input
-                    placeholder="e.g. Mettler Toledo MS303TS"
+                    placeholder={t("e.g. Mettler Toledo MS303TS")}
                     value={scaleName}
                     onChange={(e) => setScaleName(e.target.value)}
                   />
@@ -596,8 +618,8 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     onChange={(e: any) => setScalePurpose(e.target.value)}
                     className="w-full rounded-md border border-input bg-background p-2 text-xs"
                   >
-                    <option value="GOLD">Gold Scale (0.01g)</option>
-                    <option value="STONE">Stone Scale (0.001g)</option>
+                    <option value="GOLD"><T>Gold Scale (0.01g)</T></option>
+                    <option value="STONE"><T>Stone Scale (0.001g)</T></option>
                   </select>
                 </div>
               </div>
@@ -610,8 +632,8 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     onChange={(e: any) => setScaleAdapter(e.target.value)}
                     className="w-full rounded-md border border-input bg-background p-2 text-xs"
                   >
-                    <option value="SERIAL">Serial COM Port</option>
-                    <option value="TCP">TCP / IP Network Socket</option>
+                    <option value="SERIAL"><T>Serial COM Port</T></option>
+                    <option value="TCP"><T>TCP / IP Network Socket</T></option>
                   </select>
                 </div>
                 {scaleAdapter === "SERIAL" ? (
@@ -657,16 +679,16 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 {testResult && (
                   <div className="rounded-lg border bg-muted/40 p-2.5 font-mono text-[11px] space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status:</span>
+                      <span className="text-muted-foreground"><T>Status:</T></span>
                       <span className={testResult.stable ? "text-emerald-600 font-bold" : "text-amber-600"}>
                         {testResult.stable ? "STABLE" : "UNSTABLE"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Reading:</span>
+                      <span className="text-muted-foreground"><T>Reading:</T></span>
                       <span className="font-bold text-foreground">{testResult.weight} g</span>
                     </div>
-                    <div className="truncate text-muted-foreground/80">Raw: {testResult.sample}</div>
+                    <div className="truncate text-muted-foreground/80"><T>Raw:</T> {testResult.sample}</div>
                   </div>
                 )}
               </div>
@@ -703,7 +725,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <div>
                   <Label className="text-xs mb-1 block"><T>Material Name</T></Label>
                   <Input
-                    placeholder="e.g. Gold 995 Bullion"
+                    placeholder={t("e.g. Gold 995 Bullion")}
                     value={matName}
                     onChange={(e) => {
                       setMatName(e.target.value);
@@ -716,7 +738,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <div>
                   <Label className="text-xs mb-1 block"><T>Material Key (Code)</T></Label>
                   <Input
-                    placeholder="e.g. gold_995_bullion"
+                    placeholder={t("e.g. gold_995_bullion")}
                     value={matKey}
                     onChange={(e) => setMatKey(e.target.value)}
                     className="font-mono"
@@ -740,15 +762,15 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     }}
                     className="w-full rounded-md border border-input bg-background p-2 text-xs"
                   >
-                    <option value="GOLD">GOLD (Gold / Alloyed Gold)</option>
-                    <option value="ALLOY">ALLOY (Master Alloy)</option>
-                    <option value="SOLDER">SOLDER (Soldering Alloy)</option>
-                    <option value="MIXED">MIXED (Mixed Melt Output)</option>
-                    <option value="RECOVERED">RECOVERED (Sweeps / Polish / Recovery)</option>
-                    <option value="REFINERY">REFINERY (Refinery Result)</option>
-                    <option value="DIAMOND">DIAMOND (Natural / Lab Diamond)</option>
-                    <option value="STONE">STONE (Gemstone / Color Stone)</option>
-                    <option value="OTHER">OTHER (Consumable / Other)</option>
+                    <option value="GOLD"><T>GOLD (Gold / Alloyed Gold)</T></option>
+                    <option value="ALLOY"><T>ALLOY (Master Alloy)</T></option>
+                    <option value="SOLDER"><T>SOLDER (Soldering Alloy)</T></option>
+                    <option value="MIXED"><T>MIXED (Mixed Melt Output)</T></option>
+                    <option value="RECOVERED"><T>RECOVERED (Sweeps / Polish / Recovery)</T></option>
+                    <option value="REFINERY"><T>REFINERY (Refinery Result)</T></option>
+                    <option value="DIAMOND"><T>DIAMOND (Natural / Lab Diamond)</T></option>
+                    <option value="STONE"><T>STONE (Gemstone / Color Stone)</T></option>
+                    <option value="OTHER"><T>OTHER (Consumable / Other)</T></option>
                   </select>
                 </div>
                 <div>
@@ -758,8 +780,8 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     onChange={(e: any) => setMatPurpose(e.target.value)}
                     className="w-full rounded-md border border-input bg-background p-2 text-xs"
                   >
-                    <option value="GOLD">Gold Scale (0.01g)</option>
-                    <option value="STONE">Stone Scale (0.001g)</option>
+                    <option value="GOLD"><T>Gold Scale (0.01g)</T></option>
+                    <option value="STONE"><T>Stone Scale (0.001g)</T></option>
                   </select>
                 </div>
               </div>
@@ -810,13 +832,13 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
             <div className="flex items-center gap-1.5 overflow-x-auto text-[11px]">
               <span className="text-muted-foreground text-xs"><T>Presets</T>:</span>
               <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => applyRecipePreset("22K_YELLOW")}>
-                22K Yellow
+                <T>22K Yellow</T>
               </Button>
               <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => applyRecipePreset("18K_ROSE")}>
-                18K Rose
+                <T>18K Rose</T>
               </Button>
               <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => applyRecipePreset("18K_WHITE")}>
-                18K White
+                <T>18K White</T>
               </Button>
             </div>
 
@@ -826,7 +848,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <Input
                   value={recipeName}
                   onChange={(e) => setRecipeName(e.target.value)}
-                  placeholder="e.g. 22K Yellow Gold (Export Grade)"
+                  placeholder={t("e.g. 22K Yellow Gold (Export Grade)")}
                 />
               </div>
 
@@ -862,7 +884,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                     variant="ghost"
                     size="sm"
                     className="h-6 text-xs text-amber-600"
-                    onClick={() => setRecipeComponents([...recipeComponents, { element: "Zinc", percentage: 10 }])}
+                    onClick={() => setRecipeComponents([...recipeComponents, { materialKey: "", percentage: "0" }])}
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     <T>Add Element</T>
@@ -872,25 +894,17 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {recipeComponents.map((comp, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <Input
-                        value={comp.element}
-                        onChange={(e) => {
-                          const updated = [...recipeComponents];
-                          updated[idx].element = e.target.value;
-                          setRecipeComponents(updated);
-                        }}
-                        className="h-8 text-xs flex-1"
-                        placeholder="Element (e.g. Silver)"
-                      />
+                      <select value={comp.materialKey} onChange={(e) => setRecipeComponents(recipeComponents.map((part, i) => i === idx ? { ...part, materialKey: e.target.value } : part))} className="h-8 text-xs flex-1 rounded-md border bg-background">
+                        <option value=""><T>Select material</T></option>
+                        {catalog?.materials.filter((m) => m.isActive && m.scalePurpose === "GOLD").map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
+                      </select>
                       <Input
                         type="number"
                         min="0"
                         max="100"
                         value={comp.percentage}
                         onChange={(e) => {
-                          const updated = [...recipeComponents];
-                          updated[idx].percentage = parseFloat(e.target.value) || 0;
-                          setRecipeComponents(updated);
+                          setRecipeComponents(recipeComponents.map((part, i) => i === idx ? { ...part, percentage: e.target.value } : part));
                         }}
                         className="h-8 text-xs w-20 font-mono"
                       />
@@ -915,10 +929,10 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                   <span><T>Total Components</T>:</span>
                   <span
                     className={`font-bold ${
-                      Math.abs(recipeTotalPercentage - 100) < 0.01 ? "text-emerald-600" : "text-rose-600"
+                      recipeTotalMicros === 1000000 ? "text-emerald-600" : "text-rose-600"
                     }`}
                   >
-                    {recipeTotalPercentage.toFixed(1)}% / 100%
+                    {(recipeTotalMicros / 10000).toFixed(4)}% / 100%
                   </span>
                 </div>
               </div>
@@ -932,7 +946,7 @@ export function WorkshopSettingsModule({ canApprove = true }: { canApprove?: boo
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white"
                 onClick={handleSaveRecipe}
-                disabled={!recipeName.trim() || Math.abs(recipeTotalPercentage - 100) > 0.01}
+                disabled={!recipeName.trim() || recipeTotalMicros !== 1000000 || recipeComponents.some((c) => !c.materialKey || Number(c.percentage) <= 0)}
               >
                 <T>Save Recipe</T>
               </Button>

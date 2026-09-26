@@ -1,7 +1,20 @@
 import { Prisma, WorkshopAccountBucket } from "@prisma/client";
-import { WorkshopProductionService } from "./workshop-production.service";
+import { matchProcessToleranceRule, WorkshopProductionService } from "./workshop-production.service";
 
 const grams = (value: string) => new Prisma.Decimal(value);
+
+describe("process tolerance precedence", () => {
+  const rule = (id: string, scalePurpose: "GOLD" | "STONE", definitionId = "", materialKey = "") => ({
+    id, scalePurpose, definitionId, materialKey, policy: "ACCEPT_WITHIN_TOLERANCE", maxDifferenceGrams: grams("0.05"), isActive: true,
+  });
+  it("does not apply a gold rule to stone and selects the most specific stone rule", () => {
+    const rules = [rule("gold", "GOLD"), rule("stone-global", "STONE"), rule("stone-material", "STONE", "", "diamond"), rule("stone-process", "STONE", "setting", "diamond")];
+    expect(matchProcessToleranceRule(rules, "setting", "diamond", "STONE")?.id).toBe("stone-process");
+    expect(matchProcessToleranceRule(rules, "other", "diamond", "STONE")?.id).toBe("stone-material");
+    expect(matchProcessToleranceRule(rules, "setting", "diamond", undefined)).toBeNull();
+    expect(matchProcessToleranceRule([rule("gold", "GOLD")], "setting", "diamond", "STONE")).toBeNull();
+  });
+});
 
 describe("WorkshopProductionService batch reconciliation", () => {
   const tree = {
@@ -153,7 +166,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
       const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.03") };
       const toleranceRule = {
         id: "tol-1", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
-        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        materialKey: "goldGrains995", scalePurpose: "GOLD", maxDifferenceGrams: new Prisma.Decimal("0.05"),
         policy: "ACCEPT_WITHIN_TOLERANCE", isActive: true,
       };
 
@@ -172,6 +185,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
         workshopToleranceRule: {
           findMany: jest.fn().mockResolvedValue([toleranceRule]),
         },
+        workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: account.materialKey, scalePurpose: "GOLD" }]) },
         workshopMetalJournal: {
           findMany: jest.fn().mockResolvedValue([
             { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.97") }] },
@@ -218,7 +232,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
       const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.02") };
       const toleranceRule = {
         id: "tol-1", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
-        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        materialKey: "goldGrains995", scalePurpose: "GOLD", maxDifferenceGrams: new Prisma.Decimal("0.05"),
         policy: "REQUIRE_CLASSIFICATION", isActive: true,
       };
 
@@ -234,6 +248,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
         workshopToleranceRule: {
           findMany: jest.fn().mockResolvedValue([toleranceRule]),
         },
+        workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: account.materialKey, scalePurpose: "GOLD" }]) },
         workshopMetalJournal: {
           findMany: jest.fn().mockResolvedValue([
             { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.98") }] },
@@ -271,6 +286,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
         workshopToleranceRule: {
           findMany: jest.fn().mockResolvedValue([]),
         },
+        workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: account.materialKey, scalePurpose: "GOLD" }]) },
         workshopMetalJournal: {
           findMany: jest.fn().mockResolvedValue([
             { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.98") }] },
@@ -296,7 +312,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
       const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.15") };
       const toleranceRule = {
         id: "tol-1", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
-        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        materialKey: "goldGrains995", scalePurpose: "GOLD", maxDifferenceGrams: new Prisma.Decimal("0.05"),
         policy: "ACCEPT_WITHIN_TOLERANCE", isActive: true,
       };
 
@@ -312,6 +328,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
         workshopToleranceRule: {
           findMany: jest.fn().mockResolvedValue([toleranceRule]),
         },
+        workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: account.materialKey, scalePurpose: "GOLD" }]) },
         workshopMetalJournal: {
           findMany: jest.fn().mockResolvedValue([
             { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.85") }] },
@@ -337,7 +354,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
       const account = { id: "acc-proc-1", materialKey: "goldGrains995", balanceGrams: new Prisma.Decimal("0.03") };
       const toleranceRule = {
         id: "tol-polishing", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
-        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        materialKey: "goldGrains995", scalePurpose: "GOLD", maxDifferenceGrams: new Prisma.Decimal("0.05"),
         policy: "ACCEPT_WITHIN_TOLERANCE", isActive: true,
       };
 
@@ -353,6 +370,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
         workshopToleranceRule: {
           findMany: jest.fn().mockResolvedValue([toleranceRule]),
         },
+        workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: account.materialKey, scalePurpose: "GOLD" }]) },
         workshopMetalJournal: {
           findMany: jest.fn().mockResolvedValue([
             { lines: [{ accountId: "acc-proc-1", debitGrams: new Prisma.Decimal("10.00"), creditGrams: new Prisma.Decimal("9.97") }] },
@@ -378,7 +396,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
       const account = { id: "acc-proc-alloy", materialKey: "masterAlloy", balanceGrams: new Prisma.Decimal("0.03") };
       const toleranceRule = {
         id: "tol-gold-only", shopId: "shop-1", movementKind: "PROCESS", definitionId: "def-polishing",
-        materialKey: "goldGrains995", maxDifferenceGrams: new Prisma.Decimal("0.05"),
+        materialKey: "goldGrains995", scalePurpose: "GOLD", maxDifferenceGrams: new Prisma.Decimal("0.05"),
         policy: "ACCEPT_WITHIN_TOLERANCE", isActive: true,
       };
 
@@ -394,6 +412,7 @@ describe("WorkshopProductionService completed-job boundaries", () => {
         workshopToleranceRule: {
           findMany: jest.fn().mockResolvedValue([toleranceRule]),
         },
+        workshopMaterial: { findMany: jest.fn().mockResolvedValue([{ key: account.materialKey, scalePurpose: "GOLD" }]) },
         workshopMetalJournal: {
           findMany: jest.fn().mockResolvedValue([
             { lines: [{ accountId: "acc-proc-alloy", debitGrams: new Prisma.Decimal("5.00"), creditGrams: new Prisma.Decimal("4.97") }] },

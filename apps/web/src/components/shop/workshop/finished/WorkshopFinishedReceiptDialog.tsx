@@ -45,8 +45,8 @@ export function WorkshopFinishedReceiptDialog({
 }: WorkshopFinishedReceiptDialogProps) {
   const t = useT();
   const [readingId, setReadingId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [grossWeight, setGrossWeight] = useState<string>("0.00");
-  const [setStoneWeight, setSetStoneWeight] = useState<string>("0.000");
   const [productName, setProductName] = useState("");
   const [jewelleryType, setJewelleryType] = useState("RING");
   const [submitting, setSubmitting] = useState(false);
@@ -54,23 +54,23 @@ export function WorkshopFinishedReceiptDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (job) {
-      setProductName(job.product);
-      setCreatedItemId(job.inventoryItemId || null);
-    }
-  }, [job]);
+    setReadingId(null);
+    setSessionId(null);
+    setGrossWeight("0.00");
+    setJewelleryType("RING");
+    setErrorMessage(null);
+    setProductName(job?.product || "");
+    setCreatedItemId(job?.inventoryItemId || null);
+  }, [job?.id, job?.product, job?.inventoryItemId, isOpen]);
 
   if (!isOpen || !job) return null;
 
   const primaryTree = job.trees?.[0];
 
-  // Mathematical formula: Gross Jewellery Weight - Set Stone Weight = Net Metal Weight
   const numGross = parseFloat(grossWeight || "0");
-  const numStone = parseFloat(setStoneWeight || "0");
-  const netMetal = Math.max(0, numGross - numStone);
 
   const handleConfirmFinishedReceipt = async () => {
-    if (!readingId) {
+    if (!readingId || !sessionId) {
       setErrorMessage(t("Please capture an authoritative Gold Scale reading first"));
       return;
     }
@@ -82,24 +82,13 @@ export function WorkshopFinishedReceiptDialog({
     setSubmitting(true);
     setErrorMessage(null);
     try {
-      // Create weighing session for finished receipt
-      const sessionRes = await workshopApi.createSession({
-        treeId: primaryTree.id,
-        movementKind: "FINISHED_RECEIPT",
-        materialKey: job.metalKey || "goldGrains995",
-        destinationBucket: "WIP",
-      });
-
-      // Confirm with scale reading and stone weight
-      const confirmRes = await workshopApi.confirm(sessionRes.data.id, {
+      const confirmRes = await workshopApi.confirm(sessionId, {
         readingId,
-        grossWeightGrams: grossWeight,
-        setStoneWeightGrams: setStoneWeight,
-        productName: productName.trim() || job.product,
-        jewelleryType,
+        finishedGoods: { nameEn: productName.trim() || job.product, jewelleryType },
       });
+      if ("requiresApproval" in confirmRes.data) throw new Error(t("Finished receipt unexpectedly requires transfer approval"));
 
-      const newItemId = confirmRes.data.inventoryItemId;
+      const newItemId = confirmRes.data.inventoryItem?.id;
       if (newItemId) {
         setCreatedItemId(newItemId);
         onSuccess(newItemId);
@@ -127,7 +116,7 @@ export function WorkshopFinishedReceiptDialog({
                 <T>Finished Goods Scale Receipt</T>
               </h3>
               <p className="text-xs text-muted-foreground font-mono">
-                {job.product} · Job #{job.id.slice(0, 8)}
+                {job.product} · <T>Job #</T>{job.id.slice(0, 8)}
               </p>
             </div>
           </div>
@@ -166,14 +155,17 @@ export function WorkshopFinishedReceiptDialog({
                   <T>1. Authoritative Gold Scale Weigh-In (Gross Jewellery)</T>
                 </Label>
                 <ScaleCapturePanel
+                  key={job.id}
                   purpose="GOLD"
                   materialKey={job.metalKey || "goldGrains995"}
                   treeId={primaryTree?.id || ""}
                   movementKind="FINISHED_RECEIPT"
                   canApprove={canApprove}
-                  onCaptured={(readId, grams) => {
+                  externalConfirm
+                  onCaptured={(capturedSessionId, readId, grams) => {
+                    setSessionId(capturedSessionId);
                     setReadingId(readId);
-                    setGrossWeight(grams);
+                    setGrossWeight(grams || "0.00");
                   }}
                 />
               </div>
@@ -193,22 +185,14 @@ export function WorkshopFinishedReceiptDialog({
                   </div>
                   <div>
                     <Label className="text-[11px] text-muted-foreground"><T>Set Stone Weight (g)</T></Label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      placeholder="0.000"
-                      value={setStoneWeight}
-                      onChange={(e) => setSetStoneWeight(e.target.value)}
-                      className="h-8 font-mono text-xs mt-0.5"
-                    />
+                    <div className="text-xs text-muted-foreground mt-1"><T>From confirmed stone movements</T></div>
                   </div>
                 </div>
+                <p className="text-[11px] text-muted-foreground"><T>Stone weight is derived from confirmed stone movements; it cannot be entered at receipt.</T></p>
 
                 <div className="pt-2 border-t flex justify-between items-center font-mono">
                   <span className="font-semibold text-foreground"><T>Calculated Metal Weight</T>:</span>
-                  <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
-                    {netMetal.toFixed(3)} g
-                  </span>
+                  <span className="text-xs text-muted-foreground"><T>Calculated securely at confirmation</T></span>
                 </div>
               </div>
 
@@ -234,14 +218,14 @@ export function WorkshopFinishedReceiptDialog({
                       onChange={(e) => setJewelleryType(e.target.value)}
                       className="w-full rounded-md border border-input bg-background p-2 text-xs mt-1"
                     >
-                      <option value="RING">Ring</option>
-                      <option value="NECKLACE">Necklace</option>
-                      <option value="EARRINGS">Earrings</option>
-                      <option value="BRACELET">Bracelet</option>
-                      <option value="BANGLES">Bangles</option>
-                      <option value="PENDANT">Pendant</option>
-                      <option value="CHAIN">Chain</option>
-                      <option value="OTHER">Other Jewellery</option>
+                      <option value="RING"><T>Ring</T></option>
+                      <option value="NECKLACE"><T>Necklace</T></option>
+                      <option value="EARRINGS"><T>Earrings</T></option>
+                      <option value="BRACELET"><T>Bracelet</T></option>
+                      <option value="BANGLES"><T>Bangles</T></option>
+                      <option value="PENDANT"><T>Pendant</T></option>
+                      <option value="CHAIN"><T>Chain</T></option>
+                      <option value="OTHER"><T>Other Jewellery</T></option>
                     </select>
                   </div>
                 </div>

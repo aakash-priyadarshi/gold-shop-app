@@ -39,39 +39,39 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/shop/workshop/overview/WorkshopOverview", () => ({
-  WorkshopOverview: () => <div data-testid="workshop-overview-view">Workshop Overview Control Tower</div>,
+  WorkshopOverview: () => <div data-testid="workshop-overview-view">{"Workshop Overview Control Tower"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/jobs/WorkshopJobsModule", () => ({
-  WorkshopJobsModule: () => <div data-testid="workshop-jobs-view">Workshop Jobs Module</div>,
+  WorkshopJobsModule: () => <div data-testid="workshop-jobs-view">{"Workshop Jobs Module"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/production/WorkshopProductionFloor", () => ({
-  WorkshopProductionFloor: () => <div data-testid="workshop-production-view">Workshop Production Floor</div>,
+  WorkshopProductionFloor: () => <div data-testid="workshop-production-view">{"Workshop Production Floor"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/metal/WorkshopMetalModule", () => ({
-  WorkshopMetalModule: () => <div data-testid="workshop-metal-view">Workshop Metal Ledger</div>,
+  WorkshopMetalModule: () => <div data-testid="workshop-metal-view">{"Workshop Metal Ledger"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/transfers/WorkshopTransfersModule", () => ({
-  WorkshopTransfersModule: () => <div data-testid="workshop-transfers-view">Workshop Transfers Module</div>,
+  WorkshopTransfersModule: () => <div data-testid="workshop-transfers-view">{"Workshop Transfers Module"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/recovery/WorkshopRecoveryModule", () => ({
-  WorkshopRecoveryModule: () => <div data-testid="workshop-recovery-view">Workshop Recovery Module</div>,
+  WorkshopRecoveryModule: () => <div data-testid="workshop-recovery-view">{"Workshop Recovery Module"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/qc/WorkshopQcModule", () => ({
-  WorkshopQcModule: () => <div data-testid="workshop-qc-view">Workshop QC Module</div>,
+  WorkshopQcModule: () => <div data-testid="workshop-qc-view">{"Workshop QC Module"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/reports/WorkshopReportsModule", () => ({
-  WorkshopReportsModule: () => <div data-testid="workshop-reports-view">Workshop Reports Module</div>,
+  WorkshopReportsModule: () => <div data-testid="workshop-reports-view">{"Workshop Reports Module"}</div>,
 }));
 
 vi.mock("@/components/shop/workshop/settings/WorkshopSettingsModule", () => ({
-  WorkshopSettingsModule: () => <div data-testid="workshop-settings-view">Workshop Settings Module</div>,
+  WorkshopSettingsModule: () => <div data-testid="workshop-settings-view">{"Workshop Settings Module"}</div>,
 }));
 
 vi.mock("@/lib/api", async (importOriginal) => {

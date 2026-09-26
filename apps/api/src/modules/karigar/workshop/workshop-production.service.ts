@@ -7,6 +7,53 @@ import { WorkshopScaleService } from "./workshop-scale.service";
 import { CreateWorkshopChildDto, InspectTraceableQcDto, StartWorkshopProcessDto } from "./dto/workshop-production.dto";
 import { RouteStepChangeDto } from "./dto/workshop-catalog.dto";
 
+export interface ProcessToleranceCandidate {
+  id: string;
+  definitionId?: string | null;
+  materialKey?: string | null;
+  scalePurpose: string;
+  policy: string;
+  maxDifferenceGrams: Prisma.Decimal;
+  isActive: boolean;
+}
+
+export function matchProcessToleranceRule(
+  rules: ProcessToleranceCandidate[],
+  definitionId: string,
+  materialKey: string,
+  scalePurpose: string | undefined,
+): ProcessToleranceCandidate | null {
+  // Purpose must match strictly — GOLD tolerance must NEVER be used for STONE material
+  if (!scalePurpose) return null;
+  const purposeRules = rules.filter(
+    (r) => r.isActive && r.scalePurpose === scalePurpose
+  );
+
+  // 1. process + material + purpose
+  const p1 = purposeRules.find(
+    (r) => r.definitionId === definitionId && r.materialKey === materialKey
+  );
+  if (p1) return p1;
+
+  // 2. process + all-material + purpose
+  const p2 = purposeRules.find(
+    (r) => r.definitionId === definitionId && (!r.materialKey || r.materialKey === "")
+  );
+  if (p2) return p2;
+
+  // 3. global-process + material + purpose
+  const p3 = purposeRules.find(
+    (r) => (!r.definitionId || r.definitionId === "") && r.materialKey === materialKey
+  );
+  if (p3) return p3;
+
+  // 4. global + all-material + purpose
+  const p4 = purposeRules.find(
+    (r) => (!r.definitionId || r.definitionId === "") && (!r.materialKey || r.materialKey === "")
+  );
+  return p4 ?? null;
+}
+
 @Injectable()
 export class WorkshopProductionService {
   constructor(
@@ -20,7 +67,8 @@ export class WorkshopProductionService {
     return this.prisma.karigarJob.findMany({
       where: { shopId, status: { not: "CANCELLED" } },
       select: {
-        id: true, product: true, artisan: true, metalKey: true, status: true, qty: true, inventoryItemId: true,
+        id: true, product: true, artisan: true, metalKey: true, status: true, currentStage: true, qty: true, inventoryItemId: true,
+        stages: { where: { stage: "QC" }, select: { stage: true, status: true, qcApprovedAt: true } },
         trees: { select: { id: true, label: true, metalKey: true, issuedGrams: true, lines: { select: { id: true, weightGrams: true } } } },
         workshopProcessRuns: { select: { id: true, treeId: true, definitionId: true, status: true, recipeId: true, batchChildId: true, department: true, workstationId: true }, orderBy: { startedAt: "desc" } },
         workshopRouteSteps: { select: { id: true, definitionId: true, position: true, status: true }, orderBy: { position: "asc" } },
@@ -207,16 +255,21 @@ export class WorkshopProductionService {
     const toleranceRules = await db.workshopToleranceRule.findMany({
       where: { shopId, movementKind: "PROCESS", isActive: true },
     });
+    const materialKeys = accounts.map((a) => a.materialKey);
+    const catalogMaterials = await db.workshopMaterial.findMany({
+      where: { shopId, key: { in: materialKeys } },
+      select: { key: true, scalePurpose: true },
+    });
+    const materialPurposeMap = new Map(catalogMaterials.map((m) => [m.key, m.scalePurpose]));
+
     const byMaterial = accounts.map((account) => {
       const relevant = journals.flatMap((j) => j.lines.filter((line) => line.accountId === account.id));
       const input = relevant.reduce((sum, line) => sum.plus(line.debitGrams), new Prisma.Decimal(0));
       const output = relevant.reduce((sum, line) => sum.plus(line.creditGrams), new Prisma.Decimal(0));
       const unclassified = account.balanceGrams;
 
-      const rule = toleranceRules.find((r) => r.definitionId === run.definitionId && r.materialKey === account.materialKey)
-        ?? toleranceRules.find((r) => r.definitionId === run.definitionId && (!r.materialKey || r.materialKey === ""))
-        ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && r.materialKey === account.materialKey)
-        ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && (!r.materialKey || r.materialKey === ""));
+      const purpose = materialPurposeMap.get(account.materialKey);
+      const rule = matchProcessToleranceRule(toleranceRules, run.definitionId, account.materialKey, purpose);
 
       const maxDiff = rule?.maxDifferenceGrams ?? null;
       const policy = rule?.policy ?? "REQUIRE_CLASSIFICATION";
@@ -258,15 +311,16 @@ export class WorkshopProductionService {
       const grams = source.balanceGrams.toFixed(6);
       const ref = randomUUID();
 
-      const tolerance = await tx.workshopToleranceRule.findFirst({
-        where: { shopId, movementKind: "PROCESS", definitionId: run.definitionId, materialKey, isActive: true },
-      }) ?? await tx.workshopToleranceRule.findFirst({
-        where: { shopId, movementKind: "PROCESS", definitionId: run.definitionId, materialKey: "", isActive: true },
-      }) ?? await tx.workshopToleranceRule.findFirst({
-        where: { shopId, movementKind: "PROCESS", definitionId: "", materialKey, isActive: true },
-      }) ?? await tx.workshopToleranceRule.findFirst({
-        where: { shopId, movementKind: "PROCESS", definitionId: "", materialKey: "", isActive: true },
+      const material = await tx.workshopMaterial.findUnique({
+        where: { shopId_key: { shopId, key: materialKey } },
+        select: { scalePurpose: true },
       });
+      if (!material) throw new BadRequestException("Process material is unavailable");
+      const purpose = material.scalePurpose;
+      const toleranceRules = await tx.workshopToleranceRule.findMany({
+        where: { shopId, movementKind: "PROCESS", isActive: true },
+      });
+      const tolerance = matchProcessToleranceRule(toleranceRules, run.definitionId, materialKey, purpose);
       const withinTolerance = tolerance ? source.balanceGrams.lte(tolerance.maxDifferenceGrams) : false;
 
       const entry = await this.journal.postEntry(tx, {
@@ -309,13 +363,17 @@ export class WorkshopProductionService {
       const toleranceRules = await tx.workshopToleranceRule.findMany({
         where: { shopId, movementKind: "PROCESS", isActive: true },
       });
+      const materialKeys = accounts.map((a) => a.materialKey);
+      const catalogMaterials = await tx.workshopMaterial.findMany({
+        where: { shopId, key: { in: materialKeys } },
+        select: { key: true, scalePurpose: true },
+      });
+      const materialPurposeMap = new Map(catalogMaterials.map((m) => [m.key, m.scalePurpose]));
 
       for (const account of accounts) {
         if (account.balanceGrams.lte(0)) continue;
-        const rule = toleranceRules.find((r) => r.definitionId === runRec.definitionId && r.materialKey === account.materialKey)
-          ?? toleranceRules.find((r) => r.definitionId === runRec.definitionId && (!r.materialKey || r.materialKey === ""))
-          ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && r.materialKey === account.materialKey)
-          ?? toleranceRules.find((r) => (!r.definitionId || r.definitionId === "") && (!r.materialKey || r.materialKey === ""));
+        const purpose = materialPurposeMap.get(account.materialKey);
+        const rule = matchProcessToleranceRule(toleranceRules, runRec.definitionId, account.materialKey, purpose);
 
         if (rule && rule.policy === "ACCEPT_WITHIN_TOLERANCE" && account.balanceGrams.lte(rule.maxDifferenceGrams)) {
           const dest = await this.journal.ensureAccount(tx, shopId, account.materialKey, WorkshopAccountBucket.PROCESS_VARIANCE);

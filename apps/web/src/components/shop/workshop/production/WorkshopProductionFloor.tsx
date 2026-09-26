@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import {
@@ -13,6 +14,7 @@ import {
   type WorkshopProcessRun,
   type WorkshopProcessDefinition,
   type WorkshopMaterial,
+  type WorkshopRecoveryContainer,
   type RunReconciliationResponse,
 } from "@/lib/workshop-api";
 import {
@@ -53,6 +55,8 @@ export function WorkshopProductionFloor({
   const [jobs, setJobs] = useState<WorkshopJob[]>([]);
   const [definitions, setDefinitions] = useState<WorkshopProcessDefinition[]>([]);
   const [materials, setMaterials] = useState<WorkshopMaterial[]>([]);
+  const [recoveryBags, setRecoveryBags] = useState<WorkshopRecoveryContainer[]>([]);
+  const [selectedRecoveryBagId, setSelectedRecoveryBagId] = useState("");
   const [selectedDept, setSelectedDept] = useState<string>(initialDept || "ALL");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string>("");
@@ -65,13 +69,25 @@ export function WorkshopProductionFloor({
   // Close run notes
   const [closeNotes, setCloseNotes] = useState("");
   const [closingRun, setClosingRun] = useState(false);
+  const [classifyMaterialKey, setClassifyMaterialKey] = useState("");
+  const [classificationReason, setClassificationReason] = useState("");
+  const [classifying, setClassifying] = useState(false);
+
+  useEffect(() => {
+    setSelectedRunId("");
+    setRunReport(null);
+    setCloseNotes("");
+    setClassifyMaterialKey("");
+    setClassificationReason("");
+  }, [selectedJobId]);
 
   const loadFloorData = useCallback(async () => {
     setLoading(true);
     try {
-      const [jobsRes, catRes] = await Promise.allSettled([
+      const [jobsRes, catRes, bagsRes] = await Promise.allSettled([
         workshopApi.jobs(),
         workshopApi.catalog(),
+        workshopApi.recoveryBags(),
       ]);
 
       if (jobsRes.status === "fulfilled") {
@@ -84,9 +100,10 @@ export function WorkshopProductionFloor({
       }
 
       if (catRes.status === "fulfilled") {
-        setDefinitions(catRes.value.data?.definitions || []);
+        setDefinitions(catRes.value.data?.processes || []);
         setMaterials(catRes.value.data?.materials || []);
       }
+      if (bagsRes.status === "fulfilled") setRecoveryBags(bagsRes.value.data || []);
     } catch {
       // handled
     } finally {
@@ -110,6 +127,28 @@ export function WorkshopProductionFloor({
       .catch(() => setRunReport(null));
   }, [selectedRunId]);
 
+  useEffect(() => {
+    setClassifyMaterialKey(runReport?.materials.find((m) => parseFloat(m.unclassifiedGrams) > 0)?.materialKey || "");
+  }, [runReport]);
+
+  const refreshRunReport = () => {
+    if (selectedRunId) workshopApi.runReport(selectedRunId).then((res) => setRunReport(res.data)).catch(() => setRunReport(null));
+  };
+
+  const handleClassify = async () => {
+    if (!selectedRunId || !classifyMaterialKey || !classificationReason.trim()) return;
+    setClassifying(true);
+    try {
+      await workshopApi.classifyRun(selectedRunId, classifyMaterialKey, classificationReason.trim());
+      setClassificationReason("");
+      refreshRunReport();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || t("Unable to classify process remainder"));
+    } finally {
+      setClassifying(false);
+    }
+  };
+
   const selectedJob = useMemo(() => {
     return jobs.find((j) => j.id === selectedJobId) || null;
   }, [jobs, selectedJobId]);
@@ -117,6 +156,7 @@ export function WorkshopProductionFloor({
   const primaryTree = useMemo(() => {
     return selectedJob?.trees?.[0] || null;
   }, [selectedJob]);
+
 
   // Filter jobs by selected department if not ALL
   const departmentJobs = useMemo(() => {
@@ -139,6 +179,8 @@ export function WorkshopProductionFloor({
     );
   }, [selectedJob]);
 
+  const selectedRun = activeRunsForJob.find((run) => run.id === selectedRunId);
+
   const departmentsList = useMemo(() => {
     const set = new Set<string>();
     definitions.forEach((d) => {
@@ -146,6 +188,10 @@ export function WorkshopProductionFloor({
     });
     return Array.from(set);
   }, [definitions]);
+
+  useEffect(() => {
+    setSelectedDept(initialDept && departmentsList.includes(initialDept) ? initialDept : "ALL");
+  }, [initialDept, departmentsList]);
 
   // Handle Starting a Process Run
   const handleStartRun = async (defId: string) => {
@@ -181,6 +227,24 @@ export function WorkshopProductionFloor({
       setClosingRun(false);
     }
   };
+
+  const needsRun = ["ADDITIONAL_ISSUE", "PROCESS_INPUT", "PROCESS_OUTPUT", "MIXED_OUTPUT", "RECOVERY_DEPOSIT"].includes(activeMovementKind);
+  const selectedBag = recoveryBags.find((bag) => bag.id === selectedRecoveryBagId && bag.status === "OPEN");
+  const movementMaterialKey = activeMovementKind === "MIXED_OUTPUT" && selectedRun
+    ? `mix_${selectedRun.id.replace(/-/g, "")}` : selectedMaterialKey;
+  const manualBuckets = (() => {
+    const treeScope = primaryTree?.id;
+    const runScope = selectedRunId || undefined;
+    switch (activeMovementKind) {
+      case "MATERIAL_ISSUE": return { sourceBucket: "VAULT", destinationBucket: "WIP", destinationScopeId: treeScope };
+      case "ADDITIONAL_ISSUE": return { sourceBucket: "VAULT", destinationBucket: "PROCESS", destinationScopeId: runScope };
+      case "PROCESS_INPUT": return { sourceBucket: "WIP", sourceScopeId: treeScope, destinationBucket: "PROCESS", destinationScopeId: runScope };
+      case "PROCESS_OUTPUT": return { sourceBucket: "PROCESS", sourceScopeId: runScope, destinationBucket: "WIP", destinationScopeId: treeScope };
+      case "STONE_SETTING": return { sourceBucket: "VAULT", destinationBucket: runScope ? "PROCESS" : "WIP", destinationScopeId: runScope || treeScope };
+      case "STONE_RETURN": return { sourceBucket: runScope ? "PROCESS" : "WIP", sourceScopeId: runScope || treeScope, destinationBucket: "VAULT" };
+      default: return null;
+    }
+  })();
 
   return (
     <div className="space-y-4">
@@ -251,14 +315,15 @@ export function WorkshopProductionFloor({
 
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
                     <span>{job.artisan}</span>
-                    <span className="font-mono">Qty: {job.qty}</span>
+                    <span className="font-mono"><T>Qty:</T> {job.qty}</span>
                   </div>
 
                   {openRuns.length > 0 && (
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-600 font-medium">
                       <Activity className="h-3 w-3 animate-pulse" />
-                      <span>{openRuns.length} active process run</span>
+                      <span>{openRuns.length} <T>active process run</T></span>
                     </div>
+
                   )}
                 </div>
               );
@@ -277,7 +342,7 @@ export function WorkshopProductionFloor({
                       {selectedJob.product}
                     </CardTitle>
                     <CardDescription className="text-xs font-mono">
-                      Job #{selectedJob.id.slice(0, 8)} · Metal: {selectedJob.metalKey || "goldGrains995"}
+                      <T>Job #</T>{selectedJob.id.slice(0, 8)} · <T>Metal:</T> {selectedJob.metalKey || "goldGrains995"}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="font-mono text-xs capitalize">
@@ -294,7 +359,7 @@ export function WorkshopProductionFloor({
                       <T>Active Process Runs</T>
                     </Label>
                     <span className="text-xs text-muted-foreground font-mono">
-                      {activeRunsForJob.length} open
+                      {activeRunsForJob.length} <T>open</T>
                     </span>
                   </div>
 
@@ -366,11 +431,22 @@ export function WorkshopProductionFloor({
                         <div key={m.materialKey} className="flex justify-between items-center text-muted-foreground">
                           <span>{m.materialKey}:</span>
                           <span className={parseFloat(m.unclassifiedGrams) > 0 ? "text-rose-600 font-bold" : "text-emerald-600"}>
-                            {parseFloat(m.unclassifiedGrams).toFixed(3)}g unclassified
+                            {parseFloat(m.unclassifiedGrams).toFixed(3)}g <T>unclassified</T>
                           </span>
                         </div>
                       ))}
                     </div>
+
+                    {canApprove && runReport.materials.some((m) => parseFloat(m.unclassifiedGrams) > 0) && (
+                      <div className="space-y-2 border-t pt-2">
+                        <Label className="text-xs"><T>Classify process remainder</T></Label>
+                        <select value={classifyMaterialKey} onChange={(e) => setClassifyMaterialKey(e.target.value)} className="w-full rounded-md border bg-background p-2 text-xs">
+                          {runReport.materials.filter((m) => parseFloat(m.unclassifiedGrams) > 0).map((m) => <option key={m.materialKey} value={m.materialKey}>{m.materialKey}</option>)}
+                        </select>
+                        <Input value={classificationReason} onChange={(e) => setClassificationReason(e.target.value)} placeholder={t("Verified reason for remainder")} />
+                        <Button size="sm" variant="outline" disabled={classifying || !classifyMaterialKey || !classificationReason.trim()} onClick={handleClassify}><T>Classify remainder</T></Button>
+                      </div>
+                    )}
 
                     <Button
                       size="sm"
@@ -411,12 +487,14 @@ export function WorkshopProductionFloor({
                 <Label className="text-xs font-semibold block mb-1.5"><T>Movement Action</T></Label>
                 <div className="grid grid-cols-2 gap-1.5 text-xs">
                   {[
+                    { kind: "MATERIAL_ISSUE", label: "Issue material" },
+                    { kind: "ADDITIONAL_ISSUE", label: "Additional issue" },
                     { kind: "PROCESS_INPUT", label: "Weighed Input" },
                     { kind: "PROCESS_OUTPUT", label: "Forward Output" },
                     { kind: "MIXED_OUTPUT", label: "Mixed Output" },
                     { kind: "RECOVERY_DEPOSIT", label: "Recovery Deposit" },
                     { kind: "STONE_SETTING", label: "Set Stone" },
-                    { kind: "FINISHED_RECEIPT", label: "Finished Receipt" },
+                    { kind: "STONE_RETURN", label: "Return Stone" },
                   ].map((m) => (
                     <Button
                       key={m.kind}
@@ -424,9 +502,16 @@ export function WorkshopProductionFloor({
                       variant={activeMovementKind === m.kind ? "default" : "outline"}
                       size="sm"
                       className="text-xs h-8 justify-start"
-                      onClick={() => setActiveMovementKind(m.kind)}
+                      onClick={() => {
+                        setActiveMovementKind(m.kind);
+                        if (m.kind === "STONE_SETTING" || m.kind === "STONE_RETURN") {
+                          setSelectedMaterialKey(materials.find((material) => material.isActive && material.scalePurpose === "STONE")?.key || "");
+                        } else if (activeMovementKind === "STONE_SETTING" || activeMovementKind === "STONE_RETURN") {
+                          setSelectedMaterialKey(materials.find((material) => material.isActive && material.scalePurpose === "GOLD")?.key || "goldGrains995");
+                        }
+                      }}
                     >
-                      {m.label}
+                      <T>{m.label}</T>
                     </Button>
                   ))}
                 </div>
@@ -438,38 +523,52 @@ export function WorkshopProductionFloor({
                 <select
                   value={selectedMaterialKey}
                   onChange={(e) => setSelectedMaterialKey(e.target.value)}
+                  disabled={activeMovementKind === "MIXED_OUTPUT"}
                   className="w-full text-xs rounded-md border border-input bg-background p-2 font-mono"
                 >
-                  <option value="goldGrains995">Gold Grains 995</option>
-                  <option value="masterAlloy">Master Alloy</option>
-                  {materials.filter((m) => m.key !== "goldGrains995" && m.key !== "masterAlloy").map((m) => (
+                  {materials.filter((m) => m.isActive && m.scalePurpose === (["STONE_SETTING", "STONE_RETURN"].includes(activeMovementKind) ? "STONE" : "GOLD")).map((m) => (
                     <option key={m.id} value={m.key}>
                       {m.name} ({m.key})
                     </option>
                   ))}
                 </select>
+                {activeMovementKind === "MIXED_OUTPUT" && <p className="text-xs text-muted-foreground font-mono">{movementMaterialKey}</p>}
               </div>
 
-              {/* Authoritative Scale Capture Panel */}
+              {activeMovementKind === "RECOVERY_DEPOSIT" && (
+                <div><Label><T>Recovery bag</T></Label><select value={selectedRecoveryBagId} onChange={(e) => setSelectedRecoveryBagId(e.target.value)} className="w-full rounded-md border bg-background p-2 text-xs"><option value=""><T>Select open bag</T></option>{recoveryBags.filter((bag) => bag.status === "OPEN" && bag.materialKey === selectedMaterialKey).map((bag) => <option key={bag.id} value={bag.id}>{bag.code}</option>)}</select></div>
+              )}
+
+              {(!primaryTree || (needsRun && !selectedRun) || (activeMovementKind === "RECOVERY_DEPOSIT" && !selectedBag) || (activeMovementKind === "MIXED_OUTPUT" && !selectedRun?.recipeId)) ? (
+                <p className="text-xs text-amber-700"><T>Select a matching casting tree, active process run, recipe or recovery bag before weighing.</T></p>
+              ) : (
               <ScaleCapturePanel
-                purpose={activeMovementKind === "STONE_SETTING" ? "STONE" : "GOLD"}
-                materialKey={selectedMaterialKey}
+                key={`${selectedJobId}:${selectedRunId}:${activeMovementKind}:${selectedMaterialKey}`}
+                purpose={materials.find((m) => m.key === selectedMaterialKey)?.scalePurpose || "GOLD"}
+                materialKey={movementMaterialKey}
                 treeId={primaryTree?.id || ""}
+                jobId={selectedJobId || undefined}
                 movementKind={activeMovementKind}
-                processRunId={selectedRunId || undefined}
-                destinationBucket={
+                processRunId={activeMovementKind === "MATERIAL_ISSUE" ? undefined : selectedRunId || undefined}
+                recoveryContainerId={activeMovementKind === "RECOVERY_DEPOSIT" ? selectedBag?.id : undefined}
+                destinationBucket={manualBuckets?.destinationBucket || (
                   activeMovementKind === "PROCESS_OUTPUT" ? "WIP" :
                   activeMovementKind === "RECOVERY_DEPOSIT" ? "RECOVERY_PENDING" :
                   "WIP"
-                }
-                allowManualOverride={!staffMode && canApprove}
+                )}
+                sourceBucket={manualBuckets?.sourceBucket}
+                sourceScopeId={manualBuckets?.sourceScopeId}
+                destinationScopeId={manualBuckets?.destinationScopeId}
+                allowManualOverride={!staffMode && canApprove && !!manualBuckets}
                 canApprove={canApprove}
                 onConfirmed={() => {
                   setActionSuccess(t("Physical weight confirmed and posted to ledger"));
                   loadFloorData();
+                  refreshRunReport();
                   setTimeout(() => setActionSuccess(null), 3500);
                 }}
               />
+              )}
             </CardContent>
           </Card>
         </div>

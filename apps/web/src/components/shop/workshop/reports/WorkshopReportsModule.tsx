@@ -375,11 +375,11 @@ export function WorkshopReportsModule() {
                         <td className="py-3 px-3 text-muted-foreground">{ch.materialKey}</td>
                         <td className="py-3 px-3 font-sans text-muted-foreground text-[11px]">
                           {ch.reversalOfId ? (
-                            <span>Reversal of #{ch.reversalOfId.slice(0, 6)}</span>
+                            <span><T>Reversal of #</T>{ch.reversalOfId.slice(0, 6)}</span>
                           ) : ch.replacementForId ? (
-                            <span>Replacement for #{ch.replacementForId.slice(0, 6)}</span>
+                            <span><T>Replacement for #</T>{ch.replacementForId.slice(0, 6)}</span>
                           ) : (
-                            <span>Original Entry</span>
+                            <span><T>Original Entry</T></span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-muted-foreground">{new Date(ch.postedAt).toLocaleString()}</td>
@@ -482,7 +482,7 @@ export function WorkshopReportsModule() {
                           <Badge variant="outline" className="text-[10px]">{rb.status}</Badge>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground">
-                          {rb.events?.length || 0} event(s)
+                          {rb.events?.length || 0} <T>event(s)</T>
                         </td>
                       </tr>
                     ))}

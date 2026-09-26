@@ -20,10 +20,12 @@ vi.mock("@/lib/workshop-api", () => ({
     transfers: vi.fn(),
     inspectQc: vi.fn(),
     qcDecision: vi.fn(),
-    openWeighingSession: vi.fn(),
-    captureReading: vi.fn(),
-    postMovement: vi.fn(),
+    confirm: vi.fn(),
   },
+}));
+
+vi.mock("../shared/ScaleCapturePanel", () => ({
+  ScaleCapturePanel: ({ onCaptured }: any) => <button onClick={() => onCaptured("session-1", "reading-1", "30.000")}>{"Capture test reading"}</button>,
 }));
 
 describe("QC Inspection & Finished Goods Receipt Workflow", () => {
@@ -39,6 +41,7 @@ describe("QC Inspection & Finished Goods Receipt Workflow", () => {
         artisan: "Master Jeweller",
         metalKey: "goldGrains995",
         status: "PRODUCTION",
+        currentStage: "QC",
         qty: 1,
         trees: [{ id: "tr-1", label: "Tree #1", metalKey: "goldGrains995", issuedGrams: 50, lines: [] }],
         workshopProcessRuns: [],
@@ -69,13 +72,14 @@ describe("QC Inspection & Finished Goods Receipt Workflow", () => {
     expect(screen.getByText("Inspect & Decide")).toBeInTheDocument();
   });
 
-  it("calculates Net Metal Weight = Gross Scale Weight - Set Stone Weight in Finished Receipt", async () => {
+  it("confirms finished receipt using the captured session and server-derived stone weight", async () => {
     const mockJob: WorkshopJob = {
       id: "job-done-1",
       product: "Diamond Studded Bangle",
       artisan: "Artisan B",
       metalKey: "goldGrains995",
       status: "QC_APPROVED",
+      currentStage: "QC",
       qty: 1,
       trees: [{ id: "tr-2", label: "Tree #2", metalKey: "goldGrains995", issuedGrams: 30, lines: [] }],
       workshopProcessRuns: [],
@@ -83,26 +87,27 @@ describe("QC Inspection & Finished Goods Receipt Workflow", () => {
       workshopBatchChildren: [],
     };
 
+    vi.mocked(workshopApi.confirm).mockResolvedValue({ data: { journal: { id: "journal-1" }, inventoryItem: { id: "item-1" } } } as any);
+    const onSuccess = vi.fn();
     render(
       <WorkshopFinishedReceiptDialog
         isOpen={true}
         onClose={vi.fn()}
-        onSuccess={vi.fn()}
+        onSuccess={onSuccess}
         job={mockJob}
-        treeId="tr-2"
-        materialKey="goldGrains995"
       />
     );
 
-    // Initial formula display (gross 0.00 - stone 0.00 = metal 0.00)
     expect(screen.getByText("Finished Goods Scale Receipt")).toBeInTheDocument();
     expect(screen.getByText(/Diamond Studded Bangle/)).toBeInTheDocument();
     expect(screen.getByText("Calculated Metal Weight:")).toBeInTheDocument();
-
-    // Simulate stone deduction
-    const stoneInput = screen.getByPlaceholderText("0.000");
-    fireEvent.change(stoneInput, { target: { value: "2.500" } });
-
-    expect(stoneInput).toHaveValue(2.5);
+    expect(screen.queryByPlaceholderText("0.000")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Capture test reading"));
+    fireEvent.click(screen.getByText("Confirm Receipt & Create Stock"));
+    await waitFor(() => expect(workshopApi.confirm).toHaveBeenCalledWith("session-1", {
+      readingId: "reading-1",
+      finishedGoods: { nameEn: "Diamond Studded Bangle", jewelleryType: "RING" },
+    }));
+    expect(onSuccess).toHaveBeenCalledWith("item-1");
   });
 });

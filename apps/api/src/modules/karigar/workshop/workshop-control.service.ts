@@ -10,6 +10,7 @@ import {
 import { PrismaService } from "../../../prisma/prisma.service";
 import { WorkshopMetalJournalService } from "./workshop-metal-journal.service";
 import { WorkshopScaleService } from "./workshop-scale.service";
+import { effectiveTransferDispatchGrams } from "./workshop-transfer-weight";
 import { CorrectWorkshopJournalDto, WorkshopManualMovementDto } from "./dto/workshop-control.dto";
 import { WorkshopMaterialOpeningDto } from "./dto/workshop-control.dto";
 import { WORKSHOP_GOLD_995_MATERIAL_KEY } from "@gold-shop/shared";
@@ -110,7 +111,17 @@ export class WorkshopControlService {
             original.replacedBy.weightGrams.eq(new Prisma.Decimal(dto.replacementWeightGrams))) {
           return this.journal.serializeEntry(original.replacedBy, true);
         }
+        if (!dto.replacementWeightGrams && original.reversedBy?.idempotencyKey === `reversal:${dto.idempotencyKey}` && !original.replacedBy) {
+          return { id: original.id, status: "REVERSED", voided: true, idempotent: true };
+        }
         throw new ConflictException("This journal has already been corrected");
+      }
+
+      if (
+        original.referenceType === WorkshopMetalJournalReferenceType.REVERSAL ||
+        original.referenceType === WorkshopMetalJournalReferenceType.CORRECTION_REPLACEMENT
+      ) {
+        throw new BadRequestException("Reversals and replacement journals cannot be directly corrected");
       }
 
       // Route to dedicated workflow correction procedures
@@ -136,15 +147,16 @@ export class WorkshopControlService {
         return this.correctMixedOutput(tx, shopId, userId, original, dto);
       }
       const isStoneMovement =
-        (original.metadata as any)?.movementKind === "STONE_SETTING" ||
-        (original.metadata as any)?.movementKind === "STONE_RETURN" ||
-        (original.metadata as any)?.sourceReadingKind === "STONE_SETTING";
-      if (isStoneMovement && ["MATERIAL_ISSUE", "PROCESS_OUTPUT"].includes(original.referenceType)) {
+        ["MATERIAL_ISSUE", "PROCESS_OUTPUT"].includes(original.referenceType) &&
+        ((original.metadata as any)?.movementKind === "STONE_SETTING" ||
+         (original.metadata as any)?.movementKind === "STONE_RETURN" ||
+         (original.metadata as any)?.sourceReadingKind === "STONE_SETTING");
+      if (isStoneMovement) {
         return this.correctStoneSettingOrReturn(tx, shopId, userId, original, dto);
       }
       const isAdditionalIssue =
-        (original.metadata as any)?.movementKind === "ADDITIONAL_ISSUE" ||
-        (original.referenceType === WorkshopMetalJournalReferenceType.MATERIAL_ISSUE && !!original.processRunId);
+        original.referenceType === WorkshopMetalJournalReferenceType.MATERIAL_ISSUE &&
+        ((original.metadata as any)?.movementKind === "ADDITIONAL_ISSUE" || !!original.processRunId);
       if (isAdditionalIssue) {
         return this.correctAdditionalIssue(tx, shopId, userId, original, dto);
       }
@@ -169,6 +181,7 @@ export class WorkshopControlService {
       const downstream = await tx.workshopMetalJournal.findFirst({
         where: {
           shopId, status: "POSTED", id: { not: original.id }, postedAt: { gte: original.postedAt },
+          reversedBy: null,
           lines: { some: { accountId: { in: downstreamAccountIds } } },
         },
         select: { id: true },
@@ -298,7 +311,7 @@ export class WorkshopControlService {
     }
 
     const varianceJournal = await tx.workshopMetalJournal.findFirst({
-      where: { shopId, transferId: transfer.id, status: "POSTED", metadata: { path: ["classification"], equals: "TRANSFER_VARIANCE" } },
+      where: { shopId, transferId: transfer.id, status: "POSTED", reversedBy: null, metadata: { path: ["classification"], equals: "TRANSFER_VARIANCE" } },
     });
     if (varianceJournal) {
       throw new ConflictException("Transfer variance has already been classified; correct or reverse the variance classification first");
@@ -336,11 +349,12 @@ export class WorkshopControlService {
       });
       replacementEntry = posted.entry;
 
-      const diff = transfer.dispatchReading.weightGrams.minus(repWeight);
+      const effectiveDispatch = await effectiveTransferDispatchGrams(tx, shopId, transfer);
+      const diff = effectiveDispatch.minus(repWeight);
       const tolerance = await tx.workshopToleranceRule.findFirst({
-        where: { shopId, movementKind: "TRANSFER", materialKey: original.materialKey, isActive: true },
+        where: { shopId, movementKind: "TRANSFER", materialKey: original.materialKey, scalePurpose: material?.scalePurpose ?? "GOLD", isActive: true },
       }) ?? await tx.workshopToleranceRule.findFirst({
-        where: { shopId, movementKind: "TRANSFER", materialKey: "", isActive: true },
+        where: { shopId, movementKind: "TRANSFER", materialKey: "", scalePurpose: material?.scalePurpose ?? "GOLD", isActive: true },
       });
       const maxTol = tolerance?.maxDifferenceGrams ?? new Prisma.Decimal(0);
       const status = diff.abs().gt(maxTol) || diff.lt(0) ? "EXCEPTION" : diff.isZero() ? "RECONCILED" : "RECEIVED";
@@ -447,7 +461,7 @@ export class WorkshopControlService {
       throw new ConflictException("Recovery event has already been reconciled; reverse reconciliation first");
     }
     const hasResults = await tx.workshopMetalJournal.count({
-      where: { shopId, recoveryEventId: event.id, referenceType: WorkshopMetalJournalReferenceType.RECOVERY_RESULT, status: "POSTED" },
+      where: { shopId, recoveryEventId: event.id, referenceType: WorkshopMetalJournalReferenceType.RECOVERY_RESULT, status: "POSTED", reversedBy: null },
     });
     if (hasResults > 0) {
       throw new ConflictException("Recovery event has already produced recovery results; correct or reverse recovery results first");
@@ -460,6 +474,7 @@ export class WorkshopControlService {
     }
     const source = original.lines.find((l: any) => l.creditGrams.gt(0));
     const dest = original.lines.find((l: any) => l.debitGrams.gt(0));
+    if (!source || !dest) throw new BadRequestException("Recovery send lines are invalid");
 
     const material = await tx.workshopMaterial.findUnique({ where: { shopId_key: { shopId, key: original.materialKey } } });
     const oldWeight = original.weightGrams.toFixed(6);
@@ -601,7 +616,7 @@ export class WorkshopControlService {
 
     const stoneReceipts = await tx.workshopMetalJournal.findMany({
       where: {
-        shopId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED",
+        shopId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED", reversedBy: null,
         metadata: { path: ["parentReceiptJournalId"], equals: original.id },
       },
       include: { lines: true },
@@ -689,11 +704,18 @@ export class WorkshopControlService {
         throw new ConflictException("Finished goods receipt has already consumed/classified stone settings for this job. Correct finished receipt first.");
       }
     }
-    const hasFinished = await tx.workshopMetalJournal.count({
-      where: { shopId, treeId: original.treeId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED" },
-    });
+    let hasFinished = 0;
+    if (original.treeId) {
+      hasFinished = await tx.workshopMetalJournal.count({
+        where: { shopId, treeId: original.treeId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED", reversedBy: null },
+      });
+    } else if (original.jobId) {
+      hasFinished = await tx.workshopMetalJournal.count({
+        where: { shopId, jobId: original.jobId, referenceType: WorkshopMetalJournalReferenceType.FINISHED_RECEIPT, status: "POSTED", reversedBy: null },
+      });
+    }
     if (hasFinished > 0) {
-      throw new ConflictException("Finished goods receipt has already consumed stone settings for this tree. Correct finished receipt first.");
+      throw new ConflictException("Finished goods receipt has already consumed stone settings for this job/tree. Correct finished receipt first.");
     }
 
     const source = original.lines.find((l: any) => l.creditGrams.gt(0));
@@ -803,7 +825,7 @@ export class WorkshopControlService {
       where: { id: original.processRunId, shopId },
     });
     if (!run) throw new NotFoundException("Linked workshop process run not found");
-    if (run.status === "CLOSED") {
+    if (!["OPEN", "RECONCILIATION_PENDING"].includes(run.status)) {
       throw new ConflictException("Process run is already closed; cannot correct an additional issue on a closed run");
     }
 
@@ -827,11 +849,12 @@ export class WorkshopControlService {
         id: { not: original.id },
         processRunId: original.processRunId,
         postedAt: { gte: original.postedAt },
+        reversedBy: null,
         lines: { some: { accountId: dest.accountId, creditGrams: { gt: 0 } } },
       },
       select: { id: true },
     });
-    if (downstream && destAcct.balanceGrams.lt(original.weightGrams)) {
+    if (downstream) {
       throw new ConflictException(
         "Later process movements have consumed this material; reconcile them before correcting the original issue"
       );

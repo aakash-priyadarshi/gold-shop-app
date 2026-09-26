@@ -14,6 +14,7 @@ import {
   type WorkshopRecoveryEvent,
   type WorkshopProcessDefinition,
   type WorkshopWorkstation,
+  type WorkshopMaterial,
 } from "@/lib/workshop-api";
 import {
   AlertCircle,
@@ -38,6 +39,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
   const [bags, setBags] = useState<WorkshopRecoveryContainer[]>([]);
   const [definitions, setDefinitions] = useState<WorkshopProcessDefinition[]>([]);
   const [workstations, setWorkstations] = useState<WorkshopWorkstation[]>([]);
+  const [materials, setMaterials] = useState<WorkshopMaterial[]>([]);
   const [selectedBagId, setSelectedBagId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +57,8 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
   // Reconcile Event Modal
   const [activeEvent, setActiveEvent] = useState<WorkshopRecoveryEvent | null>(null);
   const [varianceReason, setVarianceReason] = useState("");
+  const [resultMaterialKey, setResultMaterialKey] = useState("");
+  const [resultDestination, setResultDestination] = useState<"VAULT" | "REUSABLE" | "SCRAP" | "REFINERY">("VAULT");
   const [reconcilingLoading, setReconcilingLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -67,8 +71,9 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
 
       if (bagsRes.status === "fulfilled") setBags(bagsRes.value.data || []);
       if (catRes.status === "fulfilled") {
-        setDefinitions(catRes.value.data?.definitions || []);
+        setDefinitions(catRes.value.data?.processes || []);
         setWorkstations(catRes.value.data?.workstations || []);
+        setMaterials(catRes.value.data?.materials.filter((m) => m.isActive) || []);
       }
     } catch {
       // handled
@@ -103,8 +108,10 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
   const handleCloseAndSend = async (containerId: string) => {
     setSendLoading(true);
     try {
-      await workshopApi.createRecoveryEvent(containerId);
+      const res = await workshopApi.createRecoveryEvent(containerId);
+      const eventId = res.data?.id;
       loadData();
+      if (eventId) handleInspectEvent(eventId);
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || "Failed to create recovery event");
     } finally {
@@ -116,6 +123,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
     try {
       const res = await workshopApi.recoveryEvent(eventId);
       setActiveEvent(res.data);
+      setResultMaterialKey(res.data.container.materialKey);
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || "Failed to load event");
     }
@@ -279,7 +287,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                   <T>Refinery Recovery Settlement</T>
                 </h3>
                 <p className="text-xs text-muted-foreground font-mono">
-                  Event #{activeEvent.id.slice(0, 8)} · Bag: {activeEvent.container?.code}
+                  <T>Event #</T>{activeEvent.id.slice(0, 8)} · <T>Bag:</T> {activeEvent.container?.code}
                 </p>
               </div>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setActiveEvent(null)}>
@@ -306,14 +314,52 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                   </span>
                   {activeEvent.assays.map((a) => (
                     <div key={a.id} className="rounded border p-2 flex justify-between font-mono">
-                      <span>Source: {a.source}</span>
-                      <span className="font-bold text-amber-600">Purity: {parseFloat(a.fineGoldFraction).toFixed(4)}</span>
+                      <span><T>Source:</T> {a.source}</span>
+                      <span className="font-bold text-amber-600"><T>Purity:</T> {parseFloat(a.fineGoldFraction).toFixed(4)}</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              {activeEvent.status === "SENT" && canApprove && (
+              {activeEvent.status === "OPEN" && (
+                <ScaleCapturePanel
+                  key={`${activeEvent.id}:send`}
+                  purpose={materials.find((m) => m.key === activeEvent.container.materialKey)?.scalePurpose || "GOLD"}
+                  materialKey={activeEvent.container.materialKey}
+                  movementKind="RECOVERY_SEND"
+                  recoveryContainerId={activeEvent.containerId}
+                  recoveryEventId={activeEvent.id}
+                  canApprove={canApprove}
+                  onConfirmed={() => { handleInspectEvent(activeEvent.id); loadData(); }}
+                />
+              )}
+
+              {activeEvent.status === "SENT" && (
+                <div className="space-y-2">
+                  <Label><T>Recovered result material and destination</T></Label>
+                  <select value={resultMaterialKey} onChange={(e) => setResultMaterialKey(e.target.value)} className="w-full rounded-md border bg-background p-2 text-xs">
+                    {materials.filter((m) => m.scalePurpose === "GOLD").map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
+                  </select>
+                  <select value={resultDestination} onChange={(e) => setResultDestination(e.target.value as typeof resultDestination)} className="w-full rounded-md border bg-background p-2 text-xs">
+                    {["VAULT", "REUSABLE", "SCRAP", "REFINERY"].map((bucket) => <option key={bucket} value={bucket}>{bucket}</option>)}
+                  </select>
+                  {!activeEvent.journals.some((j) => j.referenceType === "RECOVERY_RESULT" && !j.reversedById && !j.reversalOfId) && (
+                    <ScaleCapturePanel
+                      key={`${activeEvent.id}:result:${resultMaterialKey}:${resultDestination}`}
+                      purpose={materials.find((m) => m.key === resultMaterialKey)?.scalePurpose || "GOLD"}
+                      materialKey={resultMaterialKey}
+                      movementKind="RECOVERY_RESULT"
+                      recoveryContainerId={activeEvent.containerId}
+                      recoveryEventId={activeEvent.id}
+                      destinationBucket={resultDestination}
+                      canApprove={canApprove}
+                      onConfirmed={() => { handleInspectEvent(activeEvent.id); loadData(); }}
+                    />
+                  )}
+                </div>
+              )}
+
+              {activeEvent.status === "SENT" && canApprove && activeEvent.journals.some((j) => j.referenceType === "RECOVERY_RESULT" && !j.reversedById && !j.reversalOfId) && (
                 <div className="space-y-2 pt-2 border-t">
                   <Label className="text-xs"><T>Final Settlement Variance Reason</T></Label>
                   <Input
@@ -346,7 +392,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
               <div>
                 <Label className="text-xs mb-1 block"><T>Bag Code / Identifier</T></Label>
                 <Input
-                  placeholder="e.g. RB-POL-0019"
+                  placeholder={t("e.g. RB-POL-0019")}
                   value={bagCode}
                   onChange={(e) => setBagCode(e.target.value)}
                   className="font-mono"
@@ -360,8 +406,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                   onChange={(e) => setMaterialKey(e.target.value)}
                   className="w-full rounded-md border border-input bg-background p-2 font-mono"
                 >
-                  <option value="goldGrains995">Gold Grains 995</option>
-                  <option value="masterAlloy">Master Alloy</option>
+                  {materials.filter((m) => m.scalePurpose === "GOLD").map((m) => <option key={m.id} value={m.key}>{m.name}</option>)}
                 </select>
               </div>
 
@@ -372,7 +417,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                   onChange={(e) => setWorkstationId(e.target.value)}
                   className="w-full rounded-md border border-input bg-background p-2"
                 >
-                  <option value="">None / General</option>
+                  <option value=""><T>None / General</T></option>
                   {workstations.map((w) => (
                     <option key={w.id} value={w.id}>{w.name}</option>
                   ))}

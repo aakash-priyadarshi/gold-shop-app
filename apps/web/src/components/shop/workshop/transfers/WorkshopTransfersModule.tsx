@@ -13,6 +13,7 @@ import {
   type WorkshopTransfer,
   type WorkshopJob,
   type WorkshopProcessDefinition,
+  type WorkshopMaterial,
 } from "@/lib/workshop-api";
 import {
   AlertCircle,
@@ -36,6 +37,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
   const [transfers, setTransfers] = useState<WorkshopTransfer[]>([]);
   const [jobs, setJobs] = useState<WorkshopJob[]>([]);
   const [definitions, setDefinitions] = useState<WorkshopProcessDefinition[]>([]);
+  const [materials, setMaterials] = useState<WorkshopMaterial[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Prepare Transfer Modal
@@ -72,7 +74,8 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
         if (firstTree && !selectedTreeId) setSelectedTreeId(firstTree.id);
       }
       if (catRes.status === "fulfilled") {
-        setDefinitions(catRes.value.data?.definitions || []);
+        setDefinitions(catRes.value.data?.processes || []);
+        setMaterials(catRes.value.data?.materials.filter((m) => m.isActive) || []);
       }
     } catch {
       // handled
@@ -178,7 +181,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                 </span>
               </CardTitle>
               <CardDescription className="text-xs font-mono">
-                Transfer #{activeTransferForWeighing.id.slice(0, 8)} · Material: {activeTransferForWeighing.materialKey}
+                <T>Transfer #</T>{activeTransferForWeighing.id.slice(0, 8)} · <T>Material:</T> {activeTransferForWeighing.materialKey}
               </CardDescription>
             </div>
             <Button
@@ -192,12 +195,14 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
           </CardHeader>
           <CardContent className="p-4">
             <ScaleCapturePanel
-              purpose="GOLD"
+              key={`${activeTransferForWeighing.id}:${weighingAction}`}
+              purpose={materials.find((m) => m.key === activeTransferForWeighing.materialKey)?.scalePurpose || "GOLD"}
               materialKey={activeTransferForWeighing.materialKey}
               treeId={activeTransferForWeighing.treeId}
               movementKind={weighingAction}
               transferId={activeTransferForWeighing.id}
               canApprove={canApprove}
+              onRequiresApproval={loadData}
               onConfirmed={() => {
                 setActiveTransferForWeighing(null);
                 loadData();
@@ -280,7 +285,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                               {parseFloat(tr.differenceGrams).toFixed(3)} g
                               {tr.toleranceRule && (
                                 <span className="text-[10px] text-muted-foreground font-normal ml-1">
-                                  (max {parseFloat(String(tr.toleranceRule.maxDifferenceGrams)).toFixed(3)}g)
+                                  (<T>max</T> {parseFloat(String(tr.toleranceRule.maxDifferenceGrams)).toFixed(3)}g)
                                 </span>
                               )}
                             </span>
@@ -318,7 +323,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                               <T>Weigh Dispatch</T>
                             </Button>
                           )}
-                          {isDispatched && (
+                          {(isDispatched || (isException && !!tr.approvedAt)) && (
                             <Button
                               size="sm"
                               className="h-7 text-xs bg-cyan-600 hover:bg-cyan-700 text-white font-sans"
@@ -331,7 +336,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                               <T>Weigh Receipt</T>
                             </Button>
                           )}
-                          {isException && canApprove && (
+                          {isException && !tr.approvedAt && canApprove && (
                             <Button
                               size="sm"
                               className="h-7 text-xs bg-rose-600 hover:bg-rose-700 text-white font-sans"
@@ -395,8 +400,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                   onChange={(e) => setMaterialKey(e.target.value)}
                   className="w-full rounded-md border border-input bg-background p-2 font-mono"
                 >
-                  <option value="goldGrains995">Gold Grains 995</option>
-                  <option value="masterAlloy">Master Alloy</option>
+                  {materials.map((material) => <option key={material.id} value={material.key}>{material.name}</option>)}
                 </select>
               </div>
 
@@ -406,7 +410,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                   <Input
                     value={fromDept}
                     onChange={(e) => setFromDept(e.target.value)}
-                    placeholder="e.g. Casting"
+                  placeholder={t("e.g. Casting")}
                   />
                 </div>
                 <div>
@@ -414,7 +418,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                   <Input
                     value={toDept}
                     onChange={(e) => setToDept(e.target.value)}
-                    placeholder="e.g. Filing / Setting"
+                    placeholder={t("e.g. Filing / Setting")}
                   />
                 </div>
               </div>
@@ -452,10 +456,10 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                 <span className="font-mono font-bold">
                   {parseFloat(approvingTransfer.differenceGrams || "0").toFixed(3)}g
                 </span>{" "}
-                (Max allowed: {parseFloat(String(approvingTransfer.toleranceRule?.maxDifferenceGrams || 0)).toFixed(3)}g)
+                (<T>Max allowed:</T> {parseFloat(String(approvingTransfer.toleranceRule?.maxDifferenceGrams || 0)).toFixed(3)}g)
               </p>
               {approvingTransfer.exceptionReason && (
-                <p className="mt-1 italic">Note: {approvingTransfer.exceptionReason}</p>
+                <p className="mt-1 italic"><T>Note:</T> {approvingTransfer.exceptionReason}</p>
               )}
             </div>
 
