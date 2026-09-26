@@ -4,27 +4,17 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import { workshopApi, type WorkshopJob } from "@/lib/workshop-api";
-import { supplyChainHref } from "@/lib/workshop-route";
-import Link from "next/link";
 import {
-  Boxes,
-  CheckCircle2,
-  Clock,
-  Coins,
-  Cpu,
   Eye,
-  GitBranch,
   Hammer,
-  Layers,
   Loader2,
   Plus,
   RefreshCw,
   Search,
-  Sparkles,
 } from "lucide-react";
 import { WorkshopJobDetailView } from "./WorkshopJobDetailView";
 import { WorkshopPageHeader } from "../shared/WorkshopPageHeader";
@@ -93,7 +83,6 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
 
   return (
     <div className="space-y-5">
-      {/* Page Header */}
       <WorkshopPageHeader
         heading="Jobs"
         description="Create and manage manufacturing work orders."
@@ -119,7 +108,6 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
         }
       />
 
-      {/* Top Filter & Search Bar */}
       <div
         data-tour="workshop-jobs-filters"
         className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
@@ -156,7 +144,6 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
         </div>
       </div>
 
-      {/* Jobs Table */}
       <Card data-tour="workshop-jobs-list" className="border-border">
         <CardContent className="p-0">
           {loading ? (
@@ -239,7 +226,7 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
                             variant={isDone ? "default" : isQc ? "secondary" : "outline"}
                             className="text-[10px] capitalize font-mono"
                           >
-                            {job.status}
+                            {t(job.status)}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -266,7 +253,6 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
         </CardContent>
       </Card>
 
-      {/* Create Job Dialog */}
       <WorkshopCreateJobDialog
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
