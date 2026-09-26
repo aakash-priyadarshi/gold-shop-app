@@ -257,7 +257,7 @@ export function WorkshopTransfersModule({ canApprove = true }: { canApprove?: bo
                     <th className="py-3 px-3">
                       <div className="flex items-center gap-1">
                         <T>Difference / Tol</T>
-                        <WorkshopDomainTooltip term="Transfer Variance" />
+                        <WorkshopDomainTooltip term="transferVariance" />
                       </div>
                     </th>
                     <th className="py-3 px-3"><T>Status</T></th>

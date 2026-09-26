@@ -120,6 +120,14 @@ describe("Tutorial TOUR_STEPS — Structure", () => {
     expect(sourceFile).toContain("workshop-settings-tabs");
   });
 
+  test("Factory Settings tour uses only always-mounted tab navigation targets", () => {
+    const settingsTour = sourceFile.split("const WORKSHOP_SETTINGS_STEPS")[1].split("const TOUR_STEPS")[0];
+    expect(settingsTour).toContain("SUPPLY_CHAIN_NAV_STEP");
+    const targets = [...settingsTour.matchAll(/element: "([^\"]+)"/g)].map((match) => match[1]);
+    expect(targets.length).toBe(5);
+    expect(new Set(targets)).toEqual(new Set(["[data-tour='workshop-settings-tabs']"]));
+  });
+
   test("Supply Chain factory tours do not claim Tower replaces the karigar book", () => {
     expect(sourceFile).not.toContain(
       "This replaces Supply Chain when Workshop mode is on",

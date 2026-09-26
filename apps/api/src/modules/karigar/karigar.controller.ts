@@ -23,6 +23,7 @@ import {
   AdvanceKarigarFloorDto,
   CreateCastingTreeDto,
   CreateKarigarJobDto,
+  CreateKarigarWorkshopDto,
   CreateKarigarMovementDto,
   InspectKarigarQcDto,
   ReceiveKarigarFgDto,
@@ -122,6 +123,15 @@ export class KarigarController {
   ) {
     if (!shopId) throw new BadRequestException("No active shop selected");
     return this.karigarService.getJob(shopId, jobId);
+  }
+
+  @Post("workshops")
+  async createWorkshop(
+    @CurrentUser("shopId") shopId: string,
+    @Body() dto: CreateKarigarWorkshopDto,
+  ) {
+    if (!shopId) throw new BadRequestException("No active shop selected");
+    return this.karigarService.createWorkshop(shopId, dto);
   }
 
   @Post("jobs")

@@ -212,7 +212,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Flame className="h-4 w-4 text-orange-500" />
             <T>Tracked Recovery Bags</T>
-            <WorkshopDomainTooltip term="Recovery Pending" />
+            <WorkshopDomainTooltip term="recoveryPending" />
           </h3>
         </div>
 
@@ -348,7 +348,7 @@ export function WorkshopRecoveryModule({ canApprove = true }: { canApprove?: boo
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
                       <T>Assay Results (Optional)</T>
                     </span>
-                    <WorkshopDomainTooltip term="Assay" />
+                    <WorkshopDomainTooltip term="assay" />
                   </div>
                   {activeEvent.assays.map((a) => (
                     <div key={a.id} className="rounded border p-2 flex justify-between font-mono">

@@ -47,7 +47,7 @@ import { useFeatures } from "@/hooks/useFeatures";
 import { materialsApi, karigarApi } from "@/lib/api";
 import { getShopMarketParams } from "@/lib/mobileCurrency";
 import {
-  parseWorkshopView,
+  resolveWorkshopView,
   supplyChainHref,
   type WorkshopView,
 } from "@/lib/workshop-route";
@@ -218,9 +218,7 @@ function SupplyChainRouteContent() {
   // Determine effective view:
   // When Workshop Mode is ON and feature enabled: defaults to "overview" if no view is in query
   // When Workshop Mode is OFF: defaults to "book"
-  const parsedView = requested ? parseWorkshopView(requested) : null;
-  const effectiveView: WorkshopView =
-    parsedView ?? (workshopMode && workshopEnabled ? "overview" : "book");
+  const effectiveView = resolveWorkshopView(requested, workshopMode, workshopEnabled);
   const activeNav = effectiveView === "job" ? "jobs" : effectiveView;
   const setTourSubKey = useTourContext((state) => state.setSubKey);
 

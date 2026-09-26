@@ -112,7 +112,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
                   <T>Physical Gold 995 & Metal Ledger</T>
-                  <WorkshopDomainTooltip term="Gold 995" />
+                  <WorkshopDomainTooltip term="gold995" />
                 </h2>
                 <Badge
                   variant={cutover?.workshopLedgerVersion === "TRACEABLE" ? "default" : "outline"}
@@ -188,7 +188,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <History className="h-4 w-4 text-amber-500" />
               <T>Traceable Transactions & Corrections Audit</T>
-              <WorkshopDomainTooltip term="Correction / Reversal" />
+              <WorkshopDomainTooltip term="correctionReversal" />
             </CardTitle>
             <CardDescription className="text-xs">
               <T>Immutable physical journal records with reversal and replacement lineage</T>
@@ -196,7 +196,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
+        <CardContent className="p-0" data-tour="workshop-metal-corrections">
           {transactions.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
               <T>No special override or correction transactions posted yet.</T>
@@ -213,7 +213,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                     <th className="py-3 px-3">
                       <div className="flex items-center gap-1">
                         <T>Scale / Source</T>
-                        <WorkshopDomainTooltip term="Manual Override" />
+                        <WorkshopDomainTooltip term="manualOverride" />
                       </div>
                     </th>
                     <th className="py-3 px-3"><T>Posted At</T></th>
@@ -247,7 +247,7 @@ export function WorkshopMetalModule({ canApprove = true }: { canApprove?: boolea
                         <td className="py-3 px-3 text-muted-foreground">
                           {new Date(entry.postedAt).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right" data-tour="workshop-metal-corrections">
+                        <td className="py-3 px-4 text-right">
                           {canApprove && !isReversed && (
                             <Button
                               variant="ghost"

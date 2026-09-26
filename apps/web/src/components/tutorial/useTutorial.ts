@@ -557,41 +557,41 @@ const WORKSHOP_SETTINGS_STEPS: DriveStep[] = [
     },
   },
   {
-    element: "[data-tour='workshop-settings-scales']",
+    element: "[data-tour='workshop-settings-tabs']",
     popover: {
       title: "Hardware Scales",
       description:
-        "Connect digital scales via WebSerial or Desktop bridge. Set precision to 0.01g for gold and 0.001g for diamonds.",
+        "Select Scales to connect digital scales via the Desktop bridge. Set precision to 0.01g for gold and 0.001g for diamonds.",
       side: "bottom",
       align: "start",
     },
   },
   {
-    element: "[data-tour='workshop-settings-materials']",
+    element: "[data-tour='workshop-settings-tabs']",
     popover: {
       title: "Factory Materials",
       description:
-        "Define tracked metals (e.g. Gold 995, Sterling Silver), master alloys, and casting consumables used in production.",
+        "Select Materials to define tracked metals (e.g. Gold 995, Sterling Silver), master alloys, and casting consumables used in production.",
       side: "bottom",
       align: "start",
     },
   },
   {
-    element: "[data-tour='workshop-settings-processes']",
+    element: "[data-tour='workshop-settings-tabs']",
     popover: {
       title: "Processes & Routes",
       description:
-        "Set up standard manufacturing stages (Casting, Filing, Setting, Polishing) and link them into standardized production routes.",
+        "Select Processes to set up manufacturing stages (Casting, Filing, Setting, Polishing), then Routes to link them into production routes.",
       side: "top",
       align: "start",
     },
   },
   {
-    element: "[data-tour='workshop-settings-tolerances']",
+    element: "[data-tour='workshop-settings-tabs']",
     popover: {
       title: "Loss Tolerances & Permissions",
       description:
-        "Establish allowable metal loss percentages per process and configure staff role permissions for scale capture and supervisor approvals.",
+        "Select Tolerances to set maximum differences in grams per process. Select Staff to configure scale capture and supervisor approval permissions.",
       side: "top",
       align: "end",
     },

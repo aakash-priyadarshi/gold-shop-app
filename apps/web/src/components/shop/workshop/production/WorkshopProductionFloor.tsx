@@ -507,7 +507,7 @@ export function WorkshopProductionFloor({
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 font-semibold text-foreground">
                           <T>Process Remainder</T>
-                          <WorkshopDomainTooltip term="Process Variance" />
+                          <WorkshopDomainTooltip term="processVariance" />
                         </div>
                         <Badge
                           variant={runReport.reconciliationState === "RECONCILED" ? "default" : "destructive"}
@@ -570,9 +570,9 @@ export function WorkshopProductionFloor({
                     <T>Physical Movement & Weighing</T>
                   </div>
                   <div className="flex items-center gap-1">
-                    <WorkshopDomainTooltip term="Stable NET" />
-                    <WorkshopDomainTooltip term="Capture" />
-                    <WorkshopDomainTooltip term="Confirm" />
+                    <WorkshopDomainTooltip term="stableNet" />
+                    <WorkshopDomainTooltip term="capture" />
+                    <WorkshopDomainTooltip term="confirm" />
                   </div>
                 </CardTitle>
                 <CardDescription className="text-xs">

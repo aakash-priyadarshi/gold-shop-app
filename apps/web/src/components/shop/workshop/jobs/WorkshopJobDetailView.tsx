@@ -253,7 +253,7 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                 <Sparkles className="h-4 w-4 text-blue-500" />
                 <CardTitle className="text-sm font-semibold"><T>Theoretical CAD Specifications</T></CardTitle>
               </div>
-              <WorkshopDomainTooltip term="Theoretical" />
+              <WorkshopDomainTooltip term="theoretical" />
             </div>
             <CardDescription className="text-xs">
               <T>Design reference weights from 3D CAD modeling</T>
@@ -293,8 +293,8 @@ export function WorkshopJobDetailView({ jobId, onBack }: WorkshopJobDetailViewPr
                 <CardTitle className="text-sm font-semibold"><T>Physical Material Issue</T></CardTitle>
               </div>
               <div className="flex items-center gap-1">
-                <WorkshopDomainTooltip term="Recommended" />
-                <WorkshopDomainTooltip term="Actual" />
+                <WorkshopDomainTooltip term="recommended" />
+                <WorkshopDomainTooltip term="actual" />
               </div>
             </div>
             <CardDescription className="text-xs">

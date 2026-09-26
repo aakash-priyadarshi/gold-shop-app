@@ -120,11 +120,25 @@ export function isWorkshopAccessQuestion(message: string): boolean {
   );
 }
 
+function isRecoveryQuestion(normalized: string): boolean {
+  return /(recovery.*bag|new.*recovery|settle.*recovery)/.test(normalized) ||
+    (/\bassay\b/.test(normalized) && /\b(workshop|factory|recovery|refinery|refining)\b/.test(normalized));
+}
+
+function isFactoryConfigurationQuestion(normalized: string): boolean {
+  return /(configure.*(route|recipe|process|scale|factory)|where.*(route|recipe|process|scale))/.test(normalized) ||
+    (/\bsettings\b/.test(normalized) && /\b(workshop|factory)\b/.test(normalized));
+}
+
+function isFactoryOperationalQuestion(normalized: string): boolean {
+  return isRecoveryQuestion(normalized) || isFactoryConfigurationQuestion(normalized) ||
+    /(create.*(job|work order)|new.*job|how.*create.*job|where.*create.*job|start.*process|what.*(do|next).*after.*job|create.*transfer|new.*transfer|how.*transfer|capture.*vs.*confirm|confirm.*vs.*capture|recommended.*vs.*actual|actual.*vs.*recommended|what.*reconciliation|why.*can't.*close|cannot.*close.*run|receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive)/.test(normalized);
+}
+
 export function isWorkshopOperationalQuestion(message: string): boolean {
   const normalized = message.toLowerCase();
-  return /(create.*(job|work order)|new.*job|how.*create.*job|where.*create.*job|start.*process|what.*(do|next).*after.*job|create.*transfer|new.*transfer|how.*transfer|recovery.*bag|new.*recovery|assay|settle.*recovery|capture.*vs.*confirm|confirm.*vs.*capture|recommended.*vs.*actual|actual.*vs.*recommended|what.*reconciliation|why.*can't.*close|cannot.*close.*run|configure.*(route|recipe|process|scale|factory)|where.*(route|recipe|process|scale|settings)|receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive|cancel.*job|archive.*job|delete.*job|job.*delete|wage.*(due|settle|settlement)|settle.*wage|karigar.*(account|statement|ledger|advance|settlement)|procure.*bullion|procurement.*bullion|supplier.*bullion)/.test(
-    normalized,
-  );
+  return isFactoryOperationalQuestion(normalized) ||
+    /(cancel.*job|archive.*job|delete.*job|job.*delete|wage.*(due|settle|settlement)|settle.*wage|karigar.*(account|statement|ledger|advance|settlement)|procure.*bullion|procurement.*bullion|supplier.*bullion)/.test(normalized);
 }
 
 export function formatWorkshopOperationalReply(
@@ -138,11 +152,18 @@ export function formatWorkshopOperationalReply(
   const factoryReady =
     access.workshopManufacturingEnabled === true && access.workshopMode;
 
+  if (isFactoryOperationalQuestion(normalized) && !factoryReady) {
+    if (access.workshopManufacturingEnabled === null) {
+      return "I could not verify your workshopManufacturing entitlement right now. Retry or check Billing at /dashboard/shop/billing before using factory features. Karigar Book remains at /dashboard/shop/supply-chain?view=book.";
+    }
+    if (access.workshopManufacturingEnabled !== true) {
+      return "Factory features require the workshopManufacturing entitlement on your shop's live plan. Check the current plan options in Billing at /dashboard/shop/billing or ask your administrator to enable it. Karigar Book remains at /dashboard/shop/supply-chain?view=book.";
+    }
+    return "Your plan includes workshopManufacturing, but Workshop Mode is off. Turn on Workshop Mode in Shop Settings → Preferences (/dashboard/shop/settings?tab=preferences) before using factory features. Traditional artisan jobs remain available in Karigar Book at /dashboard/shop/supply-chain?view=book.";
+  }
+
   // 1. Create Job / New Work Order
   if (/(create.*(job|work order)|new.*job|how.*create.*job|where.*create.*job)/.test(normalized)) {
-    if (!factoryReady) {
-      return "To create a manufacturing job in Workshop mode, first ensure Workshop mode is on in Shop Settings → Preferences. In the traditional workflow, you can create jobs from Karigar Book at /dashboard/shop/supply-chain?view=book.";
-    }
     return "To create a manufacturing job, open Supply Chain → Jobs (/dashboard/shop/supply-chain?view=jobs) and click the primary '+ Create Job' button. You can also use the Create Job quick action on Overview or from the Production floor when no jobs exist. Select the product, assign an artisan/workshop, set quantity, priority, and due date. Jobs require an artisan before creation.";
   }
 
@@ -157,13 +178,13 @@ export function formatWorkshopOperationalReply(
   }
 
   // 4. Recovery Bags & Assay
-  if (/(recovery.*bag|new.*recovery|assay|settle.*recovery)/.test(normalized)) {
+  if (isRecoveryQuestion(normalized)) {
     return "Recovery bags are managed in Supply Chain → Recovery (/dashboard/shop/supply-chain?view=recovery). Click '+ New Recovery Bag' to collect floor sweeps, filing dust, or polishing residue into serialized bags (held in 'Recovery Pending'). When refined bullion returns from the refinery, recording the scale-confirmed physical recovery result is mandatory before final settlement. A laboratory assay purity certificate is optional.";
   }
 
   // 5. Capture vs Confirm
   if (/(capture.*vs.*confirm|confirm.*vs.*capture)/.test(normalized)) {
-    return "In Workshop production: 'Capture' temporarily freezes the stable net weight reading directly from the digital scale into working memory without altering stock. 'Confirm' then commits that recorded weight to the immutable double-entry workshop ledger and balance sheet.";
+    return "In Workshop production: 'Capture' stores the stable net weight reading from the digital scale without altering stock. 'Confirm' then posts that recorded weight to the immutable double-entry workshop ledger.";
   }
 
   // 6. Recommended vs Actual / Theoretical
@@ -177,7 +198,7 @@ export function formatWorkshopOperationalReply(
   }
 
   // 8. Configure Routes / Recipes / Scales / Factory Settings
-  if (/(configure.*(route|recipe|process|scale|factory)|where.*(route|recipe|process|scale|settings))/.test(normalized)) {
+  if (isFactoryConfigurationQuestion(normalized)) {
     if (/(route|routes)/.test(normalized)) {
       return "Factory routes are configured in Supply Chain → Factory Settings → Routes (/dashboard/shop/supply-chain?view=settings). Configure your factory in this order: 1. Scales → 2. Materials → 3. Recipes → 4. Processes → 5. Routes → 6. Workstations → 7. Tolerances → 8. Staff.";
     }
@@ -186,9 +207,6 @@ export function formatWorkshopOperationalReply(
 
   // 9. Finished goods receipt
   if (/(receive.*(finished|workshop)|finished.*receive|can't.*receive|cannot.*receive|why.*receive)/.test(normalized)) {
-    if (!factoryReady) {
-      return "Finished-goods receipt is part of Workshop mode. First make sure your plan includes workshopManufacturing and turn on Workshop mode in Shop Settings → Preferences. Then complete the job's QC approval in Supply Chain → QC before receiving finished goods from its job card.";
-    }
     return "Finished goods can be received only after the job is approved in Supply Chain → QC. Approve it there, then open the Jobs tab or job card and choose Receive finished goods. This adds or updates inventory; it does not create a customer invoice or sale price.";
   }
 

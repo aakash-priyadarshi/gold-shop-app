@@ -16,6 +16,7 @@ import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import { karigarApi } from "@/lib/api";
 import { supplyChainHref } from "@/lib/workshop-route";
+import { WORKSHOP_GOLD_995_MATERIAL_KEY } from "@gold-shop/shared";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -43,7 +44,7 @@ export function WorkshopCreateJobDialog({
   open,
   onOpenChange,
   onJobCreated,
-  defaultMetalKey = "goldGrains995",
+  defaultMetalKey = WORKSHOP_GOLD_995_MATERIAL_KEY,
 }: WorkshopCreateJobDialogProps) {
   const t = useT();
   const [workshops, setWorkshops] = useState<KarigarWorkshop[]>([]);
@@ -80,15 +81,15 @@ export function WorkshopCreateJobDialog({
         artisan: w.artisan || w.name,
       }));
       setWorkshops(wsList);
-      if (wsList.length > 0 && !workshopId) {
-        setWorkshopId(wsList[0].id);
+      if (wsList.length > 0) {
+        setWorkshopId((current) => wsList.some((w) => w.id === current) ? current : wsList[0].id);
       }
     } catch {
       // handled
     } finally {
       setLoadingWorkshops(false);
     }
-  }, [workshopId]);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -96,6 +97,7 @@ export function WorkshopCreateJobDialog({
       setError(null);
       setCreatedJob(null);
       setIsAddingKarigar(false);
+      setKarigarError(null);
     }
   }, [open, loadWorkshops]);
 
@@ -108,30 +110,11 @@ export function WorkshopCreateJobDialog({
     setSavingKarigar(true);
     setKarigarError(null);
     try {
-      const snapRes = await karigarApi.getSnapshot();
-      const existing = snapRes.data?.workshops || [];
-      const vaultReserves = snapRes.data?.vaultReserves || {};
-      const customMaterials = snapRes.data?.customMaterials;
-      const newWs = {
-        id: `ws-${Date.now()}`,
+      const res = await karigarApi.createWorkshop({
         name: newWorkshopName.trim(),
         artisan: newArtisanName.trim(),
-        location: "Local",
-        rating: 5.0,
-        metalIssued: 0,
-        metalReturned: 0,
-        wastagePercent: 0,
-        wastageLimit: 1.0,
-        wageRatePerGram: 200,
-        outstandingBalance: 0,
-        wageDue: 0,
-      };
-      const updated = [...existing, newWs];
-      await karigarApi.saveSnapshot({
-        vaultReserves,
-        workshops: updated,
-        customMaterials,
       });
+      const newWs = res.data;
 
       setWorkshops((prev) => [
         ...prev,
@@ -176,7 +159,7 @@ export function WorkshopCreateJobDialog({
         artisan: selectedWs.artisan,
         workshopId: selectedWs.id,
         grossWeight: isNaN(parsedWeight) ? 0 : parsedWeight,
-        metalKey: metalKey || "goldGrains995",
+        metalKey: metalKey || WORKSHOP_GOLD_995_MATERIAL_KEY,
         qty: isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty,
         priority,
         dueAt: dueAt || undefined,
@@ -471,7 +454,7 @@ export function WorkshopCreateJobDialog({
                   onChange={(e) => setMetalKey(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="goldGrains995">{t("Gold 995 Grains (0.995)")}</option>
+                  <option value={WORKSHOP_GOLD_995_MATERIAL_KEY}>{t("Gold 995 Grains (0.995)")}</option>
                   <option value="goldGrains24k">{t("Gold Grains 24K")}</option>
                   <option value="goldBars24k">{t("Gold Cast Bars 24K")}</option>
                   <option value="silverBullion999">{t("Silver Bullion (999)")}</option>

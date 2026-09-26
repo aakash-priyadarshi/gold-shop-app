@@ -271,7 +271,6 @@ export function WorkshopJobsModule({ initialJobId }: { initialJobId?: string | n
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onJobCreated={(newJob) => {
-          loadJobs();
           if (newJob?.id) {
             setSelectedJobId(newJob.id);
           }

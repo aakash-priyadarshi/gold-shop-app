@@ -11,7 +11,7 @@ import {
 import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 
-export const WORKSHOP_GLOSSARY: Record<string, string> = {
+export const WORKSHOP_GLOSSARY = {
   gold995:
     "0.995 fine gold — the standard industrial pure gold benchmark, replacing legacy 24K bullion.",
   theoretical:
@@ -40,10 +40,12 @@ export const WORKSHOP_GLOSSARY: Record<string, string> = {
     "Exceptional manual entry of weight when hardware scale is unavailable. Logged in audit trail.",
   correctionReversal:
     "Immutable accounting reversal creating an offset entry and replacement record.",
-};
+} as const satisfies Record<string, string>;
+
+export type WorkshopGlossaryTerm = keyof typeof WORKSHOP_GLOSSARY;
 
 export interface WorkshopDomainTooltipProps {
-  term?: keyof typeof WORKSHOP_GLOSSARY | string;
+  term?: WorkshopGlossaryTerm;
   text?: string;
   className?: string;
 }

@@ -63,10 +63,19 @@ describe("AiChatbotService - Workshop route context and contextual retrieval", (
       ).toContain("Karigar Book");
     });
 
-    it("defaults to Overview when no view param is present on supply-chain", () => {
+    it("uses live Workshop mode and entitlement for the default view", () => {
       expect(
-        service.formatWorkshopRouteContext("/dashboard/shop/supply-chain"),
+        service.formatWorkshopRouteContext("/dashboard/shop/supply-chain", { workshopMode: true, workshopManufacturingEnabled: true }),
       ).toContain("Overview");
+      for (const access of [
+        { workshopMode: false, workshopManufacturingEnabled: true },
+        { workshopMode: true, workshopManufacturingEnabled: false },
+      ]) {
+        expect(service.formatWorkshopRouteContext("/dashboard/shop/supply-chain", access)).toBe("Supply Chain / Karigar Book");
+        expect(service.buildContextualRetrievalQuery("What do I do here?", "/dashboard/shop/supply-chain", access)).toContain("Karigar Book");
+        expect(service.formatWorkshopRouteContext("/dashboard/shop/supply-chain?view=recovery", access)).toContain("Recovery");
+      }
+      expect(service.buildContextualRetrievalQuery("What do I do here?", "/dashboard/shop/supply-chain", { workshopMode: true, workshopManufacturingEnabled: true })).toContain("Overview");
     });
   });
 

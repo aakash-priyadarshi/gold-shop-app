@@ -19,6 +19,7 @@ import { BRAND } from "@/config/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
 import { api } from "@/lib/api";
+import { resolveWorkshopView } from "@/lib/workshop-route";
 import { OPEN_SUPPORT_CHAT_EVENT, useHelpUIStore } from "@/store/help-ui";
 import { usePreferencesStore } from "@/store/preferences";
 import { useT } from "@/providers/translation-provider";
@@ -112,7 +113,7 @@ const QUICK_ASKS_WORKSHOP_TRANSFERS = [
 
 const QUICK_ASKS_WORKSHOP_RECOVERY = [
   "How do recovery bags work?",
-  "Is assay required?",
+  "Is assay required for workshop recovery?",
   "When can I settle recovery?",
 ];
 
@@ -144,6 +145,21 @@ const QUICK_ASKS_WORKSHOP_BOOK = [
   "How do gold loss limits work?",
 ];
 
+
+export function getWorkshopQuickAsks(view: string | null, workshopMode = false, workshopEnabled = false) {
+  switch (resolveWorkshopView(view, workshopMode, workshopEnabled)) {
+    case "jobs": return QUICK_ASKS_WORKSHOP_JOBS;
+    case "production": return QUICK_ASKS_WORKSHOP_PRODUCTION;
+    case "transfers": return QUICK_ASKS_WORKSHOP_TRANSFERS;
+    case "recovery": return QUICK_ASKS_WORKSHOP_RECOVERY;
+    case "qc": return QUICK_ASKS_WORKSHOP_QC;
+    case "settings": return QUICK_ASKS_WORKSHOP_SETTINGS;
+    case "metal": return QUICK_ASKS_WORKSHOP_METAL;
+    case "reports": return QUICK_ASKS_WORKSHOP_REPORTS;
+    case "book": return QUICK_ASKS_WORKSHOP_BOOK;
+    default: return QUICK_ASKS_WORKSHOP_OVERVIEW;
+  }
+}
 
 const ESCALATION_CTA: { label: string; href: string }[] = [
   { label: `WhatsApp ${SUPPORT.phoneDisplay}`, href: `https://wa.me/${SUPPORT.phone.replace(/\+/g, "")}` },
@@ -348,13 +364,12 @@ export function SupportBot() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const rawView = pathname.includes("supply-chain") ? searchParams?.get("view") : null;
-  const ALLOWED_WORKSHOP_VIEWS = new Set([
-    "book", "overview", "tower", "jobs", "job", "production", "floor", "metal", "transfers", "recovery", "qc", "reports", "settings"
-  ]);
-  const workshopView = rawView && ALLOWED_WORKSHOP_VIEWS.has(rawView) ? rawView : null;
-  const currentPathWithView = workshopView ? `${pathname}?view=${workshopView}` : pathname;
   const { user } = useAuth();
-  const { planName } = useFeatures();
+  const { planName, hasFeature } = useFeatures();
+  const workshopView = pathname.includes("supply-chain")
+    ? resolveWorkshopView(rawView ?? null, !!user?.shop?.workshopMode, hasFeature("workshopManufacturing"))
+    : null;
+  const currentPathWithView = workshopView ? `${pathname}?view=${workshopView}` : pathname;
   const isSellerLoggedIn = user?.role === "SHOPKEEPER";
   const isAdmin = user?.role === "ADMIN";
   const isCustomerLoggedIn = user?.role === "CUSTOMER";
@@ -610,34 +625,6 @@ export function SupportBot() {
       );
     };
   }, []);
-
-  const getWorkshopQuickAsks = (view: string | null) => {
-    switch (view) {
-      case "jobs":
-        return QUICK_ASKS_WORKSHOP_JOBS;
-      case "production":
-      case "floor":
-        return QUICK_ASKS_WORKSHOP_PRODUCTION;
-      case "transfers":
-        return QUICK_ASKS_WORKSHOP_TRANSFERS;
-      case "recovery":
-        return QUICK_ASKS_WORKSHOP_RECOVERY;
-      case "qc":
-        return QUICK_ASKS_WORKSHOP_QC;
-      case "settings":
-        return QUICK_ASKS_WORKSHOP_SETTINGS;
-      case "metal":
-        return QUICK_ASKS_WORKSHOP_METAL;
-      case "reports":
-        return QUICK_ASKS_WORKSHOP_REPORTS;
-      case "book":
-        return QUICK_ASKS_WORKSHOP_BOOK;
-      case "overview":
-      case "tower":
-      default:
-        return QUICK_ASKS_WORKSHOP_OVERVIEW;
-    }
-  };
 
   const QUICK_ASKS = pathname.includes("supply-chain")
     ? getWorkshopQuickAsks(workshopView)

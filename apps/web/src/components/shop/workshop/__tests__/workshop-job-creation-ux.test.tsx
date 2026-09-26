@@ -20,7 +20,8 @@ vi.mock("@/lib/api", () => ({
   karigarApi: {
     getSnapshot: vi.fn(),
     createJob: vi.fn(),
-    persistSnapshot: vi.fn(),
+    createWorkshop: vi.fn(),
+    saveSnapshot: vi.fn(),
   },
 }));
 
@@ -66,6 +67,44 @@ describe("Workshop Job Creation UX & Domain Tooltips", () => {
       });
 
       expect(screen.getByText("Add Karigar")).toBeInTheDocument();
+    });
+
+    it("quick-adds only an artisan identity, selects the result, then creates the job", async () => {
+      vi.mocked(karigarApi.getSnapshot).mockResolvedValue({ data: {
+        workshops: [], vaultReserves: { goldGrains24k: 500 },
+        jobs: [{ id: "existing-job" }], customMaterials: [{ key: "silver" }],
+      } } as any);
+      vi.mocked(karigarApi.createWorkshop).mockResolvedValue({ data: { id: "server-workshop", name: "New Workshop", artisan: "New Artisan" } } as any);
+      vi.mocked(karigarApi.createJob).mockResolvedValue({ data: { id: "new-job" } } as any);
+      render(<WorkshopCreateJobDialog open onOpenChange={vi.fn()} />);
+      fireEvent.click(await screen.findByRole("button", { name: "Add Karigar" }));
+      fireEvent.change(screen.getByPlaceholderText("e.g. Ramesh Soni"), { target: { value: " New Artisan " } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. Ramesh Workshop"), { target: { value: " New Workshop " } });
+      fireEvent.click(screen.getByRole("button", { name: "Save Karigar & Continue" }));
+      await waitFor(() => expect(screen.getByLabelText(/Karigar \/ Workshop/)).toHaveValue("server-workshop"));
+      expect(karigarApi.createWorkshop).toHaveBeenCalledWith({ name: "New Workshop", artisan: "New Artisan" });
+      expect(karigarApi.saveSnapshot).not.toHaveBeenCalled();
+      expect(karigarApi.getSnapshot).toHaveBeenCalledTimes(1);
+      fireEvent.change(screen.getByPlaceholderText("e.g. 22K Traditional Bridal Choker"), { target: { value: "Ring" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create Work Order" }));
+      await waitFor(() => expect(karigarApi.createJob).toHaveBeenCalledWith(expect.objectContaining({ workshopId: "server-workshop", artisan: "New Artisan", product: "Ring", metalKey: "goldGrains995" })));
+    });
+
+    it("keeps errors and Quick Add state when selecting a different workshop without reloading", async () => {
+      vi.mocked(karigarApi.getSnapshot).mockResolvedValue({ data: { workshops: [
+        { id: "one", name: "One", artisan: "One" }, { id: "two", name: "Two", artisan: "Two" },
+      ] } } as any);
+      vi.mocked(karigarApi.createWorkshop).mockRejectedValue({ response: { data: { message: "Workshop creation unavailable" } } });
+      render(<WorkshopCreateJobDialog open onOpenChange={vi.fn()} />);
+      fireEvent.click(await screen.findByRole("button", { name: "New Karigar" }));
+      fireEvent.change(screen.getByPlaceholderText("Artisan name"), { target: { value: "New Artisan" } });
+      fireEvent.change(screen.getByPlaceholderText("Workshop name"), { target: { value: "New Workshop" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Workshop creation unavailable")).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText(/Karigar \/ Workshop/), { target: { value: "two" } });
+      expect(screen.getByText("Workshop creation unavailable")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Artisan name")).toHaveValue("New Artisan");
+      expect(karigarApi.getSnapshot).toHaveBeenCalledTimes(1);
     });
 
     it("renders artisan dropdown and handles successful job creation", async () => {
