@@ -9,6 +9,7 @@ import {
   recoveryOffersApi,
   type RecoveryOfferPreview,
 } from "@/lib/api";
+import { formatSelectedCrashReportsMarkdown } from "@/lib/crash-report-markdown";
 import { useT } from "@/providers/translation-provider";
 import {
   BellRing,
@@ -209,6 +210,7 @@ export default function CrashReportsPage() {
   const [recentRecoveryOffers, setRecentRecoveryOffers] = useState<
     RecentRecoveryOffer[]
   >([]);
+  const selectedReports = reports.filter((report) => selectedIds.has(report.id));
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -304,6 +306,60 @@ export default function CrashReportsPage() {
       toast({
         title: t("Download failed"),
         description: t("Could not prepare the crash-report file."),
+        variant: "destructive",
+      });
+    } finally {
+      setExportAction(null);
+    }
+  };
+
+  const handleCopySelectedMarkdown = async () => {
+    if (selectedReports.length === 0) return;
+    setExportAction("copy");
+    try {
+      await navigator.clipboard.writeText(
+        formatSelectedCrashReportsMarkdown(selectedReports),
+      );
+      toast({
+        title: t("Selected crash reports copied"),
+        description: t(
+          "Paste the selected Markdown into your AI coding agent.",
+        ),
+      });
+    } catch (error) {
+      console.error("Failed to copy selected crash reports:", error);
+      toast({
+        title: t("Copy failed"),
+        description: t("Could not prepare the selected crash reports."),
+        variant: "destructive",
+      });
+    } finally {
+      setExportAction(null);
+    }
+  };
+
+  const handleDownloadSelectedMarkdown = () => {
+    if (selectedReports.length === 0) return;
+    setExportAction("download");
+    try {
+      const blob = new Blob(
+        [formatSelectedCrashReportsMarkdown(selectedReports)],
+        { type: "text/markdown;charset=utf-8" },
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orivraa-selected-crash-reports-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: t("Selected crash reports downloaded") });
+    } catch (error) {
+      console.error("Failed to download selected crash reports:", error);
+      toast({
+        title: t("Download failed"),
+        description: t("Could not prepare the selected crash reports."),
         variant: "destructive",
       });
     } finally {
@@ -514,7 +570,7 @@ export default function CrashReportsPage() {
   return (
     <AdminGuard>
       <DashboardLayout>
-        <div className="space-y-6">
+        <div className="min-w-0 max-w-full space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -840,6 +896,24 @@ export default function CrashReportsPage() {
               <span className="mr-2 text-sm font-semibold text-gold-900 dark:text-gold-200">
                 {selectedIds.size} <T>selected</T>
               </span>
+              <button
+                type="button"
+                onClick={handleCopySelectedMarkdown}
+                disabled={Boolean(exportAction)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <T>Copy selected</T>
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadSelectedMarkdown}
+                disabled={Boolean(exportAction)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <T>Download selected .md</T>
+              </button>
               <button
                 type="button"
                 onClick={() => handleBulkStatusChange("reviewed")}

@@ -12,6 +12,52 @@ const API_BASE_URL = rawApiUrl.endsWith("/api")
 
 const DEDUPE_WINDOW_MS = 2 * 60 * 1000;
 const SESSION_MAX_PER_MINUTE = 8;
+const SENSITIVE_QUERY_PARAM = /([?&])([^=?&#\s]+)=([^&#\s]*)/g;
+
+function isSensitiveQueryParam(rawKey: string): boolean {
+  let key = rawKey;
+  try {
+    key = decodeURIComponent(rawKey.replace(/\+/g, " "));
+  } catch {
+    // Keep the encoded key when it is malformed.
+  }
+  const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return (
+    /(?:token|secret|password|passwd|credential|signature|apikey)$/.test(
+      normalizedKey,
+    ) ||
+    normalizedKey.startsWith("session") ||
+    [
+      "auth",
+      "authorization",
+      "authorizationcode",
+      "authcode",
+      "oauthcode",
+      "state",
+      "csrf",
+      "code",
+      "codeverifier",
+      "codechallenge",
+      "desktopexchange",
+      "verificationcode",
+      "resetcode",
+    ].includes(normalizedKey)
+  );
+}
+
+/** Remove credential-like URL values before they enter logs or clipboard copy. */
+export function redactSensitiveQueryParams(value?: string): string | undefined {
+  if (value === undefined) return undefined;
+  return value
+    .replace(
+      SENSITIVE_QUERY_PARAM,
+      (match, separator: string, rawKey: string) =>
+        isSensitiveQueryParam(rawKey)
+          ? `${separator}${rawKey}=[REDACTED]`
+          : match,
+    )
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, "$1[REDACTED]");
+}
 
 const BOT_USER_AGENT_PATTERN =
   /bot|crawl|spider|slurp|ia_archiver|prerender|headless|bingpreview|applewebkit\/compatible/i;
@@ -68,9 +114,11 @@ export function formatUserFacingErrorCopy(input: {
   description?: string;
   page?: string;
 }): string {
-  const title = (input.title || "").trim();
-  const description = (input.description || "").trim();
-  const page = (input.page || "").trim();
+  const title = (redactSensitiveQueryParams(input.title) || "").trim();
+  const description = (
+    redactSensitiveQueryParams(input.description) || ""
+  ).trim();
+  const page = (redactSensitiveQueryParams(input.page) || "").trim();
   const lines: string[] = [];
   if (title) lines.push(title);
   if (description && description !== title) lines.push(description);
@@ -195,26 +243,33 @@ export async function submitUserFacingError(
     if (input.reportToAdmin === false) return false;
     if (isAutomatedUserAgent(navigator.userAgent)) return false;
 
-    const title = (input.title || "").trim();
-    const description = (input.description || "").trim();
+    const title = (redactSensitiveQueryParams(input.title) || "").trim();
+    const description = (
+      redactSensitiveQueryParams(input.description) || ""
+    ).trim();
     if (shouldSkipUserFacingError(title, description) && !input.userTriggered) {
       return false;
     }
 
-    const page = (
-      input.page || window.location.pathname + window.location.search
-    ).slice(0, 2000);
-    if (page.includes("/crash-reports")) return false;
-    if (page.includes("/system/slack-alert-test")) return false;
+    const page =
+      input.page || window.location.pathname + window.location.search;
+    const safePage = redactSensitiveQueryParams(page) || "";
+    const boundedPage = safePage.slice(0, 2000);
+    if (boundedPage.includes("/crash-reports")) return false;
+    if (boundedPage.includes("/system/slack-alert-test")) return false;
 
-    const copy = formatUserFacingErrorCopy({ title, description, page });
+    const copy = formatUserFacingErrorCopy({
+      title,
+      description,
+      page: boundedPage,
+    });
     if (!copy) return false;
 
     const now = Date.now();
     prune(now);
     if (sessionHits.length >= SESSION_MAX_PER_MINUTE) return false;
 
-    const key = dedupeKey(copy, page);
+    const key = dedupeKey(copy, boundedPage);
     if (recentKeys.has(key) && !input.userTriggered) return false;
     recentKeys.set(key, now);
     sessionHits.push(now);
@@ -222,17 +277,17 @@ export async function submitUserFacingError(
     const { userId, userRole } = readJwtUser();
     const body = {
       errorMessage: copy.slice(0, 10000),
-      errorStack: input.stack?.slice(0, 20000),
-      page,
-      userAction: input.userAction?.slice(0, 2000),
+      errorStack: redactSensitiveQueryParams(input.stack)?.slice(0, 20000),
+      page: boundedPage,
+      userAction: redactSensitiveQueryParams(input.userAction)?.slice(0, 2000),
       platform: isTauriRuntime() ? "desktop" : "web",
       userRole,
       userId,
       userAgent: navigator.userAgent,
       sessionToken: sessionStorage.getItem("orivraa_ws_token") || undefined,
       userTriggered: input.userTriggered ?? false,
-      userDescription: input.userDescription,
-      screenshotUrl: input.screenshotUrl,
+      userDescription: redactSensitiveQueryParams(input.userDescription),
+      screenshotUrl: redactSensitiveQueryParams(input.screenshotUrl),
       frustrationType: input.frustrationType || "toast",
     };
 
@@ -271,7 +326,10 @@ export function reportApiFailure(error: {
   if (status && status < 500) return;
 
   const methodLabel = (method || "GET").toUpperCase();
-  const path = url.replace(/^https?:\/\/[^/]+/i, "") || url || "(unknown)";
+  const path =
+    redactSensitiveQueryParams(
+      url.replace(/^https?:\/\/[^/]+/i, "") || url || "(unknown)",
+    ) || "(unknown)";
   const apiMessage = extractApiErrorMessage(error.response?.data);
   const title = status ? `Server error ${status}` : "Network error";
   const description = [

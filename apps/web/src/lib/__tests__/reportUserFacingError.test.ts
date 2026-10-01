@@ -4,6 +4,7 @@ import {
   formatUserFacingErrorCopy,
   isAutomatedUserAgent,
   reportApiFailure,
+  redactSensitiveQueryParams,
   resetUserFacingErrorReporterForTests,
   shouldSkipUserFacingError,
   submitUserFacingError,
@@ -30,6 +31,21 @@ describe("formatUserFacingErrorCopy", () => {
         page: "/m/pos",
       }),
     ).toBe("Failed\n\nPage: /m/pos");
+  });
+
+  it("redacts OAuth credentials from copied report fields", () => {
+    expect(
+      formatUserFacingErrorCopy({
+        title: "Network error",
+        description: "GET /market/config?country=US",
+        page: "/auth/oauth-callback?accessToken=sample-access&mode=login",
+      }),
+    ).toBe(
+      "Network error\nGET /market/config?country=US\n\nPage: /auth/oauth-callback?accessToken=[REDACTED]&mode=login",
+    );
+    expect(
+      redactSensitiveQueryParams("Authorization: Bearer sample-token"),
+    ).toBe("Authorization: Bearer [REDACTED]");
   });
 });
 
@@ -108,6 +124,32 @@ describe("submitUserFacingError", () => {
     expect(body.userTriggered).toBe(false);
     expect(body.frustrationType).toBe("toast");
     expect(body.page).toBe("/dashboard/shop/invoices/abc");
+  });
+
+  it("redacts sensitive query values from all submitted report fields", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await submitUserFacingError({
+      title: "OAuth failed",
+      description: "GET /auth/me?accessToken=sample-access",
+      page: "/auth/oauth-callback?refreshToken=sample-refresh&source=google",
+      userAction: "GET /auth/me?token=sample-action-token",
+      stack: "Request failed at /auth?code=sample-auth-code",
+      userDescription: "Redirect returned ?access_token=sample-note-token",
+      screenshotUrl:
+        "https://cdn.example.test/image?signature=sample-signature",
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("sample-access");
+    expect(serialized).not.toContain("sample-refresh");
+    expect(serialized).not.toContain("sample-action-token");
+    expect(serialized).not.toContain("sample-auth-code");
+    expect(serialized).not.toContain("sample-note-token");
+    expect(serialized).not.toContain("sample-signature");
+    expect(body.page).toContain("refreshToken=[REDACTED]");
   });
 
   it("does not POST skipped or crash-reports-page errors", async () => {
@@ -248,6 +290,25 @@ describe("reportApiFailure", () => {
       config: { url: "/invoices/abc/pdf", method: "get" },
     });
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("redacts credentials from failed API request URLs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    reportApiFailure({
+      message: "Network Error",
+      config: {
+        url: "/auth/callback?accessToken=sample-access&mode=web",
+        method: "get",
+      },
+    });
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.page).not.toContain("sample-access");
+    expect(body.errorMessage).not.toContain("sample-access");
+    expect(body.errorMessage).toContain("accessToken=[REDACTED]");
   });
 });
 

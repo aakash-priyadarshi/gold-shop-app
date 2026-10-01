@@ -43,6 +43,55 @@ export type CrashReportStatus = (typeof CRASH_REPORT_STATUSES)[number];
 const SUBMIT_RATE_LIMIT = 30;
 const SUBMIT_RATE_WINDOW_MS = 60_000;
 const DEDUPE_WINDOW_MS = 5 * 60 * 1000;
+const SENSITIVE_QUERY_PARAM = /([?&])([^=?&#\s]+)=([^&#\s]*)/g;
+
+function isSensitiveQueryParam(rawKey: string): boolean {
+  let key = rawKey;
+  try {
+    key = decodeURIComponent(rawKey.replace(/\+/g, " "));
+  } catch {
+    // Keep the encoded key when it is malformed.
+  }
+  const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return (
+    /(?:token|secret|password|passwd|credential|signature|apikey)$/.test(
+      normalizedKey,
+    ) ||
+    normalizedKey.startsWith("session") ||
+    [
+      "auth",
+      "authorization",
+      "authorizationcode",
+      "authcode",
+      "oauthcode",
+      "state",
+      "csrf",
+      "code",
+      "codeverifier",
+      "codechallenge",
+      "desktopexchange",
+      "verificationcode",
+      "resetcode",
+    ].includes(normalizedKey)
+  );
+}
+
+function redactSensitiveQueryParams(value: string | null): string | null;
+function redactSensitiveQueryParams(
+  value: string | undefined,
+): string | undefined;
+function redactSensitiveQueryParams(value?: string | null) {
+  if (value == null) return value;
+  return value
+    .replace(
+      SENSITIVE_QUERY_PARAM,
+      (match, separator: string, rawKey: string) =>
+        isSensitiveQueryParam(rawKey)
+          ? `${separator}${rawKey}=[REDACTED]`
+          : match,
+    )
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, "$1[REDACTED]");
+}
 
 @Injectable()
 export class CrashReportsService {
@@ -81,8 +130,10 @@ export class CrashReportsService {
 
     this.enforceIpRateLimit(ip);
 
-    const errorMessage = dto.errorMessage.slice(0, 10000);
-    const page = dto.page.slice(0, 2000);
+    const errorMessage = redactSensitiveQueryParams(
+      dto.errorMessage.slice(0, 10000),
+    )!;
+    const page = redactSensitiveQueryParams(dto.page.slice(0, 2000))!;
     const platform =
       dto.platform === "desktop" || dto.platform === "web"
         ? dto.platform
@@ -100,10 +151,14 @@ export class CrashReportsService {
         data: {
           userTriggered: true,
           ...(dto.userDescription && {
-            userDescription: dto.userDescription.slice(0, 5000),
+            userDescription: redactSensitiveQueryParams(
+              dto.userDescription.slice(0, 5000),
+            ),
           }),
           ...(dto.screenshotUrl && {
-            screenshotUrl: dto.screenshotUrl.slice(0, 2000),
+            screenshotUrl: redactSensitiveQueryParams(
+              dto.screenshotUrl.slice(0, 2000),
+            ),
           }),
         },
       });
@@ -125,13 +180,13 @@ export class CrashReportsService {
     const report = await this.prisma.crashReport.create({
       data: {
         errorMessage,
-        errorStack: dto.errorStack?.slice(0, 20000),
+        errorStack: redactSensitiveQueryParams(dto.errorStack?.slice(0, 20000)),
         page,
-        userAction: dto.userAction?.slice(0, 2000),
+        userAction: redactSensitiveQueryParams(dto.userAction?.slice(0, 2000)),
         platform,
         userRole: dto.userRole || "guest",
         userId: dto.userId || null,
-        userAgent: dto.userAgent?.slice(0, 1000),
+        userAgent: redactSensitiveQueryParams(dto.userAgent?.slice(0, 1000)),
         appVersion: dto.appVersion || null,
         ip: ip || null,
         sessionToken: dto.sessionToken || null,
@@ -139,10 +194,14 @@ export class CrashReportsService {
           userTriggered: dto.userTriggered,
         }),
         ...(dto.userDescription && {
-          userDescription: dto.userDescription.slice(0, 5000),
+          userDescription: redactSensitiveQueryParams(
+            dto.userDescription.slice(0, 5000),
+          ),
         }),
         ...(dto.screenshotUrl && {
-          screenshotUrl: dto.screenshotUrl.slice(0, 2000),
+          screenshotUrl: redactSensitiveQueryParams(
+            dto.screenshotUrl.slice(0, 2000),
+          ),
         }),
         ...(dto.frustrationType && { frustrationType: dto.frustrationType }),
       },
@@ -175,7 +234,7 @@ export class CrashReportsService {
     ]);
 
     return {
-      reports,
+      reports: reports.map((report) => this.sanitizeReport(report)),
       total,
       page,
       limit,
@@ -320,21 +379,25 @@ export class CrashReportsService {
 
   /** Get a single crash report by ID */
   async getById(id: string) {
-    return this.prisma.crashReport.findUnique({ where: { id } });
+    const report = await this.prisma.crashReport.findUnique({ where: { id } });
+    return report ? this.sanitizeReport(report) : report;
   }
 
   /** Update crash report status / admin notes */
   async update(id: string, data: { status?: string; adminNotes?: string }) {
     const status = this.validateStatus(data.status);
-    return this.prisma.crashReport.update({
+    const report = await this.prisma.crashReport.update({
       where: { id },
       data: {
         ...(status && { status }),
         ...(data.adminNotes !== undefined && {
-          adminNotes: data.adminNotes.slice(0, 20000),
+          adminNotes: redactSensitiveQueryParams(
+            data.adminNotes.slice(0, 20000),
+          ),
         }),
       },
     });
+    return this.sanitizeReport(report);
   }
 
   /** Update several reports after one investigation fixes the same issue. */
@@ -362,7 +425,9 @@ export class CrashReportsService {
       data: {
         status,
         ...(data.adminNotes !== undefined && {
-          adminNotes: data.adminNotes.slice(0, 20000),
+          adminNotes: redactSensitiveQueryParams(
+            data.adminNotes.slice(0, 20000),
+          ),
         }),
       },
     });
@@ -463,29 +528,44 @@ export class CrashReportsService {
   }
 
   private toAiRecord(report: CrashReport) {
+    const safeReport = this.sanitizeReport(report);
     return {
-      id: report.id,
+      id: safeReport.id,
       fingerprint: createHash("sha256")
-        .update(`${report.page}\n${report.errorMessage}`)
+        .update(`${safeReport.page}\n${safeReport.errorMessage}`)
         .digest("hex")
         .slice(0, 16),
-      status: report.status,
-      errorMessage: report.errorMessage,
-      errorStack: report.errorStack,
-      page: report.page,
-      userAction: report.userAction,
-      platform: report.platform,
-      userRole: report.userRole || "guest",
-      userId: report.userId,
-      userAgent: report.userAgent,
-      appVersion: report.appVersion,
-      adminNotes: report.adminNotes,
-      userTriggered: report.userTriggered,
-      userDescription: report.userDescription,
-      screenshotUrl: report.screenshotUrl,
-      frustrationType: report.frustrationType,
-      createdAt: report.createdAt.toISOString(),
-      updatedAt: report.updatedAt.toISOString(),
+      status: safeReport.status,
+      errorMessage: safeReport.errorMessage,
+      errorStack: safeReport.errorStack,
+      page: safeReport.page,
+      userAction: safeReport.userAction,
+      platform: safeReport.platform,
+      userRole: safeReport.userRole || "guest",
+      userId: safeReport.userId,
+      userAgent: safeReport.userAgent,
+      appVersion: safeReport.appVersion,
+      adminNotes: safeReport.adminNotes,
+      userTriggered: safeReport.userTriggered,
+      userDescription: safeReport.userDescription,
+      screenshotUrl: safeReport.screenshotUrl,
+      frustrationType: safeReport.frustrationType,
+      createdAt: safeReport.createdAt.toISOString(),
+      updatedAt: safeReport.updatedAt.toISOString(),
+    };
+  }
+
+  private sanitizeReport(report: CrashReport): CrashReport {
+    return {
+      ...report,
+      errorMessage: redactSensitiveQueryParams(report.errorMessage) || "",
+      errorStack: redactSensitiveQueryParams(report.errorStack),
+      page: redactSensitiveQueryParams(report.page) || "",
+      userAction: redactSensitiveQueryParams(report.userAction),
+      userAgent: redactSensitiveQueryParams(report.userAgent),
+      adminNotes: redactSensitiveQueryParams(report.adminNotes),
+      userDescription: redactSensitiveQueryParams(report.userDescription),
+      screenshotUrl: redactSensitiveQueryParams(report.screenshotUrl),
     };
   }
 

@@ -56,12 +56,23 @@ function OAuthCallbackHandler() {
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
-      const accessToken = searchParams.get("accessToken");
-      const refreshToken = searchParams.get("refreshToken");
-      const error = searchParams.get("error");
-      const setupRequired = searchParams.get("setupRequired");
+      const callbackParams = new URLSearchParams(searchParams.toString());
+      const accessToken = callbackParams.get("accessToken");
+      const refreshToken = callbackParams.get("refreshToken");
+      const error = callbackParams.get("error");
+      const setupRequired = callbackParams.get("setupRequired");
+      const isMobileHost = window.location.hostname.startsWith("m.");
+      const fromMobile = document.cookie
+        .split(";")
+        .some((cookie) => cookie.trim() === "orivraa_mobile=1");
+      const mobileRedirect = callbackParams.get("mobileRedirect") === "1";
 
       if (error) {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          window.location.pathname,
+        );
         toast({
           variant: "destructive",
           title: "Authentication failed",
@@ -72,6 +83,11 @@ function OAuthCallbackHandler() {
       }
 
       if (!accessToken || !refreshToken) {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          window.location.pathname,
+        );
         toast({
           variant: "destructive",
           title: "Authentication failed",
@@ -81,14 +97,8 @@ function OAuthCallbackHandler() {
         return;
       }
 
-      const isMobileHost = window.location.hostname.startsWith("m.");
-      const fromMobile = document.cookie
-        .split(";")
-        .some((cookie) => cookie.trim() === "orivraa_mobile=1");
-      const mobileRedirect = searchParams.get("mobileRedirect") === "1";
-
       if (fromMobile && !isMobileHost) {
-        const params = new URLSearchParams(searchParams.toString());
+        const params = new URLSearchParams(callbackParams);
         const secure = window.location.protocol === "https:" ? "; Secure" : "";
         params.set("mobileRedirect", "1");
         document.cookie = `orivraa_mobile=; domain=.orivraa.com; path=/; SameSite=Lax${secure}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
@@ -96,15 +106,23 @@ function OAuthCallbackHandler() {
         return;
       }
 
+      // OAuth tokens arrive in the callback query for compatibility. Remove
+      // them from browser history before any subsequent API request can fail.
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname,
+      );
+
       // ── Desktop OAuth: send tokens back to Orivraa Desktop via localhost ──
       // desktop_port comes from: 1) URL param (passed through OAuth state), 2) sessionStorage, 3) localStorage
       const desktopPort =
-        searchParams.get("desktop_port") ||
+        callbackParams.get("desktop_port") ||
         sessionStorage.getItem("orivraa_desktop_port") ||
         localStorage.getItem("orivraa_desktop_port");
       // desktop_exchange is the API-mediated fallback code (passed through OAuth state)
       const desktopExchange =
-        searchParams.get("desktop_exchange") ||
+        callbackParams.get("desktop_exchange") ||
         sessionStorage.getItem("orivraa_desktop_exchange") ||
         localStorage.getItem("orivraa_desktop_exchange");
       if (desktopPort || desktopExchange) {

@@ -1345,7 +1345,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
 
         {/* Desktop Main Content */}
-        <div className="flex-1 ms-72">
+        <div className="flex-1 min-w-0 ms-72">
           {/* Desktop Header */}
           <header className="sticky top-0 z-30 h-16 bg-white/80 dark:bg-[#161B22]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
@@ -1476,7 +1476,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="p-6">
+          <main className="min-w-0 p-6">
             <SmartUpgradeBanner />
             {children}
           </main>
@@ -1484,7 +1484,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Mobile Main Content */}
-      <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
+      <main className="lg:hidden min-w-0 px-4 py-4 pb-20 safe-area-bottom">
         <SmartUpgradeBanner />
         {children}
       </main>

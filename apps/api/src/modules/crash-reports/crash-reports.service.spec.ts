@@ -29,6 +29,7 @@ const report: CrashReport = {
 describe("CrashReportsService", () => {
   const crashReport = {
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn(),
@@ -62,6 +63,65 @@ describe("CrashReportsService", () => {
 
     expect(crashReport.create).toHaveBeenCalledTimes(1);
     expect(alerts.sendCrashReportAlert).toHaveBeenCalledWith(report);
+  });
+
+  it("redacts sensitive query values before persisting a report", async () => {
+    await service.submit(
+      {
+        errorMessage:
+          "Network error Page: /auth/oauth-callback?accessToken=sample-access",
+        errorStack:
+          "Request failed at /auth?code=sample-code; Authorization: Bearer sample-bearer-token",
+        page: "/auth/oauth-callback?accessToken=sample-access&source=google",
+        userAction: "GET /auth/me?refreshToken=sample-refresh",
+        userDescription: "Redirect returned ?token=sample-note-token",
+        screenshotUrl: "https://cdn.example.test/image?signature=sample-signature",
+        platform: "web",
+      },
+      "127.0.0.1",
+    );
+
+    const stored = crashReport.create.mock.calls[0][0].data;
+    const serialized = JSON.stringify(stored);
+    expect(serialized).not.toContain("sample-access");
+    expect(serialized).not.toContain("sample-code");
+    expect(serialized).not.toContain("sample-bearer-token");
+    expect(serialized).not.toContain("sample-refresh");
+    expect(serialized).not.toContain("sample-note-token");
+    expect(serialized).not.toContain("sample-signature");
+    expect(stored.page).toContain("accessToken=[REDACTED]");
+  });
+
+  it("redacts credentials in legacy reports returned to admins and exports", async () => {
+    const legacyReport = {
+      ...report,
+      errorMessage:
+        "Network Error — Page: /auth/oauth-callback?accessToken=stored-secret",
+      errorStack: "Request failed at /auth?code=stored-code",
+      page: "/auth/oauth-callback?accessToken=stored-secret",
+    };
+    crashReport.findMany.mockResolvedValue([legacyReport]);
+    crashReport.findUnique.mockResolvedValue(legacyReport);
+    crashReport.update.mockResolvedValue(legacyReport);
+    crashReport.count.mockResolvedValue(1);
+
+    const list = await service.getAll({});
+    const detail = await service.getById(report.id);
+    const markdown = await service.getMarkdownExport({});
+    const updated = await service.update(report.id, {
+      status: "reviewed",
+      adminNotes: "Reviewed callback ?token=note-secret",
+    });
+
+    expect(JSON.stringify(list)).not.toContain("stored-secret");
+    expect(JSON.stringify(detail)).not.toContain("stored-secret");
+    expect(JSON.stringify(updated)).not.toContain("stored-secret");
+    expect(crashReport.update.mock.calls[0][0].data.adminNotes).toBe(
+      "Reviewed callback ?token=[REDACTED]",
+    );
+    expect(markdown).not.toContain("stored-secret");
+    expect(markdown).not.toContain("stored-code");
+    expect(markdown).toContain("accessToken=[REDACTED]");
   });
 
   it("does not alert again when an automatic duplicate is suppressed", async () => {
